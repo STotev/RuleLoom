@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/BusinessRules.Samples.Console/BusinessRules.Samples.Console.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/" />
+  <Folder Name="/src/">
+    <Project Path="src/BusinessRules.Abstractions/BusinessRules.Abstractions.csproj" />
+    <Project Path="src/BusinessRules.Core/BusinessRules.Core.csproj" />
+    <Project Path="src/BusinessRules.Extensions.DependencyInjection/BusinessRules.Extensions.DependencyInjection.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>
