@@ -1,18 +1,20 @@
 using BusinessRules.Abstractions;
+using BusinessRules.Abstractions.Condition;
 
 namespace BusinessRules.Core.Operators;
 
-public class EqualsOperator : IConditionOperator
+public class EqualsOperator : IOperator
 {
     public string Name => "eq";
 
-    public bool Evaluate(EvaluationContext ctx, params object[] args)
+    public object Evaluate(
+        EvaluationContext ctx,
+        IReadOnlyList<ConditionNode> operands,
+        IExpressionEvaluator evaluator)
     {
-        var field = args[0].ToString()!;
-        var expected = args[1];
+        var left = evaluator.Evaluate(ctx, operands[0]);
+        var right = evaluator.Evaluate(ctx, operands[1]);
 
-        var value = ctx.Resolve(field);
-
-        return Equals(value, expected);
+        return Equals(left, right);
     }
 }

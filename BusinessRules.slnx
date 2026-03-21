@@ -2,7 +2,9 @@
   <Folder Name="/samples/">
     <Project Path="samples/BusinessRules.Samples.Console/BusinessRules.Samples.Console.csproj" />
   </Folder>
-  <Folder Name="/Solution Items/" />
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/BusinessRules.Abstractions/BusinessRules.Abstractions.csproj" />
     <Project Path="src/BusinessRules.Core/BusinessRules.Core.csproj" />

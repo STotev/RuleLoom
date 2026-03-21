@@ -2,5 +2,6 @@ namespace BusinessRules.Samples.Console;
 
 public class Property
 {
-    public decimal Price { get; set; }
+    public int Price { get; set; }
+    public int EstimatedPrice { get; set; }
 }

@@ -1,64 +1,50 @@
 using BusinessRules.Abstractions;
+using BusinessRules.Abstractions.Action;
+using BusinessRules.Abstractions.Condition;
+using BusinessRules.Abstractions.Rule;
+using BusinessRules.Core.Helpers;
 
 namespace BusinessRules.Core.Engine;
 
 public class RuleEngine
 {
-    private readonly IEnumerable<RuleDefinition> _rules;
-    private readonly Dictionary<string, IConditionOperator> _operators;
-    private readonly Dictionary<string, IAction> _actions;
+    private readonly IExpressionEvaluator _conditionEvaluator;
+    private readonly Dictionary<string, IActionExecutor> _actions;
 
     public RuleEngine(
-        IEnumerable<RuleDefinition> rules,
-        IEnumerable<IConditionOperator> operators,
-        IDictionary<string, IAction> actions)
+        IExpressionEvaluator conditionEvaluator,
+        IEnumerable<IActionExecutor> actions)
     {
-        _rules = rules;
-        _operators = operators.ToDictionary(x => x.Name);
-        _actions = new Dictionary<string, IAction>(actions);
+        _conditionEvaluator = conditionEvaluator;
+        _actions = actions.ToDictionary(x => x.Type);
     }
 
-    public async Task ProcessAsync(EventContext evt)
+    public async Task ExecuteAsync(string eventType, object current, object? previous, IEnumerable<RuleDefinition> rules)
     {
-        var rules = _rules
-            .Where(r => r.EventName == evt.EventName)
-            .OrderBy(r => r.Priority);
+        var context = new EvaluationContext(current, previous);
 
-        foreach (var rule in rules)
+        var matchingRules = rules.Where(r => r.EventType == eventType);
+
+        foreach (var rule in matchingRules)
         {
-            if (!Evaluate(rule.Condition, evt))
+            if (!BoolHelper.ToBool(_conditionEvaluator.Evaluate(context, rule.Condition)))
                 continue;
 
-            foreach (var actionDef in rule.Actions)
+            foreach (var action in rule.Actions)
             {
-                if (!Evaluate(actionDef.Condition, evt))
+                if (action.Condition is not null && !BoolHelper.ToBool(_conditionEvaluator.Evaluate(context, action.Condition)))
                     continue;
 
-                if (!_actions.TryGetValue(actionDef.Type, out var action))
-                    continue;
-
-                await action.ExecuteAsync(new ActionContext
+                if (_actions.TryGetValue(action.Type, out var executor))
                 {
-                    Event = evt,
-                    Data = actionDef.Data
-                });
+                    await executor.ExecuteAsync(action, context);
+                }
             }
         }
     }
 
-    private bool Evaluate(ConditionDefinition? condition, EventContext evt)
+    public Task ExecuteAsync(string eventType, object data, IEnumerable<RuleDefinition> rules)
     {
-        if (condition == null) return true;
-
-        if (!_operators.TryGetValue(condition.Operator, out var op))
-            return false;
-
-        var ctx = new EvaluationContext
-        {
-            Current = evt.Current,
-            Previous = evt.Previous
-        };
-
-        return op.Evaluate(ctx, condition.Args);
+        return ExecuteAsync(eventType, data, null, rules);
     }
 }

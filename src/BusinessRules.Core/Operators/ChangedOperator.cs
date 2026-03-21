@@ -1,17 +1,22 @@
 using BusinessRules.Abstractions;
+using BusinessRules.Abstractions.Condition;
 
 namespace BusinessRules.Core.Operators;
 
-public class ChangedOperator : IConditionOperator
+public class ChangedOperator : IOperator
 {
     public string Name => "changed";
 
-    public bool Evaluate(EvaluationContext ctx, params object[] args)
+    public object Evaluate(
+        EvaluationContext context,
+        IReadOnlyList<ConditionNode> operands,
+        IExpressionEvaluator evaluator)
     {
-        var field = args[0].ToString()!;
+        var pathNode = operands[0] as PathOperand ??
+                       throw new InvalidOperationException("changed expects a path");
 
-        var current = ctx.Resolve(field, useCurrent: true);
-        var previous = ctx.Resolve(field, useCurrent: false);
+        var current = context.Resolve($"current.{pathNode.Path}");
+        var previous = context.Resolve($"previous.{pathNode.Path}");
 
         return !Equals(current, previous);
     }

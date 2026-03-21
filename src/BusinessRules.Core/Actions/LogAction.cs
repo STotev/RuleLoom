@@ -1,12 +1,19 @@
 using BusinessRules.Abstractions;
+using BusinessRules.Abstractions.Action;
 
 namespace BusinessRules.Core.Actions;
 
-public class LogAction : IAction
+public class LogAction : IActionExecutor
 {
-    public Task ExecuteAsync(ActionContext context)
+    public string Type => "log";
+
+    public Task ExecuteAsync(ActionDefinition action, EvaluationContext context)
     {
-        Console.WriteLine($"[RULE] Executed for event: {context.Event.EventName}");
+        if (action.Parameters.TryGetValue("message", out var message))
+        {
+            Console.WriteLine(message);
+        }
+
         return Task.CompletedTask;
     }
 }
