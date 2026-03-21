@@ -3,14 +3,14 @@ using BusinessRules.Abstractions.Condition;
 
 namespace BusinessRules.Core.Operators;
 
-public class ChangedOperator : IOperator
+public class ChangedOperator : IConditionOperator
 {
     public string Name => "changed";
 
-    public object Evaluate(
+    public bool Evaluate(
         EvaluationContext context,
         IReadOnlyList<ConditionNode> operands,
-        IExpressionEvaluator evaluator)
+        IConditionEvaluator evaluator)
     {
         var pathNode = operands[0] as PathOperand ??
                        throw new InvalidOperationException("changed expects a path");

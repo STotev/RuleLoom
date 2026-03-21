@@ -38,7 +38,7 @@ var rule = new RuleDefinition
                         Operands =
                         [
                             new PathOperand { Path = "Price" },
-                            new ValueOperand { Value = 100 }
+                            new ValueOperand { Value = 1500001 }
                         ]
                     }
                 ]
@@ -69,14 +69,14 @@ var rule2 = new RuleDefinition
     }
 };
 
-var conditions = new List<IOperator>
+var conditions = new List<IConditionOperator>
 {
     new AndOperator(), new EqualsOperator(), new NotOperator(), new ChangedOperator(), new OrOperator()
 };
 
 var actions = new List<IActionExecutor> { new LogAction() };
 
-var engine = new RuleEngine(new ExpressionEvaluator(conditions), actions);
+var engine = new RuleEngine(new ConditionEvaluator(conditions), actions);
 
 var previousProperty = new Property
 {
@@ -86,9 +86,9 @@ var previousProperty = new Property
 
 var currentProperty = new Property
 {
-    Price = 150000,
-    EstimatedPrice = 1500001
+    Price = 100000,
+    EstimatedPrice = 150000
 };
 
-// await engine.ExecuteAsync("PropertyUpdated", currentProperty, previousProperty, [rul2]);
-await engine.ExecuteAsync("PropertyUpdated", currentProperty, [rule]);
+await engine.ExecuteAsync("PropertyUpdated", currentProperty, previousProperty, [rule2]);
+// await engine.ExecuteAsync("PropertyUpdated", currentProperty, [rule]);

@@ -1,24 +1,21 @@
 using BusinessRules.Abstractions;
 using BusinessRules.Abstractions.Condition;
-using BusinessRules.Core.Helpers;
 
 namespace BusinessRules.Core.Operators;
 
-public class AndOperator : IOperator
+public class AndOperator : IConditionOperator
 {
     public string Name => "and";
 
-    public object Evaluate(EvaluationContext ctx, IReadOnlyList<ConditionNode> operands, IExpressionEvaluator evaluator)
+    public bool Evaluate(EvaluationContext ctx, IReadOnlyList<ConditionNode> operands, IConditionEvaluator evaluator)
     {
         foreach (var operand in operands)
         {
-            var result = evaluator.Evaluate(ctx, operand);
-            if (!BoolHelper.ToBool(result))
-            {
+            if (!evaluator.Evaluate(ctx, operand))
                 return false;
-            }
         }
 
         return true;
     }
 }
+

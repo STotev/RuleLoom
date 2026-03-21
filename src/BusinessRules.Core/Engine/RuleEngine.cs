@@ -2,24 +2,24 @@ using BusinessRules.Abstractions;
 using BusinessRules.Abstractions.Action;
 using BusinessRules.Abstractions.Condition;
 using BusinessRules.Abstractions.Rule;
-using BusinessRules.Core.Helpers;
 
 namespace BusinessRules.Core.Engine;
 
 public class RuleEngine
 {
-    private readonly IExpressionEvaluator _conditionEvaluator;
+    private readonly IConditionEvaluator _conditionEvaluator;
     private readonly Dictionary<string, IActionExecutor> _actions;
 
     public RuleEngine(
-        IExpressionEvaluator conditionEvaluator,
+        IConditionEvaluator conditionEvaluator,
         IEnumerable<IActionExecutor> actions)
     {
         _conditionEvaluator = conditionEvaluator;
         _actions = actions.ToDictionary(x => x.Type);
     }
 
-    public async Task ExecuteAsync(string eventType, object current, object? previous, IEnumerable<RuleDefinition> rules)
+    public async Task ExecuteAsync(string eventType, object current, object? previous,
+        IEnumerable<RuleDefinition> rules)
     {
         var context = new EvaluationContext(current, previous);
 
@@ -27,12 +27,12 @@ public class RuleEngine
 
         foreach (var rule in matchingRules)
         {
-            if (!BoolHelper.ToBool(_conditionEvaluator.Evaluate(context, rule.Condition)))
+            if (!_conditionEvaluator.Evaluate(context, rule.Condition))
                 continue;
 
             foreach (var action in rule.Actions)
             {
-                if (action.Condition is not null && !BoolHelper.ToBool(_conditionEvaluator.Evaluate(context, action.Condition)))
+                if (action.Condition is not null && !_conditionEvaluator.Evaluate(context, action.Condition))
                     continue;
 
                 if (_actions.TryGetValue(action.Type, out var executor))

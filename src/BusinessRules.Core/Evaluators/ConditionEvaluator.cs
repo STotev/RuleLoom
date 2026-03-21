@@ -5,7 +5,7 @@ namespace BusinessRules.Core.Evaluators;
 
 public class ConditionEvaluator : IConditionEvaluator
 {
-    private readonly IDictionary<string, IConditionOperator> _operators;
+    private readonly Dictionary<string, IConditionOperator> _operators;
 
     public ConditionEvaluator(IEnumerable<IConditionOperator> operators)
     {
@@ -14,13 +14,13 @@ public class ConditionEvaluator : IConditionEvaluator
 
     public bool Evaluate(EvaluationContext context, ConditionNode node)
     {
-        if (node is OperatorCondition op)
-        {
-            var @operator = _operators[op.Operator];
-            return @operator.Evaluate(context, op.Operands, this);
-        }
+        if (node is not OperatorCondition op)
+            throw new InvalidOperationException("Root must be operator");
 
-        throw new InvalidOperationException("Cannot evaluate non-boolean node directly");
+        if (!_operators.TryGetValue(op.Operator, out var @operator))
+            throw new InvalidOperationException($"Operator '{op.Operator}' not found");
+
+        return @operator.Evaluate(context, op.Operands, this);
     }
 
     public object? ResolveValue(EvaluationContext context, ConditionNode node)
@@ -28,8 +28,8 @@ public class ConditionEvaluator : IConditionEvaluator
         return node switch
         {
             ValueOperand v => v.Value,
-            PathOperand c => context.Resolve(c.Path),
-            OperatorCondition op => Evaluate(context, op), // allows nested boolean-as-value
+            PathOperand p => context.Resolve(p.Path),
+            OperatorCondition op => Evaluate(context, op),
             _ => throw new NotSupportedException()
         };
     }

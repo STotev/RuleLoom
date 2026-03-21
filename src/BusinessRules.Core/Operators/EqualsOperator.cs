@@ -3,17 +3,17 @@ using BusinessRules.Abstractions.Condition;
 
 namespace BusinessRules.Core.Operators;
 
-public class EqualsOperator : IOperator
+public class EqualsOperator : IConditionOperator
 {
     public string Name => "eq";
 
-    public object Evaluate(
+    public bool Evaluate(
         EvaluationContext ctx,
         IReadOnlyList<ConditionNode> operands,
-        IExpressionEvaluator evaluator)
+        IConditionEvaluator evaluator)
     {
-        var left = evaluator.Evaluate(ctx, operands[0]);
-        var right = evaluator.Evaluate(ctx, operands[1]);
+        var left = evaluator.ResolveValue(ctx, operands[0]);
+        var right = evaluator.ResolveValue(ctx, operands[1]);
 
         return Equals(left, right);
     }
