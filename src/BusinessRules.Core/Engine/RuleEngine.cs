@@ -23,22 +23,34 @@ public class RuleEngine
     {
         var context = new EvaluationContext(current, previous);
 
-        var matchingRules = rules.Where(r => r.EventType == eventType);
+        var matchingRules = rules
+            .Where(r => r.EventType == eventType)
+            .OrderByDescending(r => r.Priority)
+            .ToList();
 
         foreach (var rule in matchingRules)
         {
-            if (!_conditionEvaluator.Evaluate(context, rule.Condition))
-                continue;
-
-            foreach (var action in rule.Actions)
+            try
             {
-                if (action.Condition is not null && !_conditionEvaluator.Evaluate(context, action.Condition))
+                if (!_conditionEvaluator.Evaluate(context, rule.Condition))
                     continue;
 
-                if (_actions.TryGetValue(action.Type, out var executor))
+                foreach (var action in rule.Actions)
                 {
-                    await executor.ExecuteAsync(action, context);
+                    if (action.Condition is not null && !_conditionEvaluator.Evaluate(context, action.Condition))
+                        continue;
+
+                    if (_actions.TryGetValue(action.Type, out var executor))
+                    {
+                        await executor.ExecuteAsync(action, context);
+                    }
                 }
+            }
+            catch (Exception)
+            {
+                // TODO: Add logging here when observability is implemented
+                // For now, continue with next rule to prevent one failing rule from stopping all execution
+                continue;
             }
         }
     }

@@ -10,5 +10,8 @@
     <Project Path="src/BusinessRules.Core/BusinessRules.Core.csproj" />
     <Project Path="src/BusinessRules.Extensions.DependencyInjection/BusinessRules.Extensions.DependencyInjection.csproj" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/BusinessRules.Tests.Integration/BusinessRules.Tests.Integration.csproj" />
+    <Project Path="tests/BusinessRules.Tests/BusinessRules.Tests.csproj" />
+  </Folder>
 </Solution>

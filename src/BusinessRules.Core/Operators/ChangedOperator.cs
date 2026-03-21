@@ -6,6 +6,8 @@ namespace BusinessRules.Core.Operators;
 public class ChangedOperator : IConditionOperator
 {
     public string Name => "changed";
+    public int MinOperands => 1;
+    public int MaxOperands => 1;
 
     public bool Evaluate(
         EvaluationContext context,

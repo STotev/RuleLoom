@@ -20,6 +20,19 @@ public class ConditionEvaluator : IConditionEvaluator
         if (!_operators.TryGetValue(op.Operator, out var @operator))
             throw new InvalidOperationException($"Operator '{op.Operator}' not found");
 
+        // Validate operand count
+        if (op.Operands.Count < @operator.MinOperands)
+        {
+            throw new InvalidOperationException(
+                $"Operator '{op.Operator}' requires at least {@operator.MinOperands} operand(s), but got {op.Operands.Count}");
+        }
+
+        if (op.Operands.Count > @operator.MaxOperands)
+        {
+            throw new InvalidOperationException(
+                $"Operator '{op.Operator}' allows at most {@operator.MaxOperands} operand(s), but got {op.Operands.Count}");
+        }
+
         return @operator.Evaluate(context, op.Operands, this);
     }
 

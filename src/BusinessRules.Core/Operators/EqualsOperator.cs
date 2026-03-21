@@ -6,6 +6,8 @@ namespace BusinessRules.Core.Operators;
 public class EqualsOperator : IConditionOperator
 {
     public string Name => "eq";
+    public int MinOperands => 2;
+    public int MaxOperands => 2;
 
     public bool Evaluate(
         EvaluationContext ctx,

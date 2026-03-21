@@ -6,6 +6,8 @@ namespace BusinessRules.Core.Operators;
 public class OrOperator : IConditionOperator
 {
     public string Name => "or";
+    public int MinOperands => 1;
+    public int MaxOperands => int.MaxValue;
 
     public bool Evaluate(EvaluationContext context, IReadOnlyList<ConditionNode> operands,
         IConditionEvaluator evaluator)
