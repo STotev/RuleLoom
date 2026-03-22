@@ -1,4 +1,4 @@
-# Copilot Instructions for BusinessRules
+# Copilot Instructions for RuleForge
 
 > A .NET 10.0 library for building event-driven business rule engines with JSON-based rule authoring.
 
@@ -9,14 +9,14 @@
 dotnet build
 
 # Build specific project
-dotnet build src/BusinessRules.Core
+dotnet build src/RuleForge.Core
 
 # Run all tests
 dotnet test
 
 # Run specific test project
-dotnet test tests/BusinessRules.Tests
-dotnet test tests/BusinessRules.Tests.Integration
+dotnet test tests/RuleForge.Tests
+dotnet test tests/RuleForge.Tests.Integration
 
 # Run single test
 dotnet test --filter "FullyQualifiedName~RuleJsonParserTests.Parse_SimpleRuleWithPathOperand_Success"
@@ -29,22 +29,22 @@ dotnet test --collect:"XPlat Code Coverage"
 
 ### Three-Layer Design
 
-1. **BusinessRules.Abstractions** - Zero-dependency contracts layer
+1. **RuleForge.Abstractions** - Zero-dependency contracts layer
    - Contains all interfaces and base types
    - MUST have no external dependencies (critical constraint)
    - Defines the extension model for operators and actions
-   
-2. **BusinessRules.Core** - Default implementation
+
+2. **RuleForge.Core** - Default implementation
    - RuleEngine, ConditionEvaluator
    - Built-in operators: `eq`, `changed`, `and`, `or`, `not`
    - Built-in actions: `log`
 
-3. **BusinessRules.Extensions.DependencyInjection** - Optional DI helpers
+3. **RuleForge.Extensions.DependencyInjection** - Optional DI helpers
 
 ### Core Execution Flow
 
 ```
-Event (eventType, current, previous) 
+Event (eventType, current, previous)
   → RuleEngine filters rules by eventType
   → Rules sorted by Priority (descending)
   → For each rule:
@@ -68,8 +68,8 @@ Event (eventType, current, previous)
 ## Key Conventions
 
 ### Namespace Structure
-- Follow folder structure: `BusinessRules.<Project>.<Folder>`
-- Example: `BusinessRules.Core.Operators`, `BusinessRules.Abstractions.Condition`
+- Follow folder structure: `RuleForge.<Project>.<Folder>`
+- Example: `RuleForge.Core.Operators`, `RuleForge.Abstractions.Condition`
 
 ### Extension Points
 
@@ -80,9 +80,9 @@ public class GreaterThanOperator : IConditionOperator
     public string Name => "gt"; // lowercase convention
     public int MinOperands => 2;
     public int MaxOperands => 2; // use int.MaxValue for unlimited
-    
-    public bool Evaluate(EvaluationContext ctx, 
-                        IReadOnlyList<ConditionNode> operands, 
+
+    public bool Evaluate(EvaluationContext ctx,
+                        IReadOnlyList<ConditionNode> operands,
                         IConditionEvaluator evaluator)
     {
         var left = evaluator.ResolveValue(ctx, operands[0]);
@@ -97,7 +97,7 @@ public class GreaterThanOperator : IConditionOperator
 public class SendEmailAction : IActionExecutor
 {
     public string Type => "send-email"; // kebab-case convention
-    
+
     public async Task ExecuteAsync(ActionDefinition action, EvaluationContext context)
     {
         var to = action.Parameters["to"]?.ToString();
@@ -115,12 +115,12 @@ Rules are typically defined in JSON and parsed via `RuleJsonParser`:
 
 ### Testing Patterns
 
-**Unit tests** (BusinessRules.Tests):
+**Unit tests** (RuleForge.Tests):
 - Test individual components (operators, parsers)
 - Use xUnit framework
 - Follow naming: `[MethodName]_[Scenario]_[ExpectedOutcome]`
 
-**Integration tests** (BusinessRules.Tests.Integration):
+**Integration tests** (RuleForge.Tests.Integration):
 - Test full RuleEngine execution flows
 - Include multiple operators and actions
 - Test with real data objects

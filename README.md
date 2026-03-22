@@ -1,4 +1,4 @@
-# BusinessRules
+# RuleForge
 
 > A powerful, extensible .NET library for building event-driven business rule engines with end-user rule authoring capabilities.
 
@@ -11,7 +11,7 @@
 
 ## 🎯 Overview
 
-BusinessRules is a library-first approach to building configurable rule engines. It allows developers to define **what's possible** (operators, actions, events) and end users to define **business logic** (rules) without code changes.
+RuleForge is a library-first approach to building configurable rule engines. It allows developers to define **what's possible** (operators, actions, events) and end users to define **business logic** (rules) without code changes.
 
 ### Key Features
 
@@ -31,10 +31,10 @@ BusinessRules is a library-first approach to building configurable rule engines.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/BusinessRules.git
+git clone https://github.com/yourusername/RuleForge.git
 
 # Build the solution
-cd BusinessRules
+cd RuleForge
 dotnet build
 
 # Run tests
@@ -44,11 +44,11 @@ dotnet test
 ### Basic Example
 
 ```csharp
-using BusinessRules.Abstractions.Rule;
-using BusinessRules.Core.Engine;
-using BusinessRules.Core.Evaluators;
-using BusinessRules.Core.Operators;
-using BusinessRules.Core.Actions;
+using RuleForge.Abstractions.Rule;
+using RuleForge.Core.Engine;
+using RuleForge.Core.Evaluators;
+using RuleForge.Core.Operators;
+using RuleForge.Core.Actions;
 
 // Define a rule
 var rule = new RuleDefinition
@@ -140,13 +140,13 @@ await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, new[] { 
 
 ```
 ┌─────────────────────────────────────────┐
-│   BusinessRules.Abstractions            │ ← Zero dependencies
+│   RuleForge.Abstractions            │ ← Zero dependencies
 │   - Interfaces & Contracts              │
 │   - RuleDefinition, ConditionNode       │
 └─────────────────────────────────────────┘
                     ↑
 ┌─────────────────────────────────────────┐
-│   BusinessRules.Core                     │
+│   RuleForge.Core                     │
 │   - RuleEngine                           │
 │   - ConditionEvaluator                   │
 │   - Built-in Operators & Actions         │
@@ -241,8 +241,8 @@ public class SendEmailAction : IActionExecutor
 dotnet test
 
 # Run specific test project
-dotnet test tests/BusinessRules.Tests
-dotnet test tests/BusinessRules.Tests.Integration
+dotnet test tests/RuleForge.Tests
+dotnet test tests/RuleForge.Tests.Integration
 
 # Run with coverage
 dotnet test --collect:"XPlat Code Coverage"
@@ -258,15 +258,15 @@ dotnet test --collect:"XPlat Code Coverage"
 ## 📦 Project Structure
 
 ```
-BusinessRules/
+RuleForge/
 ├── src/
-│   ├── BusinessRules.Abstractions/     # Core contracts (zero dependencies)
-│   └── BusinessRules.Core/             # Engine implementation
+│   ├── RuleForge.Abstractions/     # Core contracts (zero dependencies)
+│   └── RuleForge.Core/             # Engine implementation
 ├── tests/
-│   ├── BusinessRules.Tests/            # Unit tests
-│   └── BusinessRules.Tests.Integration/ # Integration tests
+│   ├── RuleForge.Tests/            # Unit tests
+│   └── RuleForge.Tests.Integration/ # Integration tests
 ├── samples/
-│   └── BusinessRules.Samples.Console/  # Example usage
+│   └── RuleForge.Samples.Console/  # Example usage
 └── docs/                                # Documentation
 ```
 
@@ -412,8 +412,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📞 Support
 
 - 📖 [Documentation](docs/)
-- 🐛 [Issue Tracker](https://github.com/yourusername/BusinessRules/issues)
-- 💬 [Discussions](https://github.com/yourusername/BusinessRules/discussions)
+- 🐛 [Issue Tracker](https://github.com/yourusername/RuleForge/issues)
+- 💬 [Discussions](https://github.com/yourusername/RuleForge/discussions)
 
 ---
 

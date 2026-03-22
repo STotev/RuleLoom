@@ -25,7 +25,7 @@ Phase 1.1 focused on fixing critical stability issues in the core rule engine be
 - Higher priority rules now execute first (Priority 10 → 5 → 1)
 
 **Files Modified**:
-- `src/BusinessRules.Core/Engine/RuleEngine.cs`
+- `src/RuleForge.Core/Engine/RuleEngine.cs`
 
 **Test Coverage**:
 - `RuleEngine_PriorityOrdering_ExecutesHighPriorityFirst` - Verifies correct execution order
@@ -56,13 +56,13 @@ var matchingRules = rules
   - `NotOperator`: 1-1 operands
 
 **Files Modified**:
-- `src/BusinessRules.Abstractions/Condition/IConditionOperator.cs`
-- `src/BusinessRules.Core/Evaluators/ConditionEvaluator.cs`
-- `src/BusinessRules.Core/Operators/EqualsOperator.cs`
-- `src/BusinessRules.Core/Operators/ChangedOperator.cs`
-- `src/BusinessRules.Core/Operators/AndOperator.cs`
-- `src/BusinessRules.Core/Operators/OrOperator.cs`
-- `src/BusinessRules.Core/Operators/NotOperator.cs`
+- `src/RuleForge.Abstractions/Condition/IConditionOperator.cs`
+- `src/RuleForge.Core/Evaluators/ConditionEvaluator.cs`
+- `src/RuleForge.Core/Operators/EqualsOperator.cs`
+- `src/RuleForge.Core/Operators/ChangedOperator.cs`
+- `src/RuleForge.Core/Operators/AndOperator.cs`
+- `src/RuleForge.Core/Operators/OrOperator.cs`
+- `src/RuleForge.Core/Operators/NotOperator.cs`
 
 **Example Error Message**:
 ```
@@ -91,8 +91,8 @@ Operator 'eq' requires at least 2 operand(s), but got 1
 - Failed rules don't prevent other rules from executing
 
 **Files Modified**:
-- `src/BusinessRules.Abstractions/PathResolver.cs`
-- `src/BusinessRules.Core/Engine/RuleEngine.cs`
+- `src/RuleForge.Abstractions/PathResolver.cs`
+- `src/RuleForge.Core/Engine/RuleEngine.cs`
 
 **Test Coverage**:
 - `RuleEngine_MissingProperty_DoesNotCrash` - Verifies graceful handling of missing properties
@@ -111,7 +111,7 @@ Operator 'eq' requires at least 2 operand(s), but got 1
 - Updated all parse methods to use case-insensitive helpers
 
 **Files Modified**:
-- `src/BusinessRules.Abstractions/Rule/RuleJsonParser.cs`
+- `src/RuleForge.Abstractions/Rule/RuleJsonParser.cs`
 
 **Test Coverage**:
 - `Parse_CaseInsensitive_Success` - Verifies case-insensitive parsing
@@ -124,7 +124,7 @@ Operator 'eq' requires at least 2 operand(s), but got 1
 
 **Solution**: Created comprehensive integration test suite
 
-**New Project**: `tests/BusinessRules.Tests.Integration/`
+**New Project**: `tests/RuleForge.Tests.Integration/`
 
 **Test Coverage** (10 tests):
 1. ✅ Simple equals condition
@@ -140,7 +140,7 @@ Operator 'eq' requires at least 2 operand(s), but got 1
 11. ✅ JSON-parsed rule execution
 
 **Files Created**:
-- `tests/BusinessRules.Tests.Integration/RuleEngineIntegrationTests.cs`
+- `tests/RuleForge.Tests.Integration/RuleEngineIntegrationTests.cs`
 
 ---
 

@@ -1,8 +1,8 @@
-# BusinessRules Project - Analysis & Recommendations
+# RuleForge Project - Analysis & Recommendations
 
 ## 📋 Summary
 
-**BusinessRules** is a .NET library for building event-driven, configurable rule engines. It allows defining business rules externally (via JSON) and executing them against events with current/previous state tracking.
+**RuleForge** is a .NET library for building event-driven, configurable rule engines. It allows defining business rules externally (via JSON) and executing them against events with current/previous state tracking.
 
 ### Core Capabilities:
 - **Event-driven execution**: Rules are triggered by named events
@@ -16,20 +16,20 @@
 ### Architecture:
 ```
 ┌─────────────────────────────────────────┐
-│   BusinessRules.Abstractions            │ ← Contracts only, no dependencies
+│   RuleForge.Abstractions            │ ← Contracts only, no dependencies
 │   - Interfaces & DTOs                    │
 │   - RuleDefinition, ConditionNode        │
 └─────────────────────────────────────────┘
                     ↑
 ┌─────────────────────────────────────────┐
-│   BusinessRules.Core                     │
+│   RuleForge.Core                     │
 │   - RuleEngine                           │
 │   - ConditionEvaluator                   │
 │   - Built-in operators & actions         │
 └─────────────────────────────────────────┘
                     ↑
 ┌─────────────────────────────────────────┐
-│   BusinessRules.Extensions.DI            │
+│   RuleForge.Extensions.DI            │
 │   - Service registration                 │
 └─────────────────────────────────────────┘
 ```

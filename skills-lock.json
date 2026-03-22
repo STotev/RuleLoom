@@ -1,10 +1,60 @@
 {
   "version": 1,
   "skills": {
+    "brainstorming": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "efddfd0efbd0e7b5075c5a66ff91a706ac506c88c7b5ddd7fd45a351cb3fe3af"
+    },
+    "dotnet-advisor": {
+      "source": "novotnyllc/dotnet-artisan",
+      "sourceType": "github",
+      "computedHash": "1971796af6a0d5fef67dd36d7c196e869c2f47b450cbb2008b04ce46fee0c41e"
+    },
+    "dotnet-api": {
+      "source": "novotnyllc/dotnet-artisan",
+      "sourceType": "github",
+      "computedHash": "b3836f0881c0bff492ba29aafc9a8e1bd3d95cfd6c9b07188de50a2227097058"
+    },
+    "dotnet-csharp": {
+      "source": "novotnyllc/dotnet-artisan",
+      "sourceType": "github",
+      "computedHash": "1dd7f86c7501025e0f3822a8b79e620ea735de597bcdcb1621535c02024f651e"
+    },
+    "dotnet-debugging": {
+      "source": "novotnyllc/dotnet-artisan",
+      "sourceType": "github",
+      "computedHash": "349fc14a54ec04a993ba24f9eddb09acea06d905284e14a7c612ef69144fa3b3"
+    },
     "dotnet-design-pattern-review": {
       "source": "github/awesome-copilot",
       "sourceType": "github",
       "computedHash": "0b2b93ae1950e075045546dcf8d5a0971eea77abc5707916c99033c334accf69"
+    },
+    "dotnet-devops": {
+      "source": "novotnyllc/dotnet-artisan",
+      "sourceType": "github",
+      "computedHash": "16707c25d5dd451f8c67a2192c20983ca43d33b61e250942035410011ba031e5"
+    },
+    "dotnet-testing": {
+      "source": "novotnyllc/dotnet-artisan",
+      "sourceType": "github",
+      "computedHash": "58e19c74fa4c7d192ec8cc653b2ac954c9ccbe31f58e45c6f919fa707e0ded31"
+    },
+    "dotnet-tooling": {
+      "source": "novotnyllc/dotnet-artisan",
+      "sourceType": "github",
+      "computedHash": "c0c1b5db26d435f1ccf93aa1acde121779d6df749f2c4f900ad1b2609c21f951"
+    },
+    "dotnet-ui": {
+      "source": "novotnyllc/dotnet-artisan",
+      "sourceType": "github",
+      "computedHash": "66819bcc2b601f20de665a5dfe12fd54cdb3d64718116748abdd7d4e174282e9"
+    },
+    "using-dotnet": {
+      "source": "novotnyllc/dotnet-artisan",
+      "sourceType": "github",
+      "computedHash": "e26654a22808ee4a2472d9c0c3418a733a585f5c2afa71e02193b80af9868d95"
     }
   }
 }

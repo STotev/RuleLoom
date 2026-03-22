@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/RuleForge.Samples.Console/RuleForge.Samples.Console.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/RuleForge.Abstractions/RuleForge.Abstractions.csproj" />
+    <Project Path="src/RuleForge.Core/RuleForge.Core.csproj" />
+    <Project Path="src/RuleForge.Extensions.DependencyInjection/RuleForge.Extensions.DependencyInjection.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RuleForge.Tests.Integration/RuleForge.Tests.Integration.csproj" />
+    <Project Path="tests/RuleForge.Tests/RuleForge.Tests.csproj" />
+  </Folder>
+</Solution>
