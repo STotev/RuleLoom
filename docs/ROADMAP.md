@@ -1,4 +1,4 @@
-# BusinessRules Library - Development Roadmap
+# RuleForge Library - Development Roadmap
 
 **Last Updated**: March 21, 2026
 **Version**: 0.1.0-alpha
@@ -110,7 +110,7 @@ public class RuleEngineService : IEventConsumer<OrderCreatedEvent>
 - [ ] Consider adding StopOnFirstMatch option (future)
 
 **Files to modify**:
-- `src/BusinessRules.Core/Engine/RuleEngine.cs`
+- `src/RuleForge.Core/Engine/RuleEngine.cs`
 
 **Acceptance Criteria**:
 ```csharp
@@ -135,9 +135,9 @@ var rules = new[] {
 - [x] Add unit tests for validation
 
 **Files to modify**:
-- `src/BusinessRules.Abstractions/Condition/IConditionOperator.cs`
-- `src/BusinessRules.Core/Evaluators/ConditionEvaluator.cs`
-- `src/BusinessRules.Core/Operators/*.cs` (all operators)
+- `src/RuleForge.Abstractions/Condition/IConditionOperator.cs`
+- `src/RuleForge.Core/Evaluators/ConditionEvaluator.cs`
+- `src/RuleForge.Core/Operators/*.cs` (all operators)
 
 **Example**:
 ```csharp
@@ -170,9 +170,9 @@ if (op.Operands.Count < @operator.MinOperands || op.Operands.Count > @operator.M
 - [x] Add error handling tests
 
 **Files to modify**:
-- `src/BusinessRules.Abstractions/PathResolver.cs`
-- `src/BusinessRules.Abstractions/EvaluationContext.cs`
-- `src/BusinessRules.Core/Engine/RuleEngine.cs`
+- `src/RuleForge.Abstractions/PathResolver.cs`
+- `src/RuleForge.Abstractions/EvaluationContext.cs`
+- `src/RuleForge.Core/Engine/RuleEngine.cs`
 
 **Design Decision**:
 - Missing properties return `null` (don't throw)
@@ -185,15 +185,15 @@ if (op.Operands.Count < @operator.MinOperands || op.Operands.Count > @operator.M
 **Problem**: Only unit tests exist, no end-to-end testing.
 
 **Tasks**:
-- [x] Create `BusinessRules.Tests.Integration` project
+- [x] Create `RuleForge.Tests.Integration` project
 - [x] Test complete flow: Parse JSON → Execute → Verify
 - [x] Test all operators with realistic data
 - [x] Test error scenarios
 - [x] Add performance benchmarks (optional)
 
 **New files**:
-- `tests/BusinessRules.Tests.Integration/BusinessRules.Tests.Integration.csproj`
-- `tests/BusinessRules.Tests.Integration/RuleEngineIntegrationTests.cs`
+- `tests/RuleForge.Tests.Integration/RuleForge.Tests.Integration.csproj`
+- `tests/RuleForge.Tests.Integration/RuleEngineIntegrationTests.cs`
 
 **Results**: 10/11 tests passing (1 skipped for nested properties investigation)
 
@@ -213,7 +213,7 @@ if (op.Operands.Count < @operator.MinOperands || op.Operands.Count > @operator.M
 
 **New abstractions**:
 ```csharp
-// src/BusinessRules.Abstractions/Schema/FieldSchema.cs
+// src/RuleForge.Abstractions/Schema/FieldSchema.cs
 public class FieldSchema
 {
     public required string Path { get; init; }           // "User.Email"
@@ -224,7 +224,7 @@ public class FieldSchema
     public Dictionary<string, object>? Metadata { get; init; } // UI hints
 }
 
-// src/BusinessRules.Abstractions/Schema/FieldType.cs
+// src/RuleForge.Abstractions/Schema/FieldType.cs
 public enum FieldType
 {
     String,
@@ -249,7 +249,7 @@ public enum FieldType
 
 **New abstractions**:
 ```csharp
-// src/BusinessRules.Abstractions/Schema/EventSchema.cs
+// src/RuleForge.Abstractions/Schema/EventSchema.cs
 public class EventSchema
 {
     public required string EventType { get; init; }
@@ -259,7 +259,7 @@ public class EventSchema
     public List<string> AllowedOperators { get; init; } = []; // Optional filter
 }
 
-// src/BusinessRules.Abstractions/Schema/ISchemaProvider.cs
+// src/RuleForge.Abstractions/Schema/ISchemaProvider.cs
 public interface ISchemaProvider
 {
     EventSchema? GetSchema(string eventType);
@@ -280,13 +280,13 @@ public interface ISchemaProvider
 
 **New abstractions**:
 ```csharp
-// src/BusinessRules.Abstractions/Validation/IRuleValidator.cs
+// src/RuleForge.Abstractions/Validation/IRuleValidator.cs
 public interface IRuleValidator
 {
     ValidationResult Validate(RuleDefinition rule);
 }
 
-// src/BusinessRules.Abstractions/Validation/ValidationResult.cs
+// src/RuleForge.Abstractions/Validation/ValidationResult.cs
 public class ValidationResult
 {
     public bool IsValid => Errors.Count == 0;
@@ -312,7 +312,7 @@ public enum ValidationErrorType
 
 **Implementation**:
 ```csharp
-// src/BusinessRules.Core/Validation/SchemaRuleValidator.cs
+// src/RuleForge.Core/Validation/SchemaRuleValidator.cs
 public class SchemaRuleValidator : IRuleValidator
 {
     private readonly ISchemaProvider _schemaProvider;
@@ -353,7 +353,7 @@ public class SchemaRuleValidator : IRuleValidator
 
 **New abstractions**:
 ```csharp
-// src/BusinessRules.Abstractions/Events/IRuleEventPublisher.cs
+// src/RuleForge.Abstractions/Events/IRuleEventPublisher.cs
 public interface IRuleEventPublisher
 {
     Task PublishAsync<TData>(
@@ -363,7 +363,7 @@ public interface IRuleEventPublisher
         CancellationToken cancellationToken = default) where TData : class;
 }
 
-// src/BusinessRules.Abstractions/Events/RuleEvent.cs
+// src/RuleForge.Abstractions/Events/RuleEvent.cs
 public class RuleEvent
 {
     public required string EventType { get; init; }
@@ -389,7 +389,7 @@ public class RuleEvent
 
 **Implementation**:
 ```csharp
-// src/BusinessRules.Core/Events/InProcessEventPublisher.cs
+// src/RuleForge.Core/Events/InProcessEventPublisher.cs
 public class InProcessEventPublisher : IRuleEventPublisher
 {
     private readonly RuleEngine _ruleEngine;
@@ -420,7 +420,7 @@ public class InProcessEventPublisher : IRuleEventPublisher
 
 **New abstractions**:
 ```csharp
-// src/BusinessRules.Abstractions/Repository/IRuleRepository.cs
+// src/RuleForge.Abstractions/Repository/IRuleRepository.cs
 public interface IRuleRepository
 {
     Task<IReadOnlyList<RuleDefinition>> GetRulesAsync(
@@ -438,7 +438,7 @@ public interface IRuleRepository
 
 **Implementation**:
 ```csharp
-// src/BusinessRules.Core/Repository/InMemoryRuleRepository.cs
+// src/RuleForge.Core/Repository/InMemoryRuleRepository.cs
 public class InMemoryRuleRepository : IRuleRepository
 {
     private readonly Dictionary<string, RuleDefinition> _rules = new();
@@ -496,7 +496,7 @@ var publisher = builder.BuildPublisher();
 ```
 
 **New files**:
-- `src/BusinessRules.Core/Configuration/RuleEngineBuilder.cs`
+- `src/RuleForge.Core/Configuration/RuleEngineBuilder.cs`
 
 **Tasks**:
 - [ ] Create RuleEngineBuilder
@@ -512,9 +512,9 @@ var publisher = builder.BuildPublisher();
 #### 1.4.1 NuGet Packaging
 
 **Packages to create**:
-1. **BusinessRules.Abstractions** - Core contracts, zero dependencies
-2. **BusinessRules.Core** - Engine and default implementations
-3. **BusinessRules** - Meta-package (includes both)
+1. **RuleForge.Abstractions** - Core contracts, zero dependencies
+2. **RuleForge.Core** - Engine and default implementations
+3. **RuleForge** - Meta-package (includes both)
 
 **Tasks**:
 - [ ] Add package metadata (authors, license, icon, tags)
@@ -541,9 +541,9 @@ var publisher = builder.BuildPublisher();
 #### 1.4.3 Comprehensive Samples
 
 **Sample projects**:
-- [ ] `samples/BusinessRules.Samples.ECommerce/` - Order processing rules
-- [ ] `samples/BusinessRules.Samples.RealEstate/` - Property management rules
-- [ ] `samples/BusinessRules.Samples.MultiTenant/` - Multi-tenant scenario
+- [ ] `samples/RuleForge.Samples.ECommerce/` - Order processing rules
+- [ ] `samples/RuleForge.Samples.RealEstate/` - Property management rules
+- [ ] `samples/RuleForge.Samples.MultiTenant/` - Multi-tenant scenario
 
 ---
 
@@ -554,11 +554,11 @@ var publisher = builder.BuildPublisher();
 ### Phase 2.1: ASP.NET Core Integration (v0.4)
 > **ETA**: 2 weeks
 
-**New package**: `BusinessRules.Extensions.DependencyInjection`
+**New package**: `RuleForge.Extensions.DependencyInjection`
 
 **Example API**:
 ```csharp
-services.AddBusinessRules(options =>
+services.AddRuleForge(options =>
 {
     options.AddDefaultOperators();
     options.AddOperator<CustomOperator>();

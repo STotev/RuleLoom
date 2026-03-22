@@ -1,4 +1,4 @@
-# BusinessRules Quick Start Guide
+# RuleForge Quick Start Guide
 
 **Version**: v0.1.0-alpha
 **Last Updated**: March 21, 2026
@@ -9,10 +9,10 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/BusinessRules.git
+git clone https://github.com/yourusername/RuleForge.git
 
 # Build the solution
-cd BusinessRules
+cd RuleForge
 dotnet build
 
 # Run tests
@@ -26,9 +26,9 @@ dotnet test
 ### 1. Create a Simple Rule
 
 ```csharp
-using BusinessRules.Abstractions.Rule;
-using BusinessRules.Abstractions.Condition;
-using BusinessRules.Abstractions.Action;
+using RuleForge.Abstractions.Rule;
+using RuleForge.Abstractions.Condition;
+using RuleForge.Abstractions.Action;
 
 var rule = new RuleDefinition
 {
@@ -58,10 +58,10 @@ var rule = new RuleDefinition
 ### 2. Create Rule Engine
 
 ```csharp
-using BusinessRules.Core.Engine;
-using BusinessRules.Core.Evaluators;
-using BusinessRules.Core.Operators;
-using BusinessRules.Core.Actions;
+using RuleForge.Core.Engine;
+using RuleForge.Core.Evaluators;
+using RuleForge.Core.Operators;
+using RuleForge.Core.Actions;
 
 var operators = new List<IConditionOperator>
 {
@@ -140,7 +140,7 @@ await engine.ExecuteAsync(
 ### Parse JSON Rule
 
 ```csharp
-using BusinessRules.Abstractions.Rule;
+using RuleForge.Abstractions.Rule;
 
 var json = File.ReadAllText("rule.json");
 var rule = RuleJsonParser.Parse(json);
@@ -308,8 +308,8 @@ Actions can have their own conditions:
 ## 🔌 Creating Custom Operators
 
 ```csharp
-using BusinessRules.Abstractions;
-using BusinessRules.Abstractions.Condition;
+using RuleForge.Abstractions;
+using RuleForge.Abstractions.Condition;
 
 public class GreaterThanOperator : IConditionOperator
 {
@@ -350,8 +350,8 @@ var operators = new List<IConditionOperator>
 ## 🎬 Creating Custom Actions
 
 ```csharp
-using BusinessRules.Abstractions;
-using BusinessRules.Abstractions.Action;
+using RuleForge.Abstractions;
+using RuleForge.Abstractions.Action;
 
 public class SendEmailAction : IActionExecutor
 {
