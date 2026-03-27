@@ -2,10 +2,9 @@
 
 > A powerful, extensible .NET library for building event-driven business rule engines with end-user rule authoring capabilities.
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-24%2F25%20passing-green)]()
-[![Version](https://img.shields.io/badge/version-0.1.0--alpha-blue)]()
-[![.NET](https://img.shields.io/badge/.NET-10.0-purple)]()
+[![CI](https://github.com/STotev/RuleForge/actions/workflows/ci.yml/badge.svg)](https://github.com/STotev/RuleForge/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-10.0-purple)](https://dotnet.microsoft.com/download)
 
 ---
 
@@ -395,9 +394,16 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
+## 🤝 Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on
+reporting bugs, requesting features, and submitting pull requests.
+
+---
+
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
@@ -412,8 +418,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📞 Support
 
 - 📖 [Documentation](docs/)
-- 🐛 [Issue Tracker](https://github.com/yourusername/RuleForge/issues)
-- 💬 [Discussions](https://github.com/yourusername/RuleForge/discussions)
+- 🐛 [Issue Tracker](https://github.com/STotev/RuleForge/issues)
+- 💬 [Discussions](https://github.com/STotev/RuleForge/discussions)
 
 ---
 
