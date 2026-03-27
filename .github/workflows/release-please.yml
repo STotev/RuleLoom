@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: simple
+          # When you are ready to publish to NuGet, add the steps below
+          # by uncommenting and configuring the publish job.
+
+      # Uncomment when ready to publish to NuGet:
+      #
+      # - name: Checkout
+      #   uses: actions/checkout@v4
+      #   if: ${{ steps.release.outputs.release_created }}
+      #
+      # - name: Setup .NET
+      #   uses: actions/setup-dotnet@v4
+      #   if: ${{ steps.release.outputs.release_created }}
+      #   with:
+      #     dotnet-version: "10.x"
+      #
+      # - name: Pack
+      #   if: ${{ steps.release.outputs.release_created }}
+      #   run: dotnet pack --configuration Release -o ./artifacts
+      #
+      # - name: Publish to NuGet
+      #   if: ${{ steps.release.outputs.release_created }}
+      #   run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
