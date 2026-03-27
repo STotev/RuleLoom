@@ -51,6 +51,11 @@
       "sourceType": "github",
       "computedHash": "66819bcc2b601f20de665a5dfe12fd54cdb3d64718116748abdd7d4e174282e9"
     },
+    "open-source-management": {
+      "source": "AbsolutelySkilled/AbsolutelySkilled",
+      "sourceType": "github",
+      "computedHash": "8689f8b3a39e908d77fb3de5e7d76fa0b9375bc02bee30e73863f9ab0f508b69"
+    },
     "using-dotnet": {
       "source": "novotnyllc/dotnet-artisan",
       "sourceType": "github",
