@@ -16,6 +16,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # MinVer needs full history to find the nearest git tag
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

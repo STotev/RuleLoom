@@ -25,6 +25,8 @@ jobs:
       # - name: Checkout
       #   uses: actions/checkout@v4
       #   if: ${{ steps.release.outputs.release_created }}
+      #   with:
+      #     fetch-depth: 0  # MinVer needs full history to find the release tag
       #
       # - name: Setup .NET
       #   uses: actions/setup-dotnet@v4
@@ -35,6 +37,8 @@ jobs:
       # - name: Pack
       #   if: ${{ steps.release.outputs.release_created }}
       #   run: dotnet pack --configuration Release -o ./artifacts
+      #   # MinVer automatically picks up the git tag created by release-please.
+      #   # No -p:Version= flag needed.
       #
       # - name: Publish to NuGet
       #   if: ${{ steps.release.outputs.release_created }}
