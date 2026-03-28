@@ -176,10 +176,11 @@ public class SendEmailAction : IActionExecutor
 {
     public string Type => "send-email"; // kebab-case convention
 
-    public async Task ExecuteAsync(ActionDefinition action, EvaluationContext context)
+    public async Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context)
     {
         var to = action.Parameters["to"]?.ToString();
         // implementation
+        return ActionResult.Success();
     }
 }
 ```
