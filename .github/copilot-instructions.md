@@ -28,6 +28,7 @@ When working on any issue:
     - Represent a single logical change
     - Be minimal and focused
     - Have a clear and descriptive message
+    - NOT include "Co-authored-by" trailer in the commit message
 6. Prefer multiple commits over a single large commit
 
 ## Build, Test, and Lint
