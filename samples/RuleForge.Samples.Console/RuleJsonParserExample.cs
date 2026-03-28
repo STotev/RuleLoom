@@ -1,5 +1,4 @@
 using RuleForge.Abstractions.Rule;
-using RuleForge.Abstractions.Condition;
 
 namespace RuleForge.Samples.Console;
 

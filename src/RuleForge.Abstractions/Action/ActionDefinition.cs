@@ -1,4 +1,5 @@
 using RuleForge.Abstractions.Condition;
+using RuleForge.Abstractions.Scheduling;
 
 namespace RuleForge.Abstractions.Action;
 
@@ -23,4 +24,10 @@ public class ActionDefinition
     /// Parameters for the action executor. The structure depends on the action type.
     /// </summary>
     public Dictionary<string, object?> Parameters { get; init; } = new();
+
+    /// <summary>
+    /// Optional scheduling metadata for this action.
+    /// If null, the action executes immediately.
+    /// </summary>
+    public ScheduleMetadata? Schedule { get; init; }
 }

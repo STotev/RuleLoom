@@ -48,7 +48,8 @@ public static class RuleJsonParser
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             Converters =
             {
-                new ConditionNodeJsonConverter()
+                new ConditionNodeJsonConverter(),
+                new JsonStringEnumConverter()
             }
         };
         return options;
@@ -211,6 +212,5 @@ internal class ConditionNodeJsonConverter : JsonConverter<ConditionNode>
         };
     }
 }
-
 
 

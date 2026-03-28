@@ -2,6 +2,35 @@
 
 > A .NET 10.0 library for building event-driven business rule engines with JSON-based rule authoring.
 
+## Development Workflow (MANDATORY)
+
+When working on any issue:
+
+1. Create a branch following release-please format:
+   - `feat/<short-description>` for new features
+   - `fix/<short-description>` for bug fixes
+   - `refactor/<short-description>` for internal changes
+   - `test/<short-description>` for test-related changes
+   - `chore/<short-description>` for maintenance tasks
+   - `docs/<short-description>` for documentation updates
+2. Never work directly on `main`
+3. Work incrementally:
+    - Make small, logical changes
+    - Avoid large, monolithic updates
+4. Commit frequently using Conventional Commits (release-please compatible):
+    - feat: new feature
+    - fix: bug fix
+    - refactor: internal change without behavior change
+    - test: adding or updating tests
+    - chore: maintenance, tooling, dependencies
+    - docs: documentation changes
+5. Each commit must:
+    - Represent a single logical change
+    - Be minimal and focused
+    - Have a clear and descriptive message
+    - NOT include "Co-authored-by" trailer in the commit message
+6. Prefer multiple commits over a single large commit
+
 ## Build, Test, and Lint
 
 ```bash
@@ -24,6 +53,55 @@ dotnet test --filter "FullyQualifiedName~RuleJsonParserTests.Parse_SimpleRuleWit
 # Run tests with coverage
 dotnet test --collect:"XPlat Code Coverage"
 ```
+
+## Code Changes
+
+When implementing changes:
+
+1. Do NOT output only final code
+2. Think in steps:
+    - What changes are needed?
+    - What is the smallest safe increment?
+
+3. Prefer evolving the codebase rather than rewriting large parts
+
+---
+
+## Safety Checks Before Finishing
+
+- Code compiles
+- Tests pass
+- No obvious overengineering
+- No unused abstractions or dead code
+- Naming is consistent with existing codebase
+
+---
+
+## Priority Order (when unsure)
+
+1. Simplicity
+2. Consistency with existing code
+3. Readability
+4. Correctness
+5. Extensibility (only when justified)
+
+---
+
+## Behavior Expectations
+
+- Do not introduce new patterns without clear justification
+- Do not refactor unrelated code unless necessary
+- Do not create abstractions "just in case"
+- If uncertain, choose the simpler solution
+
+---
+
+## Activation
+
+When the user says:
+> "follow repo workflow"
+
+All rules in this document must be strictly followed.
 
 ## High-Level Architecture
 

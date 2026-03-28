@@ -1,23 +1,25 @@
-using Xunit;
+using System.Text.Json;
 using RuleForge.Abstractions.Condition;
 using RuleForge.Abstractions.Rule;
+using RuleForge.Abstractions.Scheduling;
 
-namespace RuleForge.Tests.Rule;
+namespace RuleForge.Tests;
 
 public class RuleJsonParserTests
 {
     [Fact]
     public void Parse_SimpleRuleWithPathOperand_Success()
     {
-        var json = """
-        {
-          "name": "Test Rule",
-          "eventType": "PropertyUpdated",
-          "priority": 1,
-          "condition": { "path": "Price" },
-          "actions": []
-        }
-        """;
+        const string json =
+            """
+            {
+              "name": "Test Rule",
+              "eventType": "PropertyUpdated",
+              "priority": 1,
+              "condition": { "path": "Price" },
+              "actions": []
+            }
+            """;
 
         var rule = RuleJsonParser.Parse(json);
 
@@ -32,14 +34,15 @@ public class RuleJsonParserTests
     [Fact]
     public void Parse_RuleWithValueOperand_Success()
     {
-        var json = """
-        {
-          "name": "Value Test",
-          "eventType": "Event1",
-          "condition": { "value": 42 },
-          "actions": []
-        }
-        """;
+        const string json =
+            """
+            {
+              "name": "Value Test",
+              "eventType": "Event1",
+              "condition": { "value": 42 },
+              "actions": []
+            }
+            """;
 
         var rule = RuleJsonParser.Parse(json);
 
@@ -51,20 +54,21 @@ public class RuleJsonParserTests
     [Fact]
     public void Parse_RuleWithOperatorCondition_Success()
     {
-        var json = """
-        {
-          "name": "Operator Test",
-          "eventType": "Event1",
-          "condition": {
-            "operator": "eq",
-            "operands": [
-              { "path": "Price" },
-              { "value": 100 }
-            ]
-          },
-          "actions": []
-        }
-        """;
+        const string json =
+            """
+            {
+              "name": "Operator Test",
+              "eventType": "Event1",
+              "condition": {
+                "operator": "eq",
+                "operands": [
+                  { "path": "Price" },
+                  { "value": 100 }
+                ]
+              },
+              "actions": []
+            }
+            """;
 
         var rule = RuleJsonParser.Parse(json);
 
@@ -79,34 +83,35 @@ public class RuleJsonParserTests
     [Fact]
     public void Parse_RuleWithNestedConditions_Success()
     {
-        var json = """
-        {
-          "name": "Nested Test",
-          "eventType": "Event1",
-          "condition": {
-            "operator": "and",
-            "operands": [
-              {
-                "operator": "changed",
-                "operands": [{ "path": "Price" }]
-              },
-              {
-                "operator": "not",
+        const string json =
+            """
+            {
+              "name": "Nested Test",
+              "eventType": "Event1",
+              "condition": {
+                "operator": "and",
                 "operands": [
                   {
-                    "operator": "eq",
+                    "operator": "changed",
+                    "operands": [{ "path": "Price" }]
+                  },
+                  {
+                    "operator": "not",
                     "operands": [
-                      { "path": "Price" },
-                      { "value": 999 }
+                      {
+                        "operator": "eq",
+                        "operands": [
+                          { "path": "Price" },
+                          { "value": 999 }
+                        ]
+                      }
                     ]
                   }
                 ]
-              }
-            ]
-          },
-          "actions": []
-        }
-        """;
+              },
+              "actions": []
+            }
+            """;
 
         var rule = RuleJsonParser.Parse(json);
 
@@ -128,24 +133,25 @@ public class RuleJsonParserTests
     [Fact]
     public void Parse_RuleWithActions_Success()
     {
-        var json = """
-        {
-          "name": "Action Test",
-          "eventType": "Event1",
-          "condition": { "path": "Field" },
-          "actions": [
+        const string json =
+            """
             {
-              "type": "log",
-              "parameters": { "message": "Alert!", "level": "warning" }
-            },
-            {
-              "type": "email",
-              "parameters": { "to": "admin@example.com" },
-              "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "error" }] }
+              "name": "Action Test",
+              "eventType": "Event1",
+              "condition": { "path": "Field" },
+              "actions": [
+                {
+                  "type": "log",
+                  "parameters": { "message": "Alert!", "level": "warning" }
+                },
+                {
+                  "type": "email",
+                  "parameters": { "to": "admin@example.com" },
+                  "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "error" }] }
+                }
+              ]
             }
-          ]
-        }
-        """;
+            """;
 
         var rule = RuleJsonParser.Parse(json);
 
@@ -163,16 +169,169 @@ public class RuleJsonParserTests
     }
 
     [Fact]
+    public void Parse_ActionWithNoSchedule_ScheduleIsNull()
+    {
+        const string json =
+            """
+            {
+              "name": "No Schedule Test",
+              "eventType": "Event1",
+              "condition": { "value": true },
+              "actions": [
+                {
+                  "type": "log",
+                  "parameters": { "message": "Immediate by default" }
+                }
+              ]
+            }
+            """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        Assert.Single(rule.Actions);
+        Assert.Null(rule.Actions[0].Schedule);
+    }
+
+    [Fact]
+    public void Parse_ActionWithImmediateSchedule_Success()
+    {
+        const string json =
+            """
+            {
+              "name": "Immediate Schedule Test",
+              "eventType": "Event1",
+              "condition": { "value": true },
+              "actions": [
+                {
+                  "type": "log",
+                  "schedule": { "mode": "Immediate" },
+                  "parameters": { "message": "Immediate explicitly" }
+                }
+              ]
+            }
+            """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        var action = Assert.Single(rule.Actions);
+        var schedule = Assert.IsType<ScheduleMetadata>(action.Schedule);
+        Assert.Equal(ScheduleMode.Immediate, schedule.Mode);
+        Assert.Null(schedule.Amount);
+        Assert.Null(schedule.Unit);
+        Assert.Null(schedule.ReferencePath);
+    }
+
+    [Fact]
+    public void Parse_ActionWithDelaySchedule_Success()
+    {
+        const string json =
+            """
+            {
+              "name": "Delay Schedule Test",
+              "eventType": "Event1",
+              "condition": { "value": true },
+              "actions": [
+                {
+                  "type": "log",
+                  "schedule": {
+                    "mode": "Delay",
+                    "amount": 24,
+                    "unit": "Hours"
+                  },
+                  "parameters": { "message": "Delayed" }
+                }
+              ]
+            }
+            """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        var action = Assert.Single(rule.Actions);
+        var schedule = Assert.IsType<ScheduleMetadata>(action.Schedule);
+        Assert.Equal(ScheduleMode.Delay, schedule.Mode);
+        Assert.Equal(24, schedule.Amount);
+        Assert.Equal(ScheduleUnit.Hours, schedule.Unit);
+        Assert.Null(schedule.ReferencePath);
+    }
+
+    [Fact]
+    public void Parse_ActionWithAdvanceSchedule_Success()
+    {
+        const string json =
+            """
+            {
+              "name": "Advance Schedule Test",
+              "eventType": "Event1",
+              "condition": { "value": true },
+              "actions": [
+                {
+                  "type": "log",
+                  "schedule": {
+                    "mode": "Advance",
+                    "amount": 2,
+                    "unit": "Hours",
+                    "referencePath": "Order.DueDate"
+                  },
+                  "parameters": { "message": "Advance" }
+                }
+              ]
+            }
+            """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        var action = Assert.Single(rule.Actions);
+        var schedule = Assert.IsType<ScheduleMetadata>(action.Schedule);
+        Assert.Equal(ScheduleMode.Advance, schedule.Mode);
+        Assert.Equal(2, schedule.Amount);
+        Assert.Equal(ScheduleUnit.Hours, schedule.Unit);
+        Assert.Equal("Order.DueDate", schedule.ReferencePath);
+    }
+
+    [Fact]
+    public void Parse_ScheduleEnumCaseInsensitive_Success()
+    {
+        const string json =
+            """
+            {
+              "name": "Case-insensitive Schedule Test",
+              "eventType": "Event1",
+              "condition": { "value": true },
+              "actions": [
+                {
+                  "type": "log",
+                  "schedule": {
+                    "mode": "delay",
+                    "amount": 30,
+                    "unit": "minutes"
+                  },
+                  "parameters": { "message": "Case-insensitive enums" }
+                }
+              ]
+            }
+            """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        var action = Assert.Single(rule.Actions);
+        var schedule = Assert.IsType<ScheduleMetadata>(action.Schedule);
+        Assert.Equal(ScheduleMode.Delay, schedule.Mode);
+        Assert.Equal(30, schedule.Amount);
+        Assert.Equal(ScheduleUnit.Minutes, schedule.Unit);
+    }
+
+    [Fact]
     public void Parse_CaseInsensitive_Success()
     {
-        var json = """
-        {
-          "NAME": "Test",
-          "EVENTTYPE": "Event1",
-          "CONDITION": { "PATH": "Field" },
-          "ACTIONS": []
-        }
-        """;
+        const string json =
+            """
+            {
+              "NAME": "Test",
+              "EVENTTYPE": "Event1",
+              "CONDITION": { "PATH": "Field" },
+              "ACTIONS": []
+            }
+            """;
 
         var rule = RuleJsonParser.Parse(json);
 
@@ -183,16 +342,17 @@ public class RuleJsonParserTests
     [Fact]
     public void Parse_VariousValueTypes_Success()
     {
-        var json = """
-        [
-          { "name": "R1", "eventType": "E", "condition": { "value": null }, "actions": [] },
-          { "name": "R2", "eventType": "E", "condition": { "value": true }, "actions": [] },
-          { "name": "R3", "eventType": "E", "condition": { "value": "string" }, "actions": [] },
-          { "name": "R4", "eventType": "E", "condition": { "value": 42 }, "actions": [] },
-          { "name": "R5", "eventType": "E", "condition": { "value": 3.14 }, "actions": [] },
-          { "name": "R6", "eventType": "E", "condition": { "value": [1, 2, 3] }, "actions": [] }
-        ]
-        """;
+        const string json =
+            """
+            [
+              { "name": "R1", "eventType": "E", "condition": { "value": null }, "actions": [] },
+              { "name": "R2", "eventType": "E", "condition": { "value": true }, "actions": [] },
+              { "name": "R3", "eventType": "E", "condition": { "value": "string" }, "actions": [] },
+              { "name": "R4", "eventType": "E", "condition": { "value": 42 }, "actions": [] },
+              { "name": "R5", "eventType": "E", "condition": { "value": 3.14 }, "actions": [] },
+              { "name": "R6", "eventType": "E", "condition": { "value": [1, 2, 3] }, "actions": [] }
+            ]
+            """;
 
         var rules = RuleJsonParser.ParseMany(json);
 
@@ -208,21 +368,22 @@ public class RuleJsonParserTests
     [Fact]
     public void Parse_InvalidJson_ThrowsException()
     {
-        var invalidJson = "{ invalid json }";
+        const string invalidJson = "{ invalid json }";
 
-        Assert.Throws<System.Text.Json.JsonException>(() => RuleJsonParser.Parse(invalidJson));
+        Assert.Throws<JsonException>(() => RuleJsonParser.Parse(invalidJson));
     }
 
     [Fact]
     public void Parse_MissingRequiredProperty_ThrowsException()
     {
-        var json = """
-        {
-          "eventType": "Event1",
-          "condition": { "path": "Field" },
-          "actions": []
-        }
-        """;
+        const string json =
+            """
+            {
+              "eventType": "Event1",
+              "condition": { "path": "Field" },
+              "actions": []
+            }
+            """;
 
         // Missing "name" is allowed (null! property)
         var rule = RuleJsonParser.Parse(json);
@@ -232,28 +393,30 @@ public class RuleJsonParserTests
     [Fact]
     public void Parse_UnknownConditionType_ThrowsException()
     {
-        var json = """
-        {
-          "name": "Test",
-          "eventType": "Event1",
-          "condition": { "unknown": "property" },
-          "actions": []
-        }
-        """;
+        const string json =
+            """
+            {
+              "name": "Test",
+              "eventType": "Event1",
+              "condition": { "unknown": "property" },
+              "actions": []
+            }
+            """;
 
-        Assert.Throws<System.Text.Json.JsonException>(() => RuleJsonParser.Parse(json));
+        Assert.Throws<JsonException>(() => RuleJsonParser.Parse(json));
     }
 
     [Fact]
     public void ParseMany_MultipleRules_Success()
     {
-        var json = """
-        [
-          { "name": "Rule1", "eventType": "E1", "condition": { "path": "A" }, "actions": [] },
-          { "name": "Rule2", "eventType": "E2", "condition": { "path": "B" }, "actions": [] },
-          { "name": "Rule3", "eventType": "E3", "condition": { "path": "C" }, "actions": [] }
-        ]
-        """;
+        const string json =
+            """
+            [
+              { "name": "Rule1", "eventType": "E1", "condition": { "path": "A" }, "actions": [] },
+              { "name": "Rule2", "eventType": "E2", "condition": { "path": "B" }, "actions": [] },
+              { "name": "Rule3", "eventType": "E3", "condition": { "path": "C" }, "actions": [] }
+            ]
+            """;
 
         var rules = RuleJsonParser.ParseMany(json);
 
@@ -266,14 +429,15 @@ public class RuleJsonParserTests
     [Fact]
     public void Parse_WithGeneratedId_Success()
     {
-        var json = """
-        {
-          "name": "Test",
-          "eventType": "Event1",
-          "condition": { "path": "Field" },
-          "actions": []
-        }
-        """;
+        const string json =
+            """
+            {
+              "name": "Test",
+              "eventType": "Event1",
+              "condition": { "path": "Field" },
+              "actions": []
+            }
+            """;
 
         var rule = RuleJsonParser.Parse(json);
 
@@ -284,15 +448,16 @@ public class RuleJsonParserTests
     [Fact]
     public void Parse_UserProvidedId_Success()
     {
-        var json = """
-        {
-          "id": "custom-id-123",
-          "name": "Test",
-          "eventType": "Event1",
-          "condition": { "path": "Field" },
-          "actions": []
-        }
-        """;
+        const string json =
+            """
+            {
+              "id": "custom-id-123",
+              "name": "Test",
+              "eventType": "Event1",
+              "condition": { "path": "Field" },
+              "actions": []
+            }
+            """;
 
         var rule = RuleJsonParser.Parse(json);
 
@@ -302,72 +467,72 @@ public class RuleJsonParserTests
     [Fact]
     public void Parse_ComplexRealWorldExample_Success()
     {
-        var json = """
-        {
-          "name": "High price alert",
-          "eventType": "PropertyUpdated",
-          "priority": 2,
-          "condition": {
-            "operator": "and",
-            "operands": [
-              {
-                "operator": "changed",
-                "operands": [{ "path": "Price" }]
-              },
-              {
-                "operator": "not",
-                "operands": [
-                  {
-                    "operator": "eq",
-                    "operands": [
-                      { "path": "Price" },
-                      { "value": 1500001 }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          "actions": [
+        const string json =
+            """
             {
-              "type": "log",
-              "parameters": {
-                "message": "Price is high!",
-                "severity": "warning"
-              },
+              "name": "Product price changed",
+              "eventType": "ProductUpdated",
+              "priority": 2,
               "condition": {
-                "operator": "or",
+                "operator": "and",
                 "operands": [
                   {
-                    "operator": "eq",
-                    "operands": [
-                      { "path": "Price" },
-                      { "value": 100000 }
-                    ]
+                    "operator": "changed",
+                    "operands": [{ "path": "Price" }]
                   },
                   {
-                    "operator": "eq",
+                    "operator": "not",
                     "operands": [
-                      { "path": "Price" },
-                      { "value": 200000 }
+                      {
+                        "operator": "eq",
+                        "operands": [
+                          { "path": "Price" },
+                          { "value": 1500001 }
+                        ]
+                      }
                     ]
                   }
                 ]
-              }
+              },
+              "actions": [
+                {
+                  "type": "log",
+                  "parameters": {
+                    "message": "Product price changed!",
+                    "severity": "warning"
+                  },
+                  "condition": {
+                    "operator": "or",
+                    "operands": [
+                      {
+                        "operator": "eq",
+                        "operands": [
+                          { "path": "Price" },
+                          { "value": 100000 }
+                        ]
+                      },
+                      {
+                        "operator": "eq",
+                        "operands": [
+                          { "path": "Price" },
+                          { "value": 200000 }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
             }
-          ]
-        }
-        """;
+            """;
 
         var rule = RuleJsonParser.Parse(json);
 
         Assert.NotNull(rule);
-        Assert.Equal("High price alert", rule.Name);
-        Assert.Equal("PropertyUpdated", rule.EventType);
+        Assert.Equal("Product price changed", rule.Name);
+        Assert.Equal("ProductUpdated", rule.EventType);
         Assert.Equal(2, rule.Priority);
         Assert.IsType<OperatorCondition>(rule.Condition);
         Assert.Single(rule.Actions);
         Assert.NotNull(rule.Actions[0].Condition);
     }
 }
-
