@@ -1,3 +1,5 @@
+using System.Threading;
+
 namespace RuleForge.Abstractions.Action;
 
 /// <summary>
@@ -16,5 +18,6 @@ public interface IActionExecutor
     /// </summary>
     /// <param name="action">The action definition with type and parameters.</param>
     /// <param name="context">The evaluation context containing current/previous state.</param>
-    Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context);
+    Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
+        CancellationToken cancellationToken = default);
 }

@@ -5,6 +5,7 @@ namespace RuleForge.Abstractions.Action;
 /// </summary>
 public sealed record ActionResult
 {
+    private static readonly ActionResult _success = new() { Status = ActionExecutionStatus.ExecutedImmediately };
     /// <summary>
     /// Execution status.
     /// </summary>
@@ -27,6 +28,7 @@ public sealed record ActionResult
 
     public static ActionResult Success(string? message = null)
     {
+        if (message is null) return _success;
         return new ActionResult
         {
             Status = ActionExecutionStatus.ExecutedImmediately,

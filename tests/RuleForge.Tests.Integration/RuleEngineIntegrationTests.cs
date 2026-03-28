@@ -574,7 +574,7 @@ public class RuleEngineIntegrationTests
 
         public string Type => "test-log";
 
-        public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context)
+        public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
         {
             if (action.Parameters.TryGetValue("message", out var message))
             {

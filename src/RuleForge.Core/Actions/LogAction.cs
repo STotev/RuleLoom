@@ -3,11 +3,14 @@ using RuleForge.Abstractions.Action;
 
 namespace RuleForge.Core.Actions;
 
-public class LogAction : IActionExecutor
+using System.Threading;
+
+public sealed class LogAction : IActionExecutor
 {
     public string Type => "log";
 
-    public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context)
+    public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
+        CancellationToken cancellationToken = default)
     {
         if (action.Parameters.TryGetValue("message", out var message))
         {

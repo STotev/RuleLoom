@@ -5,7 +5,7 @@ using RuleForge.Abstractions.Rule;
 
 namespace RuleForge.Core.Engine;
 
-public class RuleEngine
+public sealed class RuleEngine
 {
     private readonly IConditionEvaluator _conditionEvaluator;
     private readonly Dictionary<string, IActionExecutor> _actions;
@@ -21,7 +21,7 @@ public class RuleEngine
     }
 
     public async Task ExecuteAsync(string eventType, object current, object? previous,
-        IEnumerable<RuleDefinition> rules)
+        IEnumerable<RuleDefinition> rules, CancellationToken cancellationToken = default)
     {
         var context = new EvaluationContext(current, previous);
 
@@ -44,7 +44,7 @@ public class RuleEngine
 
                     if (_actions.TryGetValue(action.Type, out var executor))
                     {
-                        await executor.ExecuteAsync(action, context);
+                        await executor.ExecuteAsync(action, context, cancellationToken);
                     }
                 }
             }
@@ -58,8 +58,9 @@ public class RuleEngine
         }
     }
 
-    public Task ExecuteAsync(string eventType, object data, IEnumerable<RuleDefinition> rules)
+    public Task ExecuteAsync(string eventType, object data, IEnumerable<RuleDefinition> rules,
+        CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(eventType, data, null, rules);
+        return ExecuteAsync(eventType, data, null, rules, cancellationToken);
     }
 }
