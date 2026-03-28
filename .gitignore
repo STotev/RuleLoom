@@ -6,6 +6,10 @@
 .aider*
 .ai/
 
+# Local planning, specs, and AI context files
+plans/
+docs/superpowers/
+
 # dotenv files
 .env
 
