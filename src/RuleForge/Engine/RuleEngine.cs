@@ -8,22 +8,21 @@ namespace RuleForge.Engine;
 public sealed class RuleEngine
 {
     private readonly IConditionEvaluator _conditionEvaluator;
-    private readonly Dictionary<string, IActionExecutor> _actions;
+    private readonly IActionExecutorFactory _actionFactory;
 
     public RuleEngine(
         IConditionEvaluator conditionEvaluator,
-        IEnumerable<IActionExecutor> actions)
+        IActionExecutorFactory actionFactory)
     {
         _conditionEvaluator = conditionEvaluator ?? throw new ArgumentNullException(nameof(conditionEvaluator));
-        
-        ArgumentNullException.ThrowIfNull(actions);
-        _actions = actions.ToDictionary(x => x.Type);
+        _actionFactory = actionFactory ?? throw new ArgumentNullException(nameof(actionFactory));
     }
 
-    public async Task ExecuteAsync(string eventType, object current, object? previous,
+    public async Task<IReadOnlyList<RuleExecutionResult>> ExecuteAsync(string eventType, object current, object? previous,
         IEnumerable<RuleDefinition> rules, CancellationToken cancellationToken = default)
     {
         var context = new EvaluationContext(current, previous);
+        var ruleResults = new List<RuleExecutionResult>();
 
         var matchingRules = rules
             .Where(r => r.EventType == eventType)
@@ -37,16 +36,45 @@ public sealed class RuleEngine
                 if (!_conditionEvaluator.Evaluate(context, rule.Condition))
                     continue;
 
+                var actionResults = new List<ActionResult>();
+
                 foreach (var action in rule.Actions)
                 {
                     if (action.Condition is not null && !_conditionEvaluator.Evaluate(context, action.Condition))
-                        continue;
-
-                    if (_actions.TryGetValue(action.Type, out var executor))
                     {
-                        await executor.ExecuteAsync(action, context, cancellationToken);
+                        actionResults.Add(ActionResult.Skipped($"Action '{action.Type}' skipped because condition was not met."));
+                        continue;
+                    }
+
+                    if (!_actionFactory.TryGetExecutor(action.Type, out var executor) || executor is null)
+                    {
+                        actionResults.Add(
+                            ActionResult.Failed(
+                                new InvalidOperationException($"No action executor is registered for action type '{action.Type}'."),
+                                $"Action '{action.Type}' is not supported."));
+                        continue;
+                    }
+
+                    try
+                    {
+                        var actionResult = await executor.ExecuteAsync(action, context, cancellationToken);
+                        actionResults.Add(actionResult);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        actionResults.Add(ActionResult.Failed(ex, $"Action '{action.Type}' execution failed."));
                     }
                 }
+
+                ruleResults.Add(new RuleExecutionResult
+                {
+                    RuleName = rule.Name,
+                    ActionResults = actionResults
+                });
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -56,9 +84,11 @@ public sealed class RuleEngine
                 continue;
             }
         }
+
+        return ruleResults;
     }
 
-    public Task ExecuteAsync(string eventType, object data, IEnumerable<RuleDefinition> rules,
+    public Task<IReadOnlyList<RuleExecutionResult>> ExecuteAsync(string eventType, object data, IEnumerable<RuleDefinition> rules,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAsync(eventType, data, null, rules, cancellationToken);

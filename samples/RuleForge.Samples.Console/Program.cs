@@ -109,7 +109,8 @@ var conditions = new List<IConditionOperator>
 
 var actions = new List<IActionExecutor> { new LogAction() };
 
-var engine = new RuleEngine(new ConditionEvaluator(conditions), actions);
+var actionFactory = new DirectActionExecutorFactory(actions);
+var engine = new RuleEngine(new ConditionEvaluator(conditions), actionFactory);
 
 var previousProperty = new Property
 {
@@ -125,4 +126,12 @@ var currentProperty = new Property
 
 // await engine.ExecuteAsync("PropertyUpdated", currentProperty, previousProperty, [rule2]);
 // await engine.ExecuteAsync("PropertyUpdated", currentProperty, [rule]);
-await engine.ExecuteAsync("PropertyUpdated", currentProperty, [rule3]);
+var executionResults = await engine.ExecuteAsync("PropertyUpdated", currentProperty, [rule3]);
+
+foreach (var executionResult in executionResults)
+{
+    foreach (var actionResult in executionResult.ActionResults)
+    {
+        Console.WriteLine($"[{executionResult.RuleName}] {actionResult.Status}");
+    }
+}
