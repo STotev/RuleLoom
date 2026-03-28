@@ -2,9 +2,9 @@ using RuleForge.Abstractions;
 using RuleForge.Abstractions.Action;
 using RuleForge.Abstractions.Condition;
 using RuleForge.Abstractions.Rule;
-using RuleForge.Core.Engine;
-using RuleForge.Core.Evaluators;
-using RuleForge.Core.Operators;
+using RuleForge.Engine;
+using RuleForge.Evaluators;
+using RuleForge.Operators;
 
 namespace RuleForge.Tests.Integration;
 

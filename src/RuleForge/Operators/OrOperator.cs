@@ -1,7 +1,7 @@
 using RuleForge.Abstractions;
 using RuleForge.Abstractions.Condition;
 
-namespace RuleForge.Core.Operators;
+namespace RuleForge.Operators;
 
 public class OrOperator : IConditionOperator
 {

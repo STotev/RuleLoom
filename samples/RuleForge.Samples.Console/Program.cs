@@ -1,10 +1,10 @@
 ﻿using RuleForge.Abstractions.Action;
 using RuleForge.Abstractions.Condition;
 using RuleForge.Abstractions.Rule;
-using RuleForge.Core.Actions;
-using RuleForge.Core.Engine;
-using RuleForge.Core.Evaluators;
-using RuleForge.Core.Operators;
+using RuleForge.Actions;
+using RuleForge.Engine;
+using RuleForge.Evaluators;
+using RuleForge.Operators;
 using RuleForge.Samples.Console;
 
 var rule = new RuleDefinition

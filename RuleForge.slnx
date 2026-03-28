@@ -10,7 +10,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/RuleForge.Abstractions/RuleForge.Abstractions.csproj" />
-    <Project Path="src/RuleForge.Core/RuleForge.Core.csproj" />
+    <Project Path="src/RuleForge/RuleForge.csproj" />
     <Project Path="src/RuleForge.Extensions.DependencyInjection/RuleForge.Extensions.DependencyInjection.csproj" />
   </Folder>
   <Folder Name="/tests/">
