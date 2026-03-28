@@ -1,6 +1,6 @@
 using RuleForge.Abstractions.Action;
 
-namespace RuleForge.Tests.Action;
+namespace RuleForge.Tests;
 
 public class ActionResultTests
 {

@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace RuleForge.Abstractions.Action;
 
 /// <summary>
@@ -12,12 +10,13 @@ public interface IActionExecutor
     /// Used for action resolution in rules.
     /// </summary>
     string Type { get; }
-    
+
     /// <summary>
     /// Executes the action with the given parameters and context.
     /// </summary>
     /// <param name="action">The action definition with type and parameters.</param>
     /// <param name="context">The evaluation context containing current/previous state.</param>
+    /// <param name="cancellationToken">CancellationToken</param>
     Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
         CancellationToken cancellationToken = default);
 }

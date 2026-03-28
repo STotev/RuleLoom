@@ -2,11 +2,9 @@ using RuleForge.Abstractions;
 using RuleForge.Abstractions.Action;
 using RuleForge.Abstractions.Condition;
 using RuleForge.Abstractions.Rule;
-using RuleForge.Core.Actions;
 using RuleForge.Core.Engine;
 using RuleForge.Core.Evaluators;
 using RuleForge.Core.Operators;
-using Xunit;
 
 namespace RuleForge.Tests.Integration;
 
@@ -17,7 +15,7 @@ public class RuleEngineIntegrationTests
 
     public RuleEngineIntegrationTests()
     {
-        _logMessages = new List<string>();
+        _logMessages = [];
 
         var operators = new List<IConditionOperator>
         {
@@ -563,22 +561,15 @@ public class RuleEngineIntegrationTests
     }
 
     // Helper class for testing
-    private class TestLogAction : IActionExecutor
+    private class TestLogAction(List<string> messages) : IActionExecutor
     {
-        private readonly List<string> _messages;
-
-        public TestLogAction(List<string> messages)
-        {
-            _messages = messages;
-        }
-
         public string Type => "test-log";
 
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
         {
             if (action.Parameters.TryGetValue("message", out var message))
             {
-                _messages.Add(message?.ToString() ?? string.Empty);
+                messages.Add(message?.ToString() ?? string.Empty);
             }
 
             return Task.FromResult(ActionResult.Success());
