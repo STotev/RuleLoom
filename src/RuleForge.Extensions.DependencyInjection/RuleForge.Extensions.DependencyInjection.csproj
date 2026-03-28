@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
-      <ProjectReference Include="..\RuleForge.Core\RuleForge.Core.csproj" />
+      <ProjectReference Include="..\RuleForge\RuleForge.csproj" />
     </ItemGroup>
 
     <ItemGroup>

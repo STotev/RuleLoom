@@ -1,7 +1,7 @@
 using RuleForge.Abstractions;
 using RuleForge.Abstractions.Condition;
 
-namespace RuleForge.Core.Evaluators;
+namespace RuleForge.Evaluators;
 
 public class ConditionEvaluator : IConditionEvaluator
 {

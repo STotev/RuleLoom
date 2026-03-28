@@ -1,7 +1,7 @@
 using RuleForge.Abstractions;
 using RuleForge.Abstractions.Action;
 
-namespace RuleForge.Core.Actions;
+namespace RuleForge.Actions;
 
 using System.Threading;
 
