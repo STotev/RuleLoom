@@ -20,5 +20,9 @@
         <ProjectReference Include="..\..\src\RuleForge.Abstractions\RuleForge.Abstractions.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
 </Project>
 

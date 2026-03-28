@@ -16,5 +16,5 @@ public interface IActionExecutor
     /// </summary>
     /// <param name="action">The action definition with type and parameters.</param>
     /// <param name="context">The evaluation context containing current/previous state.</param>
-    Task ExecuteAsync(ActionDefinition action, EvaluationContext context);
+    Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context);
 }

@@ -7,13 +7,13 @@ public class LogAction : IActionExecutor
 {
     public string Type => "log";
 
-    public Task ExecuteAsync(ActionDefinition action, EvaluationContext context)
+    public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context)
     {
         if (action.Parameters.TryGetValue("message", out var message))
         {
             Console.WriteLine(message);
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult(ActionResult.Success());
     }
 }

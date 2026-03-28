@@ -1,6 +1,7 @@
 using Xunit;
 using RuleForge.Abstractions.Condition;
 using RuleForge.Abstractions.Rule;
+using RuleForge.Abstractions.Scheduling;
 
 namespace RuleForge.Tests.Rule;
 
@@ -160,6 +161,153 @@ public class RuleJsonParserTests
         Assert.Equal("email", rule.Actions[1].Type);
         Assert.NotNull(rule.Actions[1].Condition);
         Assert.IsType<OperatorCondition>(rule.Actions[1].Condition);
+    }
+
+    [Fact]
+    public void Parse_ActionWithNoSchedule_ScheduleIsNull()
+    {
+        var json = """
+        {
+          "name": "No Schedule Test",
+          "eventType": "Event1",
+          "condition": { "value": true },
+          "actions": [
+            {
+              "type": "log",
+              "parameters": { "message": "Immediate by default" }
+            }
+          ]
+        }
+        """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        Assert.Single(rule.Actions);
+        Assert.Null(rule.Actions[0].Schedule);
+    }
+
+    [Fact]
+    public void Parse_ActionWithImmediateSchedule_Success()
+    {
+        var json = """
+        {
+          "name": "Immediate Schedule Test",
+          "eventType": "Event1",
+          "condition": { "value": true },
+          "actions": [
+            {
+              "type": "log",
+              "schedule": { "mode": "Immediate" },
+              "parameters": { "message": "Immediate explicitly" }
+            }
+          ]
+        }
+        """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        var action = Assert.Single(rule.Actions);
+        var schedule = Assert.IsType<ScheduleMetadata>(action.Schedule);
+        Assert.Equal(ScheduleMode.Immediate, schedule.Mode);
+        Assert.Null(schedule.Amount);
+        Assert.Null(schedule.Unit);
+        Assert.Null(schedule.ReferencePath);
+    }
+
+    [Fact]
+    public void Parse_ActionWithDelaySchedule_Success()
+    {
+        var json = """
+        {
+          "name": "Delay Schedule Test",
+          "eventType": "Event1",
+          "condition": { "value": true },
+          "actions": [
+            {
+              "type": "log",
+              "schedule": {
+                "mode": "Delay",
+                "amount": 24,
+                "unit": "Hours"
+              },
+              "parameters": { "message": "Delayed" }
+            }
+          ]
+        }
+        """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        var action = Assert.Single(rule.Actions);
+        var schedule = Assert.IsType<ScheduleMetadata>(action.Schedule);
+        Assert.Equal(ScheduleMode.Delay, schedule.Mode);
+        Assert.Equal(24, schedule.Amount);
+        Assert.Equal(ScheduleUnit.Hours, schedule.Unit);
+        Assert.Null(schedule.ReferencePath);
+    }
+
+    [Fact]
+    public void Parse_ActionWithAdvanceSchedule_Success()
+    {
+        var json = """
+        {
+          "name": "Advance Schedule Test",
+          "eventType": "Event1",
+          "condition": { "value": true },
+          "actions": [
+            {
+              "type": "log",
+              "schedule": {
+                "mode": "Advance",
+                "amount": 2,
+                "unit": "Hours",
+                "referencePath": "Order.DueDate"
+              },
+              "parameters": { "message": "Advance" }
+            }
+          ]
+        }
+        """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        var action = Assert.Single(rule.Actions);
+        var schedule = Assert.IsType<ScheduleMetadata>(action.Schedule);
+        Assert.Equal(ScheduleMode.Advance, schedule.Mode);
+        Assert.Equal(2, schedule.Amount);
+        Assert.Equal(ScheduleUnit.Hours, schedule.Unit);
+        Assert.Equal("Order.DueDate", schedule.ReferencePath);
+    }
+
+    [Fact]
+    public void Parse_ScheduleEnumCaseInsensitive_Success()
+    {
+        var json = """
+        {
+          "name": "Case-insensitive Schedule Test",
+          "eventType": "Event1",
+          "condition": { "value": true },
+          "actions": [
+            {
+              "type": "log",
+              "schedule": {
+                "mode": "delay",
+                "amount": 30,
+                "unit": "minutes"
+              },
+              "parameters": { "message": "Case-insensitive enums" }
+            }
+          ]
+        }
+        """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        var action = Assert.Single(rule.Actions);
+        var schedule = Assert.IsType<ScheduleMetadata>(action.Schedule);
+        Assert.Equal(ScheduleMode.Delay, schedule.Mode);
+        Assert.Equal(30, schedule.Amount);
+        Assert.Equal(ScheduleUnit.Minutes, schedule.Unit);
     }
 
     [Fact]
@@ -370,4 +518,3 @@ public class RuleJsonParserTests
         Assert.NotNull(rule.Actions[0].Condition);
     }
 }
-

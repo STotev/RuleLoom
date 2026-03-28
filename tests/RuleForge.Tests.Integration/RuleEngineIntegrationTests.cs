@@ -574,14 +574,14 @@ public class RuleEngineIntegrationTests
 
         public string Type => "test-log";
 
-        public Task ExecuteAsync(ActionDefinition action, EvaluationContext context)
+        public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context)
         {
             if (action.Parameters.TryGetValue("message", out var message))
             {
                 _messages.Add(message?.ToString() ?? string.Empty);
             }
 
-            return Task.CompletedTask;
+            return Task.FromResult(ActionResult.Success());
         }
     }
 
@@ -597,7 +597,6 @@ public class RuleEngineIntegrationTests
         public string ZipCode { get; set; } = string.Empty;
     }
 }
-
 
 
 
