@@ -2,6 +2,7 @@ using RuleForge.Abstractions;
 using RuleForge.Abstractions.Action;
 using RuleForge.Abstractions.Condition;
 using RuleForge.Abstractions.Rule;
+using RuleForge.Actions;
 using RuleForge.Engine;
 using RuleForge.Evaluators;
 using RuleForge.Operators;
@@ -31,7 +32,7 @@ public class RuleEngineIntegrationTests
             new TestLogAction(_logMessages)
         };
 
-        _engine = new RuleEngine(new ConditionEvaluator(operators), actions);
+        _engine = new RuleEngine(new ConditionEvaluator(operators), new DirectActionExecutorFactory(actions));
     }
 
     [Fact]
@@ -65,11 +66,15 @@ public class RuleEngineIntegrationTests
         var property = new { Price = 100000 };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", property, [rule]);
+        var result = await _engine.ExecuteAsync("PropertyUpdated", property, [rule]);
 
         // Assert
         Assert.Single(_logMessages);
         Assert.Equal("Price matches!", _logMessages[0]);
+        Assert.Single(result);
+        Assert.Equal("Price Equals Test", result[0].RuleName);
+        Assert.Single(result[0].ActionResults);
+        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, result[0].ActionResults[0].Status);
     }
 
     [Fact]
@@ -424,12 +429,15 @@ public class RuleEngineIntegrationTests
         var property = new { Status = "Active" };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", property, [rule]);
+        var result = await _engine.ExecuteAsync("PropertyUpdated", property, [rule]);
 
         // Assert
         Assert.Equal(2, _logMessages.Count);
         Assert.Equal("Action 1 - Always", _logMessages[0]);
         Assert.Equal("Action 2 - Conditional", _logMessages[1]);
+        Assert.Single(result);
+        Assert.Equal(3, result[0].ActionResults.Count);
+        Assert.Equal(ActionExecutionStatus.Skipped, result[0].ActionResults[2].Status);
     }
 
     [Fact(Skip = "Nested property resolution needs investigation")]
@@ -588,6 +596,5 @@ public class RuleEngineIntegrationTests
         public string ZipCode { get; set; } = string.Empty;
     }
 }
-
 
 

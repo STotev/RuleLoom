@@ -73,14 +73,14 @@ var rule = new RuleDefinition
 // Create rule engine
 var engine = new RuleEngine(
     new ConditionEvaluator(new[] { new ChangedOperator(), new EqualsOperator() }),
-    new[] { new LogAction() }
+    new DirectActionExecutorFactory(new[] { new LogAction() })
 );
 
 // Execute rules
 var previousData = new { Price = 100000 };
 var currentData = new { Price = 150000 };
 
-await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, new[] { rule });
+var executionResults = await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, new[] { rule });
 // Output: "Price changed!"
 ```
 
@@ -220,13 +220,14 @@ public class SendEmailAction : IActionExecutor
 {
     public string Type => "send-email";
 
-    public async Task ExecuteAsync(ActionDefinition action, EvaluationContext context)
+    public async Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context)
     {
         var to = action.Parameters["to"]?.ToString();
         var subject = action.Parameters["subject"]?.ToString();
 
         // Your email logic here
         await SendEmailAsync(to, subject);
+        return ActionResult.Success();
     }
 }
 ```
@@ -424,4 +425,3 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 ---
 
 **Built with ❤️ for the .NET community**
-
