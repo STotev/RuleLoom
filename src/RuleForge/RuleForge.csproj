@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
-      <ProjectReference Include="..\RuleForge.Abstractions\RuleForge.Abstractions.csproj" />
+      <InternalsVisibleTo Include="RuleForge.Tests" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Resolvers\" />
+      <ProjectReference Include="..\RuleForge.Abstractions\RuleForge.Abstractions.csproj" />
     </ItemGroup>
 
 </Project>

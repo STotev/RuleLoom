@@ -2,6 +2,7 @@ using RuleForge.Abstractions;
 using RuleForge.Abstractions.Action;
 using RuleForge.Abstractions.Condition;
 using RuleForge.Abstractions.Rule;
+using RuleForge.Abstractions.Scheduling;
 using RuleForge.Engine;
 
 namespace RuleForge.Tests;
@@ -205,6 +206,220 @@ public class RuleEngineTests
             () => engine.ExecuteAsync("Event", new { }, rules, cts.Token));
     }
 
+    [Fact]
+    public async Task ExecuteAsync_DelaySchedule_ReturnsScheduledResultAndSkipsExecutor()
+    {
+        var fixedNow = new DateTimeOffset(2026, 3, 29, 12, 0, 0, TimeSpan.Zero);
+        var evaluator = new TestConditionEvaluator(conditionResult: true);
+        var executor = new CountingActionExecutor(
+            "scheduled",
+            (_, _, _) => Task.FromResult(ActionResult.Success()));
+        var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
+        {
+            ["scheduled"] = executor
+        });
+        var engine = new RuleEngine(evaluator, factory, new FixedTimeProvider(fixedNow));
+        var rule = new RuleDefinition
+        {
+            Name = "Rule A",
+            EventType = "Event",
+            Condition = new ValueOperand { Value = true },
+            Actions =
+            [
+                new ActionDefinition
+                {
+                    Type = "scheduled",
+                    Schedule = new ScheduleMetadata
+                    {
+                        Mode = ScheduleMode.Delay,
+                        Amount = 2,
+                        Unit = ScheduleUnit.Hours
+                    }
+                }
+            ]
+        };
+
+        var result = await engine.ExecuteAsync("Event", new { }, [rule]);
+
+        Assert.Single(result);
+        Assert.Single(result[0].ActionResults);
+        var actionResult = result[0].ActionResults[0];
+        Assert.Equal(ActionExecutionStatus.Scheduled, actionResult.Status);
+        Assert.Equal(fixedNow.AddHours(2), actionResult.ScheduledFor);
+        Assert.Equal(0, executor.ExecutionCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AdvanceScheduleWithReferencePath_ReturnsScheduledResult()
+    {
+        var fixedNow = new DateTimeOffset(2026, 3, 29, 12, 0, 0, TimeSpan.Zero);
+        var dueDate = new DateTimeOffset(2026, 4, 1, 10, 0, 0, TimeSpan.Zero);
+        var evaluator = new TestConditionEvaluator(conditionResult: true);
+        var executor = new CountingActionExecutor(
+            "scheduled",
+            (_, _, _) => Task.FromResult(ActionResult.Success()));
+        var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
+        {
+            ["scheduled"] = executor
+        });
+        var engine = new RuleEngine(evaluator, factory, new FixedTimeProvider(fixedNow));
+        var current = new OrderWithDateTimeOffset { DueDate = dueDate };
+        var rule = new RuleDefinition
+        {
+            Name = "Rule A",
+            EventType = "Event",
+            Condition = new ValueOperand { Value = true },
+            Actions =
+            [
+                new ActionDefinition
+                {
+                    Type = "scheduled",
+                    Schedule = new ScheduleMetadata
+                    {
+                        Mode = ScheduleMode.Advance,
+                        Amount = 2,
+                        Unit = ScheduleUnit.Hours,
+                        ReferencePath = "DueDate"
+                    }
+                }
+            ]
+        };
+
+        var result = await engine.ExecuteAsync("Event", current, [rule]);
+
+        Assert.Single(result);
+        Assert.Single(result[0].ActionResults);
+        var actionResult = result[0].ActionResults[0];
+        Assert.Equal(ActionExecutionStatus.Scheduled, actionResult.Status);
+        Assert.Equal(dueDate.AddHours(-2), actionResult.ScheduledFor);
+        Assert.Equal(0, executor.ExecutionCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ImmediateModeSchedule_ExecutesImmediately()
+    {
+        var evaluator = new TestConditionEvaluator(conditionResult: true);
+        var executor = new CountingActionExecutor(
+            "ok",
+            (_, _, _) => Task.FromResult(ActionResult.Success("executed")));
+        var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
+        {
+            ["ok"] = executor
+        });
+        var engine = new RuleEngine(evaluator, factory);
+        var rule = new RuleDefinition
+        {
+            Name = "Rule A",
+            EventType = "Event",
+            Condition = new ValueOperand { Value = true },
+            Actions =
+            [
+                new ActionDefinition
+                {
+                    Type = "ok",
+                    Schedule = new ScheduleMetadata
+                    {
+                        Mode = ScheduleMode.Immediate,
+                        Amount = 3,
+                        Unit = ScheduleUnit.Minutes
+                    }
+                }
+            ]
+        };
+
+        var result = await engine.ExecuteAsync("Event", new { }, [rule]);
+
+        Assert.Single(result);
+        Assert.Single(result[0].ActionResults);
+        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, result[0].ActionResults[0].Status);
+        Assert.Equal(1, executor.ExecutionCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ActionConditionFalseWithSchedule_ReturnsSkipped()
+    {
+        var evaluator = new TestConditionEvaluator(conditionResult: true, actionConditionResult: false);
+        var executor = new CountingActionExecutor(
+            "scheduled",
+            (_, _, _) => Task.FromResult(ActionResult.Success()));
+        var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
+        {
+            ["scheduled"] = executor
+        });
+        var engine = new RuleEngine(evaluator, factory);
+        var rule = new RuleDefinition
+        {
+            Name = "Rule A",
+            EventType = "Event",
+            Condition = new ValueOperand { Value = true },
+            Actions =
+            [
+                new ActionDefinition
+                {
+                    Type = "scheduled",
+                    Condition = new ValueOperand { Value = false },
+                    Schedule = new ScheduleMetadata
+                    {
+                        Mode = ScheduleMode.Delay,
+                        Amount = 1,
+                        Unit = ScheduleUnit.Hours
+                    }
+                }
+            ]
+        };
+
+        var result = await engine.ExecuteAsync("Event", new { }, [rule]);
+
+        Assert.Single(result);
+        Assert.Single(result[0].ActionResults);
+        Assert.Equal(ActionExecutionStatus.Skipped, result[0].ActionResults[0].Status);
+        Assert.Equal(0, executor.ExecutionCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidReferencePath_ReturnsFailedResult()
+    {
+        var evaluator = new TestConditionEvaluator(conditionResult: true);
+        var executor = new CountingActionExecutor(
+            "scheduled",
+            (_, _, _) => Task.FromResult(ActionResult.Success()));
+        var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
+        {
+            ["scheduled"] = executor
+        });
+        var engine = new RuleEngine(evaluator, factory);
+        var current = new { DueDate = "not-a-date" };
+        var rule = new RuleDefinition
+        {
+            Name = "Rule A",
+            EventType = "Event",
+            Condition = new ValueOperand { Value = true },
+            Actions =
+            [
+                new ActionDefinition
+                {
+                    Type = "scheduled",
+                    Schedule = new ScheduleMetadata
+                    {
+                        Mode = ScheduleMode.Delay,
+                        Amount = 1,
+                        Unit = ScheduleUnit.Hours,
+                        ReferencePath = "DueDate"
+                    }
+                }
+            ]
+        };
+
+        var result = await engine.ExecuteAsync("Event", current, [rule]);
+
+        Assert.Single(result);
+        Assert.Single(result[0].ActionResults);
+        var actionResult = result[0].ActionResults[0];
+        Assert.Equal(ActionExecutionStatus.Failed, actionResult.Status);
+        Assert.IsType<InvalidOperationException>(actionResult.Error);
+        Assert.Equal(0, executor.ExecutionCount);
+    }
+
     private static RuleDefinition CreateRule(string name, string actionType, int priority = 1) =>
         new()
         {
@@ -235,6 +450,23 @@ public class RuleEngineTests
             execute(action, context, cancellationToken);
     }
 
+    private sealed class CountingActionExecutor(
+        string type,
+        Func<ActionDefinition, EvaluationContext, CancellationToken, Task<ActionResult>> execute) : IActionExecutor
+    {
+        public int ExecutionCount { get; private set; }
+        public string Type => type;
+
+        public Task<ActionResult> ExecuteAsync(
+            ActionDefinition action,
+            EvaluationContext context,
+            CancellationToken cancellationToken = default)
+        {
+            ExecutionCount++;
+            return execute(action, context, cancellationToken);
+        }
+    }
+
     private sealed class TestConditionEvaluator(bool conditionResult, bool actionConditionResult = true)
         : IConditionEvaluator
     {
@@ -245,5 +477,15 @@ public class RuleEngineTests
         }
 
         public object? ResolveValue(EvaluationContext context, ConditionNode node) => null;
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
+    }
+
+    private sealed class OrderWithDateTimeOffset
+    {
+        public DateTimeOffset DueDate { get; init; }
     }
 }

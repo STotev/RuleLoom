@@ -18,7 +18,7 @@ public class ActionResultTests
     [Fact]
     public void Scheduled_WithDate_ReturnsScheduledStatusAndDate()
     {
-        var scheduledFor = new DateTime(2026, 3, 28, 12, 0, 0, DateTimeKind.Utc);
+        var scheduledFor = new DateTimeOffset(2026, 3, 28, 12, 0, 0, TimeSpan.Zero);
 
         var result = ActionResult.Scheduled(scheduledFor);
 

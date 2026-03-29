@@ -21,3 +21,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Introduced `ActionResult`, `ActionExecutionStatus`, and updated `RuleExecutionResult` to wrap action results.
 - Updated `LogAction` and test actions to new contract and sealed key classes.
 - Improved JSON parsing for schedule enums and added/adjusted tests for new types and contract.
+- `ActionResult.ScheduledFor` now uses `DateTimeOffset?` for explicit UTC-safe scheduling semantics (breaking change).
+- `RuleEngine` now calculates schedule timestamps for non-immediate actions and returns `ActionResult.Scheduled(...)` instead of executing them immediately.
