@@ -14,7 +14,7 @@ public sealed record ActionResult
     /// <summary>
     /// Scheduled execution timestamp in UTC when status is Scheduled.
     /// </summary>
-    public DateTime? ScheduledFor { get; init; }
+    public DateTimeOffset? ScheduledFor { get; init; }
 
     /// <summary>
     /// Optional informational message.
@@ -36,12 +36,12 @@ public sealed record ActionResult
         };
     }
 
-    public static ActionResult Scheduled(DateTime scheduledFor, string? message = null)
+    public static ActionResult Scheduled(DateTimeOffset scheduledFor, string? message = null)
     {
         return new ActionResult
         {
             Status = ActionExecutionStatus.Scheduled,
-            ScheduledFor = scheduledFor,
+            ScheduledFor = scheduledFor.ToUniversalTime(),
             Message = message
         };
     }

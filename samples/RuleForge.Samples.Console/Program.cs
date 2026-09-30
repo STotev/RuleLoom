@@ -95,6 +95,44 @@ var json = """
           }
         ]
       }
+    },
+    {
+      "type": "invalid.log",
+      "parameters": { "message": "Price is high!" },
+      "condition": {
+        "operator": "not",
+        "operands": [
+          {
+            "operator": "eq",
+            "operands": [
+              { "path": "Price" },
+              { "value": 150000 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "log",
+      "parameters": { "message": "Price is high!" },
+      "condition": {
+        "operator": "not",
+        "operands": [
+          {
+            "operator": "eq",
+            "operands": [
+              { "path": "Price" },
+              { "value": 150000 }
+            ]
+          }
+        ]
+      },
+      "schedule": {
+        "mode": "delay",
+        "amount": 30,
+        "unit": "minutes",
+        "referencePath": "UpdatedAt"
+      }
     }
   ]
 }
@@ -121,7 +159,10 @@ var previousProperty = new Property
 var currentProperty = new Property
 {
     Price = 100000,
-    EstimatedPrice = 100000
+    EstimatedPrice = 100000,
+    // UpdatedAt = DateTimeOffset.Parse("2014-02-02T00:00:00.000Z")
+    // UpdatedAt = "2014-02-02T00:00:00"
+    UpdatedAt = "asd"
 };
 
 // await engine.ExecuteAsync("PropertyUpdated", currentProperty, previousProperty, [rule2]);
@@ -132,6 +173,6 @@ foreach (var executionResult in executionResults)
 {
     foreach (var actionResult in executionResult.ActionResults)
     {
-        Console.WriteLine($"[{executionResult.RuleName}] {actionResult.Status}");
+        Console.WriteLine($"[{executionResult.RuleName}] '{actionResult.Status}': {actionResult.Message}");
     }
 }
