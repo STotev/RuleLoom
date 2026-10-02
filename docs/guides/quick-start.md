@@ -485,9 +485,9 @@ public class MyRuleTests
 
 ## 📚 Additional Resources
 
-- [Roadmap](ROADMAP.md) - Development roadmap
-- [Phase 1.1 Summary](PHASE_1_1_SUMMARY.md) - Latest changes
-- [JSON Parser Documentation](JSON_RULE_PARSER.md) - Detailed JSON format guide
+- [Roadmap](../roadmap.md) - Development roadmap
+- [Phase 1.1 Summary](../archive/phase-1-1-summary.md) - Latest changes
+- [JSON Parser Documentation](json-rules.md) - Detailed JSON format guide
 
 ---
 
@@ -542,7 +542,7 @@ var actions = new List<IActionExecutor>
 2. Experiment with different operators
 3. Create custom operators for your domain
 4. Create custom actions for your needs
-5. Read the [Roadmap](ROADMAP.md) for upcoming features
+5. Read the [Roadmap](../roadmap.md) for upcoming features
 
 **Happy rule building!** 🚀
 
