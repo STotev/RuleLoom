@@ -281,7 +281,7 @@ public interface ISchemaProvider
 **New abstractions**:
 ```csharp
 // src/RuleForge.Abstractions/Validation/IRuleValidator.cs
-public interface IRuleValidator[plan.md](../../../../.copilot/session-state/5a4ed91a-98b7-473c-8d4d-de920529318f/plan.md)
+public interface IRuleValidator
 {
     ValidationResult Validate(RuleDefinition rule);
 }
