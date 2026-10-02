@@ -296,3 +296,21 @@ public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContex
     return Task.FromResult(ActionResult.Success());
 }
 ```
+
+---
+
+## Deviations
+
+Recorded retrospectively (2026-10-02) by comparing this spec with the code. Reasons were not
+recorded at the time unless stated.
+
+- **`ActionResult` factories take an optional `message`**: `Success(string? message = null)`,
+  `Scheduled(DateTimeOffset, string? message = null)`, `Failed(Exception, string? message = null)`.
+  `Success()` with no message returns a cached instance. `Failed` throws on a null `error`.
+- **`ActionResult.ScheduledFor` is `DateTimeOffset?`**, not `DateTime?`, and `Scheduled()` normalises
+  to UTC. Changed in Phase 1.2D — see `2026-03-29-schedule-calculation-engine-design.md`.
+- **`IActionExecutor.ExecuteAsync` takes a `CancellationToken`** (default `default`), added in
+  commit `f2ec235` and propagated through `RuleEngine`.
+- **`RuleExecutionResult` is a record with `RuleName` and `ActionResults` init properties**, not a
+  positional record with `ActionResults` only. Changed in Phase 1.2B — see
+  `2026-03-28-action-factory-pattern-design.md`.

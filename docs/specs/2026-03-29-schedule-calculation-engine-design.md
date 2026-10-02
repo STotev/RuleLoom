@@ -245,3 +245,20 @@ RuleEngine.ExecuteAsync(eventType, current, previous, rules)
 - Timezone support (deferred to Phase 3.x)
 - Actual scheduler dispatch (Hangfire, Quartz — Phase 2.x)
 - DI wiring of `TimeProvider` into `RuleEngine` (that's Phase 1.2C/E work)
+
+---
+
+## Deviations
+
+Recorded on 2026-09-30 when PR #10 was merged (see the comment on issue #4).
+
+- **String reference values are parsed** as invariant UTC date-times
+  (`DateTimeStyles.AssumeUniversal | AdjustToUniversal`) instead of throwing. Unparseable strings
+  still throw `InvalidOperationException`. Reason not recorded; to be revisited in the code review.
+- **`Schedule.Unit` is required** for Delay/Advance: a null `Unit` throws `InvalidOperationException`
+  (the spec only covered a null `Amount`).
+- **All inputs are normalised to UTC**: `utcNow`, `DateTimeOffset` references, and `DateTime`
+  references (`Local` converted, `Unspecified` treated as UTC).
+- **Missing `ReferencePath` throws** as this spec decided — this contradicts issue #4's original
+  acceptance criterion (fall back to `DateTime.UtcNow`), which predates the spec.
+- **Test plan**: `ExecuteAsync_NullSchedule_ExecutesImmediately` was not added as a dedicated test.

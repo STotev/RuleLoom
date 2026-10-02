@@ -246,3 +246,18 @@ Assert.Equal("test-log", result.ActionResults[0].ActionType);
 - `IActionExecutorFactory` must have zero new dependencies (Abstractions constraint)
 - `DirectActionExecutorFactory` may only depend on `RuleForge.Abstractions`
 - `dotnet build` and `dotnet test` must pass with no regressions
+
+---
+
+## Deviations
+
+Recorded retrospectively (2026-10-02) by comparing this spec with the code. Reasons were not
+recorded at the time.
+
+- **Results are grouped per rule instead of flattened.** Both `ExecuteAsync` overloads return
+  `Task<IReadOnlyList<RuleExecutionResult>>`, one entry per rule whose condition matched, each with
+  `RuleName` and `IReadOnlyList<ActionResult> ActionResults`. `RuleActionResult` was not introduced,
+  so a result does not carry its action's `Type` — callers correlate by index with `rule.Actions`.
+- **Rules whose condition is false produce no result entry**, and a rule that throws is written to
+  `Console.Error` and also produces no entry.
+- **`ExecuteAsync` takes a `CancellationToken`**; `OperationCanceledException` always propagates.
