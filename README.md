@@ -30,7 +30,7 @@ RuleForge is a library-first approach to building configurable rule engines. It 
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/RuleForge.git
+git clone https://github.com/STotev/RuleForge.git
 
 # Build the solution
 cd RuleForge
@@ -43,11 +43,13 @@ dotnet test
 ### Basic Example
 
 ```csharp
+using RuleForge.Abstractions.Action;
+using RuleForge.Abstractions.Condition;
 using RuleForge.Abstractions.Rule;
-using RuleForge.Core.Engine;
-using RuleForge.Core.Evaluators;
-using RuleForge.Core.Operators;
-using RuleForge.Core.Actions;
+using RuleForge.Actions;
+using RuleForge.Engine;
+using RuleForge.Evaluators;
+using RuleForge.Operators;
 
 // Define a rule
 var rule = new RuleDefinition
@@ -72,16 +74,18 @@ var rule = new RuleDefinition
 
 // Create rule engine
 var engine = new RuleEngine(
-    new ConditionEvaluator(new[] { new ChangedOperator(), new EqualsOperator() }),
-    new DirectActionExecutorFactory(new[] { new LogAction() })
+    new ConditionEvaluator([new ChangedOperator(), new EqualsOperator()]),
+    new DirectActionExecutorFactory([new LogAction()])
 );
 
 // Execute rules
 var previousData = new { Price = 100000 };
 var currentData = new { Price = 150000 };
 
-var executionResults = await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, new[] { rule });
+IReadOnlyList<RuleExecutionResult> results =
+    await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, [rule]);
 // Output: "Price changed!"
+// results[0].ActionResults[0].Status == ActionExecutionStatus.ExecutedImmediately
 ```
 
 ### JSON Example
@@ -121,17 +125,17 @@ var executionResults = await engine.ExecuteAsync("PropertyUpdated", currentData,
 ```csharp
 var json = File.ReadAllText("rule.json");
 var rule = RuleJsonParser.Parse(json);
-await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, new[] { rule });
+await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, [rule]);
 ```
 
 ---
 
 ## 📚 Documentation
 
-- **[Quick Start Guide](docs/QUICK_START.md)** - Get started in 5 minutes
-- **[JSON Rule Parser](docs/JSON_RULE_PARSER.md)** - JSON format reference
-- **[Development Roadmap](docs/ROADMAP.md)** - Future plans and timeline
-- **[Phase 1.1 Summary](docs/PHASE_1_1_SUMMARY.md)** - Latest release notes
+- **[Quick Start Guide](plans/QUICK_START.md)** - Get started in 5 minutes
+- **[JSON Rule Parser](plans/JSON_RULE_PARSER.md)** - JSON format reference
+- **[Development Roadmap](plans/ROADMAP.md)** - Future plans and timeline
+- **[Changelog](CHANGELOG.md)** - Release notes
 
 ---
 
@@ -139,16 +143,17 @@ await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, new[] { 
 
 ```
 ┌─────────────────────────────────────────┐
-│   RuleForge.Abstractions            │ ← Zero dependencies
+│   RuleForge.Abstractions                │ ← Zero dependencies
 │   - Interfaces & Contracts              │
 │   - RuleDefinition, ConditionNode       │
 └─────────────────────────────────────────┘
                     ↑
 ┌─────────────────────────────────────────┐
-│   RuleForge.Core                     │
-│   - RuleEngine                           │
-│   - ConditionEvaluator                   │
-│   - Built-in Operators & Actions         │
+│   RuleForge                             │
+│   - RuleEngine                          │
+│   - ConditionEvaluator                  │
+│   - Built-in Operators & Actions        │
+│   - ScheduleCalculator                  │
 └─────────────────────────────────────────┘
 ```
 
@@ -220,13 +225,16 @@ public class SendEmailAction : IActionExecutor
 {
     public string Type => "send-email";
 
-    public async Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context)
+    public async Task<ActionResult> ExecuteAsync(
+        ActionDefinition action,
+        EvaluationContext context,
+        CancellationToken cancellationToken = default)
     {
         var to = action.Parameters["to"]?.ToString();
         var subject = action.Parameters["subject"]?.ToString();
 
         // Your email logic here
-        await SendEmailAsync(to, subject);
+        await SendEmailAsync(to, subject, cancellationToken);
         return ActionResult.Success();
     }
 }
@@ -248,11 +256,6 @@ dotnet test tests/RuleForge.Tests.Integration
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
-**Current Test Results**:
-- Unit Tests: 14/14 passing ✅
-- Integration Tests: 10/11 passing (1 skipped) ✅
-- Total Coverage: 96%
-
 ---
 
 ## 📦 Project Structure
@@ -261,13 +264,14 @@ dotnet test --collect:"XPlat Code Coverage"
 RuleForge/
 ├── src/
 │   ├── RuleForge.Abstractions/     # Core contracts (zero dependencies)
-│   └── RuleForge.Core/             # Engine implementation
+│   ├── RuleForge/                  # Engine implementation
+│   └── RuleForge.Extensions.DependencyInjection/ # DI registration (planned)
 ├── tests/
 │   ├── RuleForge.Tests/            # Unit tests
 │   └── RuleForge.Tests.Integration/ # Integration tests
 ├── samples/
 │   └── RuleForge.Samples.Console/  # Example usage
-└── docs/                                # Documentation
+└── plans/                          # Roadmap and design specs
 ```
 
 ---
@@ -299,7 +303,7 @@ RuleForge/
 - Persistence layers
 - Observability & metrics
 
-See the [full roadmap](docs/ROADMAP.md) for details.
+See the [full roadmap](plans/ROADMAP.md) for details.
 
 ---
 
@@ -326,7 +330,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📋 Requirements
 
 - .NET 10.0 or later
-- C# 12.0 features
+- C# 14
 
 ---
 
@@ -418,7 +422,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## 📞 Support
 
-- 📖 [Documentation](docs/)
+- 📖 [Documentation](plans/)
 - 🐛 [Issue Tracker](https://github.com/STotev/RuleForge/issues)
 - 💬 [Discussions](https://github.com/STotev/RuleForge/discussions)
 
