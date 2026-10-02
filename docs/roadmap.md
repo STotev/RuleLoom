@@ -19,7 +19,7 @@ connect to historical docs — they were reused inconsistently between documents
 | Version | Status | Contents |
 |---|---|---|
 | 0.1.0 | Tagged `v0.1.0` (release-please bootstrap; no GitHub release or NuGet package) | Core engine, operators, JSON parser, Phase 1.1 stability fixes |
-| 0.2.0 | Release PR [#8](https://github.com/STotev/RuleForge/pull/8) open | Action results, scheduling model, action factory, schedule calculation |
+| 0.2.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.0) 2026-10-02 | Action results, scheduling model, action factory, schedule calculation |
 
 ---
 
@@ -47,12 +47,37 @@ CI on PRs (build + test), release-please + MinVer versioning, issue/PR templates
 
 ---
 
-## 🎯 Next — finish PRD #1
+## 🎯 Next
+
+Work in this order. Findings from the 2026-10-02 code review are tracked as the bug batch and PRD #22.
+
+### 1. Bug batch (code review)
+
+| Issue | Change | Notes |
+|---|---|---|
+| [#14](https://github.com/STotev/RuleForge/issues/14) | Unscoped nested paths (`Address.City`) throw | Un-skips `RuleEngine_NestedProperties_ResolvesCorrectly`. Prerequisite for #22 |
+| [#15](https://github.com/STotev/RuleForge/issues/15) | Path accessor cache recreated per event | Shared, thread-safe cache. Prerequisite for #22 |
+| [#20](https://github.com/STotev/RuleForge/issues/20) | Unit tests for operators, evaluator, path resolution | Prerequisite for #22 |
+| [#21](https://github.com/STotev/RuleForge/issues/21) | Align test package versions, coverage in both projects | Prerequisite for #22 |
+| [#16](https://github.com/STotev/RuleForge/issues/16) | `changed` always false for scoped paths | May be folded into #22 |
+| [#17](https://github.com/STotev/RuleForge/issues/17) | Unclear errors for duplicates and non-operator operands | May be folded into #22 |
+| [#18](https://github.com/STotev/RuleForge/issues/18) | Cancellation not checked between rules/actions | May be folded into #22 |
+| [#19](https://github.com/STotev/RuleForge/issues/19) | String dates for schedule `ReferencePath` | Decided: keep, ISO 8601 only — implemented in #22 |
+
+### 2. API hardening — PRD [#22](https://github.com/STotev/RuleForge/issues/22)
+
+One breaking release before 1.0: shared value comparison (numbers, enums, ISO dates), `OperatorContext` operator API
+(revised [proposal](proposals/operator-context-api-redesign.md)), `gt`/`gte`/`lt`/`lte`, complete results
+(`Matched`/`NotMatched`/`Failed`, rule and action identity, `RuleEngineResult` wrapper), case-insensitive names,
+normalised action parameters with `GetParameter<T>`, parse-time and registry-based validation.
+Needs slicing into issues, then a spec per slice.
+
+### 3. Finish PRD #1
 
 | Issue | Slice | Status |
 |---|---|---|
-| [#5](https://github.com/STotev/RuleForge/issues/5) | DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionExecutorFactory` | Needs a spec. `RuleForge.Extensions.DependencyInjection` is an empty project |
-| [#6](https://github.com/STotev/RuleForge/issues/6) | Integration tests, samples, migration guide, doc refresh | Blocked by #5. Includes updating [`guides/`](guides/) to the current API |
+| [#5](https://github.com/STotev/RuleForge/issues/5) | DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionExecutorFactory` | Needs a spec; after #22 (its factory must list action types). `RuleForge.Extensions.DependencyInjection` is an empty project |
+| [#6](https://github.com/STotev/RuleForge/issues/6) | Integration tests, samples, migration guide, doc refresh | Blocked by #5. Includes the migration guide for #22 and updating [`guides/`](guides/) to the current API |
 
 ---
 
@@ -64,9 +89,7 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 ### Core API & correctness
 | Item | Notes | Source |
 |---|---|---|
-| Operator API redesign (`OperatorContext`) | Breaking change to `IConditionOperator` — best done before 1.0 | [proposal](proposals/operator-context-api-redesign.md) |
-| Parse-time structural validation in `RuleJsonParser` | Same proposal; reject invalid trees at parse, not execution | [proposal](proposals/operator-context-api-redesign.md) |
-| Nested property resolution | Integration test `RuleEngine_NestedProperties_ResolvesCorrectly` is skipped | Phase 1.1 report |
+| Pluggable value comparer (`IValueComparer`) | Deferred from #22; built-in rules are fixed for now | PRD #22 Out of Scope |
 | `StopOnFirstMatch` option | Stop after the first matching rule | [old roadmap §1.1.1](archive/roadmap-2026-03.md) |
 | Separate `EvaluationContext` data from path resolution (`IPathResolver`) | Testability | [analysis §6](archive/business-rules-analysis.md) |
 | Path whitelisting for untrusted rules | Security, when end users author rules | [analysis §13](archive/business-rules-analysis.md) |
@@ -95,7 +118,7 @@ NuGet package metadata and publishing workflow (packages are now `RuleForge.Abst
 scenario samples. Detail: [old roadmap §1.4](archive/roadmap-2026-03.md), [PRD #1 plan Phase 3](archive/action-scheduling-di-plan.md).
 
 ### Developer experience (old Phase 2)
-Fluent rule builder API; more operators — comparison (`gt` `lt` `gte` `lte` `between` `in`), string
+Fluent rule builder API; more operators — comparison (`between` `in`; `gt` `gte` `lt` `lte` are in #22), string
 (`contains` `startsWith` `endsWith` `matches`), collection (`any` `all` `count`), date. DI moved to #5.
 Detail: [old roadmap Phase 2](archive/roadmap-2026-03.md).
 
