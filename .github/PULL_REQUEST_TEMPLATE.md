@@ -21,5 +21,5 @@ Closes #<!-- issue number -->
 
 - [ ] Tests added or updated to cover the change
 - [ ] `dotnet test` passes locally
-- [ ] `CHANGELOG.md` updated under `## [Unreleased]` for user-facing changes
+- [ ] PR title is a Conventional Commit (`feat:`, `fix:`, `feat!:` …) — it becomes the changelog entry
 - [ ] Breaking changes documented with a migration path

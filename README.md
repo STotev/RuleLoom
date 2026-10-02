@@ -132,9 +132,9 @@ await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, [rule]);
 
 ## 📚 Documentation
 
-- **[Quick Start Guide](plans/QUICK_START.md)** - Get started in 5 minutes
-- **[JSON Rule Parser](plans/JSON_RULE_PARSER.md)** - JSON format reference
-- **[Development Roadmap](plans/ROADMAP.md)** - Future plans and timeline
+- **[Quick Start Guide](docs/guides/quick-start.md)** - Get started (being refreshed for 0.2.0)
+- **[JSON Rule Format](docs/guides/json-rules.md)** - JSON format reference
+- **[Roadmap](docs/roadmap.md)** - What's done, what's next, and the backlog
 - **[Changelog](CHANGELOG.md)** - Release notes
 
 ---
@@ -177,7 +177,7 @@ await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, [rule]);
 | `or` | Any true | 1+ | `A \|\| B \|\| C` |
 | `not` | Invert | 1 | `!(Status == "Inactive")` |
 
-More operators coming in Phase 2.3!
+More operators are on the [roadmap](docs/roadmap.md).
 
 ---
 
@@ -271,39 +271,21 @@ RuleForge/
 │   └── RuleForge.Tests.Integration/ # Integration tests
 ├── samples/
 │   └── RuleForge.Samples.Console/  # Example usage
-└── plans/                          # Roadmap and design specs
+└── docs/                           # Guides, roadmap and design specs
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-### ✅ Phase 1.1 - Core Stability (Complete)
-- Priority-based rule execution
-- Operator validation
-- Null safety & error handling
-- Integration test suite
+- ✅ **Done**: core engine and operators, stability fixes, action results, scheduling model,
+  action factory, schedule calculation (0.2.0)
+- 🎯 **Next**: dependency injection extensions ([#5](https://github.com/STotev/RuleForge/issues/5)),
+  then integration tests, samples and migration guide ([#6](https://github.com/STotev/RuleForge/issues/6))
+- 📋 **Backlog**: operator API redesign, schema system, event system, NuGet packaging, more operators,
+  rule management, persistence, observability
 
-### 🎯 Phase 1.2 - Schema System (Next)
-- Field schema definition
-- Event schema registration
-- Schema-based validation
-- UI metadata support
-
-### 📅 Phase 1.3 - Event System (Future)
-- Event publishing abstraction
-- In-process event publisher
-- Rule repository pattern
-- Fluent configuration API
-
-### 🔮 Phase 2+ - Advanced Features
-- ASP.NET Core integration
-- Advanced operators (gt, lt, contains, etc.)
-- Rule management UI
-- Persistence layers
-- Observability & metrics
-
-See the [full roadmap](plans/ROADMAP.md) for details.
+See the [full roadmap](docs/roadmap.md) for details.
 
 ---
 
@@ -392,10 +374,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## ⚠️ Current Limitations
 
-- Nested property resolution needs investigation (Phase 1.2)
-- No observability/logging yet (Phase 4.3)
-- No persistence layer yet (Phase 4.1)
-- Limited operator set (more in Phase 2.3)
+- Nested property resolution needs investigation
+- Scheduled actions are calculated (`ScheduledFor`) but not dispatched — bring your own scheduler
+- No observability/logging yet
+- No persistence layer yet
+- Limited operator set
 
 ---
 
@@ -422,7 +405,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## 📞 Support
 
-- 📖 [Documentation](plans/)
+- 📖 [Documentation](docs/)
 - 🐛 [Issue Tracker](https://github.com/STotev/RuleForge/issues)
 - 💬 [Discussions](https://github.com/STotev/RuleForge/discussions)
 
