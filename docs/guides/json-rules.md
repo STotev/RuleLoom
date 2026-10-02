@@ -1,5 +1,8 @@
 # JSON Rule Parser Documentation
 
+> **Note**: action `schedule` blocks (`mode`, `amount`, `unit`, `referencePath`) are not documented here yet —
+> see [the scheduling spec](../specs/2026-03-28-scheduling-model-abstractions-design.md) until this guide is refreshed in #6.
+
 ## Overview
 
 The `RuleJsonParser` is a performant, type-safe JSON parser for converting JSON rule definitions into strongly-typed `RuleDefinition` objects. It uses `System.Text.Json` with custom polymorphic converters to efficiently handle the tree-based condition structure.
@@ -200,14 +203,14 @@ The converter uses these rules to determine ConditionNode type:
 var rule = RuleJsonParser.Parse(jsonString);
 
 // Use with RuleEngine
-var operators = new List<IConditionOperator>
-{
-    new EqOperator(), new ChangedOperator(), new AndOperator(), ...
-};
-var actions = new List<IActionExecutor> { new LogAction(), ... };
+IConditionOperator[] operators =
+[
+    new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator()
+];
+IActionExecutor[] actions = [new LogAction()];
 
-var engine = new RuleEngine(new ConditionEvaluator(operators), actions);
-await engine.ExecuteAsync(eventType, current, previous, [rule]);
+var engine = new RuleEngine(new ConditionEvaluator(operators), new DirectActionExecutorFactory(actions));
+IReadOnlyList<RuleExecutionResult> results = await engine.ExecuteAsync(eventType, current, previous, [rule]);
 ```
 
 ## Best Practices

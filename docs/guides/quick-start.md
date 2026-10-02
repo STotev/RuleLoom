@@ -1,5 +1,10 @@
 # RuleForge Quick Start Guide
 
+> ⚠️ **Out of date.** This guide predates the action factory, `ActionResult` and scheduling changes
+> (0.2.0) and still uses the old `RuleForge.Core` namespaces. Until it is refreshed in
+> [#6](https://github.com/STotev/RuleForge/issues/6), use the [README](../../README.md) example and the
+> [console sample](../../samples/RuleForge.Samples.Console/Program.cs).
+
 **Version**: v0.1.0-alpha
 **Last Updated**: March 21, 2026
 
