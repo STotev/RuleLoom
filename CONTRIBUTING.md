@@ -42,14 +42,17 @@ dotnet test
 2. **Fork and create a branch** — `feat/my-feature`, `fix/my-bug`, `docs/update-readme`
 3. **Make your changes** — keep them focused; one logical change per PR
 4. **Write or update tests** for any behavior change
-5. **Update `CHANGELOG.md`** under `## [Unreleased]` for user-facing changes
-6. **Open a pull request** targeting `main`, fill in the template, and link the related issue
+5. **Open a pull request** targeting `main`, fill in the template, and link the related issue
 
 ### Commit messages
 
-We follow [Conventional Commits](https://www.conventionalcommits.org/) — this is encouraged
-but not enforced. Common prefixes: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `ci:`, `chore:`.
-Use `feat!:` or a `BREAKING CHANGE:` footer for breaking API changes.
+We follow [Conventional Commits](https://www.conventionalcommits.org/). PRs are squash-merged, so
+the **PR title** becomes the commit on `main` and must be a Conventional Commit — release-please
+uses it to pick the next version and write the `CHANGELOG.md` entry (don't edit the changelog by
+hand). `feat:` and `fix:` appear in the changelog; `docs:`, `test:`, `refactor:`, `ci:`, `chore:`
+do not. Use `feat!:` / `fix!:` in the PR title for breaking API changes.
+
+Commits within a PR should follow the same format, but only the PR title reaches the changelog.
 
 ### Review process
 
@@ -63,7 +66,7 @@ Use `feat!:` or a `BREAKING CHANGE:` footer for breaking API changes.
 
 ```
 src/RuleForge.Abstractions/          # Zero-dependency contracts — no external NuGet references allowed
-src/RuleForge.Core/                  # Default implementations, built-in operators and actions
+src/RuleForge/                       # Default implementations, built-in operators and actions
 src/RuleForge.Extensions.DependencyInjection/  # Optional DI helpers
 tests/RuleForge.Tests/               # Unit tests
 tests/RuleForge.Tests.Integration/   # Integration tests
