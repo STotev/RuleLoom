@@ -12,10 +12,10 @@ Work moves through **PRD → issue → spec → implementation**:
 
 1. **PRD**: a GitHub issue labelled `enhancement` describing the feature (e.g. #1).
 2. **Phase issues**: one issue per vertical slice, labelled `prd-phase`, linked to the PRD.
-3. **Spec**: a design doc in `plans/specs/YYYY-MM-DD-<topic>-design.md`, written before implementation.
+3. **Spec**: a design doc in `docs/specs/YYYY-MM-DD-<topic>-design.md`, written before implementation.
 4. **Implementation**: a branch and PR that closes the phase issue.
 
-When the implementation diverges from the spec or the issue's acceptance criteria, **record it before merging**: add a `## Deviations` section to the spec (what changed and why) and update the issue. Specs in `plans/specs/` are the source of truth for design decisions.
+When the implementation diverges from the spec or the issue's acceptance criteria, **record it before merging**: add a `## Deviations` section to the spec (what changed and why) and update the issue. Specs in `docs/specs/` are the source of truth for design decisions.
 
 ### Branches and commits
 
@@ -128,8 +128,15 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 
 ## Plans and Docs
 
-- `plans/specs/` — authoritative design specs per phase.
-- `plans/ROADMAP.md` and the other `plans/*.md` files are being consolidated; they may be out of date
-  (e.g. references to `RuleForge.Core`). Prefer GitHub issues and specs when they disagree.
+All documentation lives in `docs/` (index: `docs/README.md`):
+
+- `docs/roadmap.md` — the single overview: done, next, backlog. Update it when an issue is
+  created, closed, or re-scoped.
+- `docs/specs/` — authoritative design specs (`YYYY-MM-DD-<topic>-design.md`), each with a
+  Deviations section once implemented.
+- `docs/proposals/` — designs not yet scheduled. `docs/guides/` — user-facing guides.
+- `docs/archive/` — historical; don't update, and don't treat as current.
+- Skills that write specs or plans elsewhere by default (e.g. `docs/superpowers/specs/`, `./plans/`)
+  must write to `docs/specs/` instead.
 - `CHANGELOG.md` is maintained by release-please from commit messages. Whether `## [Unreleased]` is
   also hand-edited is not yet decided — don't edit it unless asked.
