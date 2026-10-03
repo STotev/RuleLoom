@@ -5,8 +5,6 @@ namespace RuleForge.Abstractions;
 /// </summary>
 public class EvaluationContext
 {
-    private readonly PathResolver _resolver = new();
-
     /// <summary>
     /// The current state of the object being evaluated.
     /// </summary>
@@ -60,6 +58,6 @@ public class EvaluationContext
         if (root == null)
             return null;
 
-        return _resolver.Resolve(root, remainingPath);
+        return PathResolver.Shared.Resolve(root, remainingPath);
     }
 }

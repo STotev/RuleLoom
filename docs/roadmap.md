@@ -56,7 +56,7 @@ Work in this order. Findings from the 2026-10-02 code review are tracked as the 
 | Issue | Change | Notes |
 |---|---|---|
 | [#14](https://github.com/STotev/RuleForge/issues/14) | Unscoped nested paths (`Address.City`) throw | ✅ Fixed — `RuleEngine_NestedProperties_ResolvesCorrectly` un-skipped |
-| [#15](https://github.com/STotev/RuleForge/issues/15) | Path accessor cache recreated per event | Shared, thread-safe cache. Prerequisite for #22 |
+| [#15](https://github.com/STotev/RuleForge/issues/15) | Path accessor cache recreated per event | ✅ Fixed — shared, thread-safe cache |
 | [#20](https://github.com/STotev/RuleForge/issues/20) | Unit tests for operators, evaluator, path resolution | Prerequisite for #22 |
 | [#21](https://github.com/STotev/RuleForge/issues/21) | Align test package versions, coverage in both projects | Prerequisite for #22 |
 | [#16](https://github.com/STotev/RuleForge/issues/16) | `changed` always false for scoped paths | May be folded into #22 |
@@ -107,10 +107,24 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 `FieldSchema` / `EventSchema` / `ISchemaProvider`, schema-based `IRuleValidator`, JSON export of schemas for
 rule-authoring UIs. Detail: [old roadmap §1.2](archive/roadmap-2026-03.md).
 
+The schema is intended as the single source for:
+- **UI form generation**: fields, types and labels for rule-authoring UIs.
+- **Path validation / whitelisting**: reject unknown paths when a rule is saved. `RuleValidator` in #22 can't do this
+  because it doesn't know an event's CLR type.
+- **Path cache**: pre-warm or bound the shared accessor cache (#15) to schema paths, possibly as a DI registration
+  option. Today the cache grows with every distinct (type, path), which is fine while rules are developer-authored.
+- **Typed JSON values**: produce real dates and numbers at parse time; #22's ISO-string coercion becomes a fallback.
+- **Declared-type limits**: describe payloads whose properties are declared as `object` or an interface, which path
+  resolution can't traverse today (it follows declared property types).
+
 ### Event system & configuration (old Phase 1.3)
 `IRuleEventPublisher` + `RuleEvent`, in-process publisher, `IRuleRepository` + in-memory implementation,
 fluent `RuleEngineBuilder`. The builder overlaps with #5's `RuleForgeBuilder` — reconcile before starting.
 Detail: [old roadmap §1.3](archive/roadmap-2026-03.md).
+
+### Performance & benchmarks — [#27](https://github.com/STotev/RuleForge/issues/27)
+BenchmarkDotNet suite (path resolution, condition evaluation, JSON parsing, engine end-to-end, allocations),
+published results in `docs/benchmarks.md`, a README Performance section, and a manual CI workflow. After #22, before 1.0.
 
 ### Packaging & documentation (old Phase 1.4)
 NuGet package metadata and publishing workflow (packages are now `RuleForge.Abstractions`, `RuleForge`,
