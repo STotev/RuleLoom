@@ -86,6 +86,54 @@ public class EqualsOperatorTests
         Assert.True(Evaluator().Evaluate(context, Op("eq", Path("previous.Name"), Value("Desk"))));
     }
 
+    public static TheoryData<object?, bool> CrossTypeValues => new()
+    {
+        { 1250, true },
+        { 1250L, true },
+        { 1250.0, true },
+        { 1250.5, false },
+        { "1250", false }
+    };
+
+    [Theory]
+    [MemberData(nameof(CrossTypeValues))]
+    public void Evaluate_DecimalPropertyAgainstOtherTypes_ComparesByValue(object? value, bool expected)
+    {
+        var context = new EvaluationContext(new { Amount = 1250m });
+
+        Assert.Equal(expected, Evaluator().Evaluate(context, Op("eq", Path("Amount"), Value(value))));
+    }
+
+    [Theory]
+    [InlineData("Active", true)]
+    [InlineData("active", true)]
+    [InlineData(1, true)]
+    [InlineData("Draft", false)]
+    public void Evaluate_EnumPropertyAgainstNameOrNumber_Matches(object value, bool expected)
+    {
+        var context = new EvaluationContext(new { Status = ListingStatus.Active });
+
+        Assert.Equal(expected, Evaluator().Evaluate(context, Op("eq", Path("Status"), Value(value))));
+    }
+
+    [Theory]
+    [InlineData("2026-05-01T12:00:00Z", true)]
+    [InlineData("2026-05-01T14:00:00+02:00", true)]
+    [InlineData("2026-05-01T12:00:01Z", false)]
+    [InlineData("05/01/2026 12:00", false)]
+    public void Evaluate_DatePropertyAgainstIsoString_ComparesInstants(string value, bool expected)
+    {
+        var context = new EvaluationContext(new { ListedAt = new DateTime(2026, 5, 1, 12, 0, 0, DateTimeKind.Utc) });
+
+        Assert.Equal(expected, Evaluator().Evaluate(context, Op("eq", Path("ListedAt"), Value(value))));
+    }
+
+    private enum ListingStatus
+    {
+        Draft,
+        Active
+    }
+
     private sealed class Product
     {
         public string Name { get; init; } = string.Empty;
