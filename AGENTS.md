@@ -36,15 +36,23 @@ When the implementation diverges from the spec or the issue's acceptance criteri
 ## Build and Test
 
 ```bash
-dotnet build                                   # entire solution (RuleForge.slnx)
-dotnet test                                    # all tests
-dotnet test tests/RuleForge.Tests              # unit tests
-dotnet test tests/RuleForge.Tests.Integration  # integration tests
-dotnet test --filter "FullyQualifiedName~ScheduleCalculatorTests"
-dotnet test --collect:"XPlat Code Coverage"
+dotnet build                                             # entire solution (RuleForge.slnx)
+dotnet test                                              # all tests
+dotnet test --project tests/RuleForge.Tests              # unit tests
+dotnet test --project tests/RuleForge.Tests.Integration  # integration tests
+dotnet test --filter-class "RuleForge.Tests.ScheduleCalculatorTests"
+dotnet test --filter-method "*Resolve_Path*"
+dotnet test --coverage --coverage-output-format cobertura --results-directory ./TestResults
 ```
 
-CI (`.github/workflows/ci.yml`) runs restore, a Release build and tests on every PR to `main`.
+Tests use **xunit v3 on Microsoft.Testing.Platform** (opted in via `global.json`), not VSTest:
+pass project paths with `--project`, and use xunit's `--filter-class` / `--filter-method` / `--filter-query`
+(the VSTest `--filter "FullyQualifiedName~..."` syntax doesn't apply). Package versions live in
+`Directory.Packages.props` (central package management); shared test settings in `tests/Directory.Build.props`.
+Pass `TestContext.Current.CancellationToken` to methods that accept a token (analyzer xUnit1051).
+
+CI (`.github/workflows/ci.yml`) runs restore, a Release build and tests (with TRX reports and Cobertura coverage
+uploaded as artifacts) on every PR to `main`.
 
 ### Before finishing a change
 

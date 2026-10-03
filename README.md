@@ -249,11 +249,11 @@ public class SendEmailAction : IActionExecutor
 dotnet test
 
 # Run specific test project
-dotnet test tests/RuleForge.Tests
-dotnet test tests/RuleForge.Tests.Integration
+dotnet test --project tests/RuleForge.Tests
+dotnet test --project tests/RuleForge.Tests.Integration
 
-# Run with coverage
-dotnet test --collect:"XPlat Code Coverage"
+# Run with coverage (Cobertura XML in ./TestResults)
+dotnet test --coverage --coverage-output-format cobertura --results-directory ./TestResults
 ```
 
 ---
