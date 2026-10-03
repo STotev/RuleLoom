@@ -568,6 +568,43 @@ public class RuleEngineIntegrationTests
         Assert.Equal("JSON rule executed!", _logMessages[0]);
     }
 
+    [Fact]
+    public async Task RuleEngine_JsonValuesAgainstTypedProperties_MatchByValue()
+    {
+        // Arrange
+        var json = """
+        {
+          "name": "Typed values",
+          "eventType": "ListingUpdated",
+          "condition": {
+            "operator": "and",
+            "operands": [
+              { "operator": "eq", "operands": [{ "path": "Price" }, { "value": 100 }] },
+              { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "active" }] },
+              { "operator": "eq", "operands": [{ "path": "ListedAt" }, { "value": "2026-05-01T14:00:00+02:00" }] }
+            ]
+          },
+          "actions": [
+            { "type": "test-log", "parameters": { "message": "Typed values matched!" } }
+          ]
+        }
+        """;
+
+        var rule = RuleJsonParser.Parse(json);
+        var listing = new TestListing
+        {
+            Price = 100.00m,
+            Status = TestListingStatus.Active,
+            ListedAt = new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero)
+        };
+
+        // Act
+        await _engine.ExecuteAsync("ListingUpdated", listing, [rule], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["Typed values matched!"], _logMessages);
+    }
+
     // Helper class for testing
     private class TestLogAction(List<string> messages) : IActionExecutor
     {
@@ -594,6 +631,19 @@ public class RuleEngineIntegrationTests
     {
         public string City { get; set; } = string.Empty;
         public string ZipCode { get; set; } = string.Empty;
+    }
+
+    private class TestListing
+    {
+        public decimal Price { get; set; }
+        public TestListingStatus Status { get; set; }
+        public DateTimeOffset ListedAt { get; set; }
+    }
+
+    private enum TestListingStatus
+    {
+        Draft,
+        Active
     }
 }
 

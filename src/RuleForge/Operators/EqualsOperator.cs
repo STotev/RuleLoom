@@ -1,5 +1,6 @@
 using RuleForge.Abstractions;
 using RuleForge.Abstractions.Condition;
+using RuleForge.Abstractions.Values;
 
 namespace RuleForge.Operators;
 
@@ -17,6 +18,6 @@ public class EqualsOperator : IConditionOperator
         var left = evaluator.ResolveValue(ctx, operands[0]);
         var right = evaluator.ResolveValue(ctx, operands[1]);
 
-        return Equals(left, right);
+        return ValueComparer.AreEqual(left, right);
     }
 }

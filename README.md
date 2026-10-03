@@ -171,7 +171,7 @@ await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, [rule]);
 
 | Operator | Description | Operands | Example |
 |----------|-------------|----------|---------|
-| `eq` | Equals | 2 | `Price == 100000` |
+| `eq` | Equals ([comparison rules](docs/guides/json-rules.md#comparing-values)) | 2 | `Price == 100000` |
 | `changed` | Value changed | 1 | `Price changed` |
 | `and` | All true | 1+ | `A && B && C` |
 | `or` | Any true | 1+ | `A \|\| B \|\| C` |
