@@ -440,7 +440,7 @@ public class RuleEngineIntegrationTests
         Assert.Equal(ActionExecutionStatus.Skipped, result[0].ActionResults[2].Status);
     }
 
-    [Fact(Skip = "Nested property resolution needs investigation")]
+    [Fact]
     public async Task RuleEngine_NestedProperties_ResolvesCorrectly()
     {
         // Arrange
