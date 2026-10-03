@@ -11,7 +11,11 @@ These instructions apply to every task in this repository.
 Work moves through **PRD → issue → spec → implementation**:
 
 1. **PRD**: a GitHub issue labelled `enhancement` describing the feature (e.g. #1).
-2. **Phase issues**: one issue per vertical slice, labelled `prd-phase`, linked to the PRD.
+2. **Phase issues**: one issue per vertical slice, labelled `prd-phase`, added to the PRD as a GitHub
+   **sub-issue** (`POST /repos/{owner}/{repo}/issues/{prd}/sub_issues` with the child's internal `id`, not its number).
+   Ordering between issues uses GitHub **"blocked by"** links (`.../issues/{n}/dependencies/blocked_by` with `issue_id`).
+   Keep the plain-text `Parent PRD: #n` and `## Blocked by` sections in issue bodies as well, so issues read
+   correctly without the native links.
 3. **Spec**: a design doc in `docs/specs/YYYY-MM-DD-<topic>-design.md`, written before implementation.
 4. **Implementation**: a branch and PR that closes the phase issue.
 
