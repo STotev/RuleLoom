@@ -82,7 +82,7 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 | `RuleForge.Tests.Integration` | `tests/RuleForge.Tests.Integration` | xUnit end-to-end tests |
 | `RuleForge.Samples.Console` | `samples/RuleForge.Samples.Console` | Usage sample |
 
-Namespaces follow folders: `RuleForge.Abstractions.{Action,Condition,Rule,Scheduling}` and
+Namespaces follow folders: `RuleForge.Abstractions.{Action,Condition,Rule,Scheduling,Values}` and
 `RuleForge.{Engine,Evaluators,Operators,Actions,Scheduling}` (there is no `RuleForge.Core`).
 
 Versioning is from git tags via MinVer (`Directory.Build.props`); release-please creates the tags.
@@ -114,6 +114,10 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
   in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now. UTC only.
   RuleForge computes `ScheduledFor`; dispatching scheduled work is the consumer's responsibility.
+- **Value comparison**: `ValueComparer` (`AreEqual`, `TryCompare`) and `ValueConverter` (`TryConvert`) in
+  `RuleForge.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
+  types, enums by name or number, dates as UTC instants incl. strict ISO 8601 strings, ordinal strings). Operators
+  and other features must use them rather than `object.Equals` or ad-hoc parsing.
 - **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive.
 
 ### Extension points

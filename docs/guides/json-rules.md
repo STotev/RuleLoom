@@ -196,6 +196,24 @@ The converter uses these rules to determine ConditionNode type:
 3. Else if `"value"` property exists OR is empty object → `ValueOperand`
 4. Otherwise → throws `JsonException`
 
+## Comparing Values
+
+JSON values are parsed as `int`, `long`, `double`, `string`, `bool` or `null`, while domain properties are often
+`decimal`, enums or dates. `eq` compares them with `ValueComparer` (namespace `RuleForge.Abstractions.Values`),
+so a value matches when it means the same thing:
+
+| Property type | JSON value | Matches when |
+|---|---|---|
+| Any number (`decimal`, `int`, `double`, …) | Number | Equal by value: `100` matches `100m`, `5.0` matches `5` |
+| Enum | String | Same name, ignoring case: `"active"` matches `Status.Active`; `[Flags]` combinations like `"Read, Write"` work |
+| Enum | Number | Same underlying value: `1` matches `Status.Active` (= 1) |
+| `DateTime` / `DateTimeOffset` | String | Same instant, given as **ISO 8601**: `"2026-05-01T12:00:00Z"`, `"2026-05-01T14:00:00+02:00"`; no offset means UTC; `"2026-05-01"` means UTC midnight |
+| `string` | String | Exactly equal (case-sensitive) |
+
+Values that don't fit these rules never match: e.g. a non-ISO date string (`"05/01/2026"`), a number as text
+(`"100"` vs `100`), or `NaN`. Custom operators can call `ValueComparer.AreEqual` / `ValueComparer.TryCompare`
+to follow the same rules.
+
 ## Integration with RuleEngine
 
 ```csharp
