@@ -66,7 +66,7 @@ public class RuleEngineIntegrationTests
         var property = new { Price = 100000 };
 
         // Act
-        var result = await _engine.ExecuteAsync("PropertyUpdated", property, [rule]);
+        var result = await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -105,7 +105,7 @@ public class RuleEngineIntegrationTests
         var current = new { Price = 150000 };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", current, previous, [rule]);
+        await _engine.ExecuteAsync("PropertyUpdated", current, previous, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -140,7 +140,7 @@ public class RuleEngineIntegrationTests
         var current = new { Price = 100000 };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", current, previous, [rule]);
+        await _engine.ExecuteAsync("PropertyUpdated", current, previous, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(_logMessages);
@@ -193,7 +193,7 @@ public class RuleEngineIntegrationTests
         var property = new { Price = 100000, Status = "Active" };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", property, [rule]);
+        await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -247,7 +247,7 @@ public class RuleEngineIntegrationTests
         var property = new { Price = 100000, Status = "Active" };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", property, [rule]);
+        await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -292,7 +292,7 @@ public class RuleEngineIntegrationTests
         var property = new { Price = 100000 };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", property, [rule]);
+        await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -365,7 +365,7 @@ public class RuleEngineIntegrationTests
         };
 
         // Act
-        await _engine.ExecuteAsync("Test", new { }, rules);
+        await _engine.ExecuteAsync("Test", new { }, rules, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, _logMessages.Count);
@@ -429,7 +429,7 @@ public class RuleEngineIntegrationTests
         var property = new { Status = "Active" };
 
         // Act
-        var result = await _engine.ExecuteAsync("PropertyUpdated", property, [rule]);
+        var result = await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, _logMessages.Count);
@@ -479,7 +479,7 @@ public class RuleEngineIntegrationTests
         };
 
         // Act
-        await _engine.ExecuteAsync("UserUpdated", user, [rule]);
+        await _engine.ExecuteAsync("UserUpdated", user, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -517,7 +517,7 @@ public class RuleEngineIntegrationTests
         var data = new { ExistingProperty = "value" };
 
         // Act & Assert - Should not throw
-        await _engine.ExecuteAsync("Test", data, [rule]);
+        await _engine.ExecuteAsync("Test", data, [rule], TestContext.Current.CancellationToken);
 
         Assert.Empty(_logMessages);
     }
@@ -561,7 +561,7 @@ public class RuleEngineIntegrationTests
         var current = new { Price = 150000, Status = "Active" };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", current, previous, [rule]);
+        await _engine.ExecuteAsync("PropertyUpdated", current, previous, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
