@@ -20,6 +20,8 @@ connect to historical docs — they were reused inconsistently between documents
 |---|---|---|
 | 0.1.0 | Tagged `v0.1.0` (release-please bootstrap; no GitHub release or NuGet package) | Core engine, operators, JSON parser, Phase 1.1 stability fixes |
 | 0.2.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.0) 2026-10-02 | Action results, scheduling model, action factory, schedule calculation |
+| 0.2.1 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.1) 2026-10-03 | Nested path fix (#14), shared path cache (#15) |
+| 0.3.0 | Planned | PRD #22 API hardening, as **one** breaking release: don't merge release-please PRs until all #22 slices are done |
 
 ---
 
@@ -59,18 +61,34 @@ Work in this order. Findings from the 2026-10-02 code review are tracked as the 
 | [#15](https://github.com/STotev/RuleForge/issues/15) | Path accessor cache recreated per event | ✅ Fixed — shared, thread-safe cache |
 | [#20](https://github.com/STotev/RuleForge/issues/20) | Unit tests for operators, evaluator, path resolution | ✅ Done — unit coverage of `RuleForge` 57% → 90% |
 | [#21](https://github.com/STotev/RuleForge/issues/21) | Align test package versions, coverage in both projects | ✅ Done — central package management, xunit v3 on Microsoft.Testing.Platform, coverage in both projects |
-| [#16](https://github.com/STotev/RuleForge/issues/16) | `changed` always false for scoped paths | May be folded into #22 |
-| [#17](https://github.com/STotev/RuleForge/issues/17) | Unclear errors for duplicates and non-operator operands | May be folded into #22 |
-| [#18](https://github.com/STotev/RuleForge/issues/18) | Cancellation not checked between rules/actions | May be folded into #22 |
-| [#19](https://github.com/STotev/RuleForge/issues/19) | String dates for schedule `ReferencePath` | Decided: keep, ISO 8601 only — implemented in #22 |
+| [#16](https://github.com/STotev/RuleForge/issues/16) | `changed` always false for scoped paths | Folded into [#38](https://github.com/STotev/RuleForge/issues/38) |
+| [#17](https://github.com/STotev/RuleForge/issues/17) | Unclear errors for duplicates and non-operator operands | Folded into [#34](https://github.com/STotev/RuleForge/issues/34) |
+| [#18](https://github.com/STotev/RuleForge/issues/18) | Cancellation not checked between rules/actions | Folded into [#32](https://github.com/STotev/RuleForge/issues/32) |
+| [#19](https://github.com/STotev/RuleForge/issues/19) | String dates for schedule `ReferencePath` | Decided: keep, ISO 8601 only — folded into [#33](https://github.com/STotev/RuleForge/issues/33) |
 
 ### 2. API hardening — PRD [#22](https://github.com/STotev/RuleForge/issues/22)
 
 One breaking release before 1.0: shared value comparison (numbers, enums, ISO dates), `OperatorContext` operator API
 (revised [proposal](proposals/operator-context-api-redesign.md)), `gt`/`gte`/`lt`/`lte`, complete results
 (`Matched`/`NotMatched`/`Failed`, rule and action identity, `RuleEngineResult` wrapper), case-insensitive names,
-normalised action parameters with `GetParameter<T>`, parse-time and registry-based validation.
-Needs slicing into issues, then a spec per slice.
+normalised action parameters with `GetParameter<T>`, parse-time and registry-based validation, `$current`/`$previous`.
+Ten slices, each a sub-issue of #22. Every slice gets a spec in [`specs/`](specs/) first; **HITL** slices need the
+maintainer to review that spec before implementation.
+
+| Issue | Slice | Type | Blocked by | Closes |
+|---|---|---|---|---|
+| [#30](https://github.com/STotev/RuleForge/issues/30) | Shared value comparer, used by `eq` | AFK | — | |
+| [#31](https://github.com/STotev/RuleForge/issues/31) | Parse-time structural validation | AFK | — | |
+| [#32](https://github.com/STotev/RuleForge/issues/32) | Complete engine results | HITL | — | #18 |
+| [#33](https://github.com/STotev/RuleForge/issues/33) | ISO 8601 string dates for schedule `ReferencePath` | AFK | #30 | #19 |
+| [#34](https://github.com/STotev/RuleForge/issues/34) | `OperatorContext` operator API | HITL | #30 | #17 |
+| [#35](https://github.com/STotev/RuleForge/issues/35) | Normalised action parameters, `GetParameter<T>` | AFK | #30 | |
+| [#36](https://github.com/STotev/RuleForge/issues/36) | `gt`, `gte`, `lt`, `lte` | AFK | #34 | |
+| [#37](https://github.com/STotev/RuleForge/issues/37) | Case-insensitive names | AFK | #34 | |
+| [#38](https://github.com/STotev/RuleForge/issues/38) | `$current` / `$previous` scope prefixes | AFK | #31, #34, #37 | #16 |
+| [#39](https://github.com/STotev/RuleForge/issues/39) | `RuleValidator` against registered operators and actions | AFK | #31, #34, #37 | |
+
+#30, #31 and #32 can start immediately. The migration guide for the 0.3.0 breaking changes is part of #6.
 
 ### 3. Finish PRD #1
 
