@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. It is generated
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/) — do not edit it by hand.
 
+## [0.2.1](https://github.com/STotev/RuleForge/compare/v0.2.0...v0.2.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* resolve unscoped nested paths against current state ([#24](https://github.com/STotev/RuleForge/issues/24)) ([4fe881a](https://github.com/STotev/RuleForge/commit/4fe881ac2bb55e27f97e88d560524d3ed337266f))
+
+
+### Performance Improvements
+
+* share the path accessor cache across evaluation contexts ([#26](https://github.com/STotev/RuleForge/issues/26)) ([a8a1095](https://github.com/STotev/RuleForge/commit/a8a10953eda54a4885932aec5363d52a8e33886f))
+
 ## [0.2.0](https://github.com/STotev/RuleForge/compare/v0.1.0...v0.2.0) (2026-10-02)
 
 
