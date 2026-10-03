@@ -56,7 +56,7 @@ Work in this order. Findings from the 2026-10-02 code review are tracked as the 
 | Issue | Change | Notes |
 |---|---|---|
 | [#14](https://github.com/STotev/RuleForge/issues/14) | Unscoped nested paths (`Address.City`) throw | ✅ Fixed — `RuleEngine_NestedProperties_ResolvesCorrectly` un-skipped |
-| [#15](https://github.com/STotev/RuleForge/issues/15) | Path accessor cache recreated per event | Shared, thread-safe cache. Prerequisite for #22 |
+| [#15](https://github.com/STotev/RuleForge/issues/15) | Path accessor cache recreated per event | ✅ Fixed — shared, thread-safe cache |
 | [#20](https://github.com/STotev/RuleForge/issues/20) | Unit tests for operators, evaluator, path resolution | Prerequisite for #22 |
 | [#21](https://github.com/STotev/RuleForge/issues/21) | Align test package versions, coverage in both projects | Prerequisite for #22 |
 | [#16](https://github.com/STotev/RuleForge/issues/16) | `changed` always false for scoped paths | May be folded into #22 |

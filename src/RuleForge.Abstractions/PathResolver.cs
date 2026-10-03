@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 
 namespace RuleForge.Abstractions;
@@ -5,10 +6,16 @@ namespace RuleForge.Abstractions;
 /// <summary>
 /// Resolves property paths on objects using compiled expression trees for performance.
 /// Returns null for missing properties instead of throwing exceptions.
+/// Accessors are cached per (type, path), including paths that don't exist. Instances are thread-safe.
 /// </summary>
 public class PathResolver
 {
-    private readonly Dictionary<(Type, string), Func<object, object?>> _cache = new();
+    /// <summary>
+    /// The resolver shared by all <see cref="EvaluationContext"/> instances, so accessors are compiled once per process.
+    /// </summary>
+    internal static PathResolver Shared { get; } = new();
+
+    private readonly ConcurrentDictionary<(Type Type, string Path), Func<object, object?>?> _cache = new();
 
     /// <summary>
     /// Resolves a property path on the given object.
@@ -19,13 +26,8 @@ public class PathResolver
         if (root == null) return null;
         if (string.IsNullOrWhiteSpace(path)) return root;
 
-        if (!_cache.TryGetValue((root.GetType(), path), out var accessor))
-        {
-            accessor = BuildAccessor(path, root.GetType());
-            if (accessor == null) return null;
-
-            _cache[(root.GetType(), path)] = accessor;
-        }
+        var accessor = _cache.GetOrAdd((root.GetType(), path), static key => BuildAccessor(key.Path, key.Type));
+        if (accessor == null) return null;
 
         try
         {
@@ -38,7 +40,9 @@ public class PathResolver
         }
     }
 
-    private Func<object, object?>? BuildAccessor(string path, Type rootType)
+    internal bool IsCached(Type type, string path) => _cache.ContainsKey((type, path));
+
+    private static Func<object, object?>? BuildAccessor(string path, Type rootType)
     {
         try
         {
