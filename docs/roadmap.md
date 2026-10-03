@@ -122,6 +122,10 @@ The schema is intended as the single source for:
 fluent `RuleEngineBuilder`. The builder overlaps with #5's `RuleForgeBuilder` — reconcile before starting.
 Detail: [old roadmap §1.3](archive/roadmap-2026-03.md).
 
+### Performance & benchmarks — [#27](https://github.com/STotev/RuleForge/issues/27)
+BenchmarkDotNet suite (path resolution, condition evaluation, JSON parsing, engine end-to-end, allocations),
+published results in `docs/benchmarks.md`, a README Performance section, and a manual CI workflow. After #22, before 1.0.
+
 ### Packaging & documentation (old Phase 1.4)
 NuGet package metadata and publishing workflow (packages are now `RuleForge.Abstractions`, `RuleForge`,
 `RuleForge.Extensions.DependencyInjection`), XML docs on all public APIs, concept/operator guides,
