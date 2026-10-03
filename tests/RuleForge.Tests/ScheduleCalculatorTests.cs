@@ -91,6 +91,25 @@ public class ScheduleCalculatorTests
     }
 
     [Fact]
+    public void Calculate_NestedReferencePathWithoutScope_UsesReferenceValue()
+    {
+        var utcNow = new DateTimeOffset(2026, 3, 29, 12, 0, 0, TimeSpan.Zero);
+        var dueDate = new DateTimeOffset(2026, 4, 2, 10, 0, 0, TimeSpan.Zero);
+        var context = new EvaluationContext(new { Order = new OrderWithDateTimeOffset { DueDate = dueDate } });
+        var schedule = new ScheduleMetadata
+        {
+            Mode = ScheduleMode.Advance,
+            Amount = 2,
+            Unit = ScheduleUnit.Hours,
+            ReferencePath = "Order.DueDate"
+        };
+
+        var result = ScheduleCalculator.Calculate(schedule, context, utcNow);
+
+        Assert.Equal(dueDate.AddHours(-2), result);
+    }
+
+    [Fact]
     public void Calculate_AdvanceBeforeReference_ResultCanBePast()
     {
         var utcNow = new DateTimeOffset(2026, 3, 29, 12, 0, 0, TimeSpan.Zero);

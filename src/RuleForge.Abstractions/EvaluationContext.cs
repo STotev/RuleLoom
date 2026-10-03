@@ -30,7 +30,10 @@ public class EvaluationContext
 
     /// <summary>
     /// Resolves a property path from the context.
-    /// Supports "current.Property", "previous.Property", or just "Property" (defaults to current).
+    /// A leading <c>current.</c> or <c>previous.</c> segment (case-insensitive) selects the scope;
+    /// any other path, including nested ones such as <c>Address.City</c>, resolves against <see cref="Current"/>.
+    /// A property literally named <c>Current</c> or <c>Previous</c> therefore needs an explicit scope,
+    /// e.g. <c>current.Previous.Price</c>.
     /// </summary>
     /// <param name="path">The property path to resolve.</param>
     /// <returns>The resolved value, or null if the path doesn't exist.</returns>
@@ -38,26 +41,20 @@ public class EvaluationContext
     {
         var parts = path.Split('.', 2);
 
-        object? root;
-        string remainingPath;
+        object? root = Current;
+        var remainingPath = path;
 
-        if (parts.Length == 1)
+        if (parts.Length == 2)
         {
-            root = Current;
-            remainingPath = parts[0];
-        }
-        else
-        {
-            var scope = parts[0].ToLower();
-
-            root = scope switch
+            if (parts[0].Equals("current", StringComparison.OrdinalIgnoreCase))
             {
-                "current" => Current,
-                "previous" => Previous,
-                _ => throw new InvalidOperationException($"Unknown root '{scope}'")
-            };
-
-            remainingPath = parts[1];
+                remainingPath = parts[1];
+            }
+            else if (parts[0].Equals("previous", StringComparison.OrdinalIgnoreCase))
+            {
+                root = Previous;
+                remainingPath = parts[1];
+            }
         }
 
         if (root == null)
