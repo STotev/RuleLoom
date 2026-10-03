@@ -118,7 +118,10 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   `RuleForge.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
   types, enums by name or number, dates as UTC instants incl. strict ISO 8601 strings, ordinal strings). Operators
   and other features must use them rather than `object.Equals` or ad-hoc parsing.
-- **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive.
+- **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is
+  validated before deserialization (`RuleJsonValidator`); invalid rules throw `RuleParseException` (a `JsonException`)
+  whose `Path` is the JSONPath of the problem. `Name`, `EventType` and `Condition` are required, and every condition
+  root (rule or action) must be an operator.
 
 ### Extension points
 

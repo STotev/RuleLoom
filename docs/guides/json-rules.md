@@ -138,8 +138,8 @@ var rule = await RuleJsonParser.ParseAsync(stream);
 ```csharp
 var json = """
 [
-  { "name": "Rule 1", "eventType": "Event1", "condition": { "path": "Field1" }, "actions": [] },
-  { "name": "Rule 2", "eventType": "Event2", "condition": { "path": "Field2" }, "actions": [] }
+  { "name": "Rule 1", "eventType": "Event1", "condition": { "operator": "changed", "operands": [{ "path": "Field1" }] } },
+  { "name": "Rule 2", "eventType": "Event2", "condition": { "operator": "changed", "operands": [{ "path": "Field2" }] } }
 ]
 """;
 
@@ -169,23 +169,34 @@ For actual benchmarks, run BenchmarkDotNet tests against your use cases.
 
 ## Error Handling
 
-The parser throws `JsonException` with descriptive messages:
+Malformed JSON throws `JsonException`. Well-formed JSON that doesn't describe a valid rule throws
+`RuleParseException` (a `JsonException`), whose `Path` is the JSONPath of the problem, e.g. `$.condition.operands[1]`,
+or `$[2].condition` for the third rule passed to `ParseMany`:
 
 ```csharp
 try
 {
-    var rule = RuleJsonParser.Parse(invalidJson);
+    var rule = RuleJsonParser.Parse(json);
+}
+catch (RuleParseException ex)
+{
+    Console.WriteLine($"Invalid rule at {ex.Path}: {ex.Message}");
 }
 catch (JsonException ex)
 {
-    Console.WriteLine($"Parse error: {ex.Message}");
+    Console.WriteLine($"Malformed JSON: {ex.Message}");
 }
 ```
 
-Common errors:
-- Missing required properties (e.g., "operator", "path", "name")
-- Unknown ConditionNode types (must have "operator", "path", or "value")
-- Invalid JSON syntax
+A rule is rejected when:
+- `name` or `eventType` is missing, empty or not a string, or `condition` is missing
+- the root condition (or an action's condition) is not an operator — wrap paths and values in one, e.g.
+  `{ "operator": "eq", "operands": [{ "path": "Active" }, { "value": true }] }`
+- a condition node doesn't have exactly one of `operator`, `path` or `value` (an empty `{}` is not allowed; use
+  `{ "value": null }`), or its `operator`/`path` is empty
+- `operands` or `actions` isn't an array, an action has no `type`, or `parameters` isn't an object
+
+Whether an operator exists or has the right number of operands is checked when the rule runs, not when it is parsed.
 
 ## Type Inference Rules
 
@@ -193,8 +204,9 @@ The converter uses these rules to determine ConditionNode type:
 
 1. If `"operator"` property exists → `OperatorCondition`
 2. Else if `"path"` property exists → `PathOperand`
-3. Else if `"value"` property exists OR is empty object → `ValueOperand`
-4. Otherwise → throws `JsonException`
+3. Else if `"value"` property exists → `ValueOperand`
+
+A node with none or more than one of these properties is rejected with a `RuleParseException` (see Error Handling).
 
 ## Comparing Values
 
