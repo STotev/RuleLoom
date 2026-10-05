@@ -109,7 +109,7 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 ### Key concepts
 
 - **Conditions** are trees of `ConditionNode`: `OperatorCondition` (operator name + operands),
-  `PathOperand`, `ValueOperand`. Built-in operators: `eq`, `changed`, `and`, `or`, `not`.
+  `PathOperand`, `ValueOperand`. Built-in operators: `eq`, `changed`, `and`, `or`, `not`, `gt`, `gte`, `lt`, `lte`.
 - **Paths** resolve via `PathResolver` (compiled, cached expressions): `"Price"` = current,
   `"current.Price"` / `"previous.Price"` explicit. Missing properties resolve to `null`.
 - **Actions** are resolved by `Type` through `IActionExecutorFactory` (`DirectActionExecutorFactory`

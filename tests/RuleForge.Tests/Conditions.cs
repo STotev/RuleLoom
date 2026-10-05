@@ -24,6 +24,10 @@ internal static class Conditions
             new AndOperator(),
             new OrOperator(),
             new NotOperator(),
+            new GreaterThanOperator(),
+            new GreaterThanOrEqualOperator(),
+            new LessThanOperator(),
+            new LessThanOrEqualOperator(),
             .. extraOperators
         ]);
 

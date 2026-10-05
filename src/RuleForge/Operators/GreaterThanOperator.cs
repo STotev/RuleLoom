@@ -1,0 +1,17 @@
+using RuleForge.Abstractions.Condition;
+
+namespace RuleForge.Operators;
+
+/// <summary>
+/// True if the first operand is greater than the second.
+/// Values that can't be ordered (nulls, mismatched types) evaluate to <c>false</c>.
+/// </summary>
+public sealed class GreaterThanOperator : IConditionOperator
+{
+    public string Name => "gt";
+    public int MinOperands => 2;
+    public int MaxOperands => 2;
+
+    public bool Evaluate(OperatorContext context) =>
+        context.TryCompare(context.GetValue(0), context.GetValue(1), out var result) && result > 0;
+}

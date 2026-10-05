@@ -24,7 +24,11 @@ public class RuleEngineIntegrationTests
             new ChangedOperator(),
             new AndOperator(),
             new OrOperator(),
-            new NotOperator()
+            new NotOperator(),
+            new GreaterThanOperator(),
+            new GreaterThanOrEqualOperator(),
+            new LessThanOperator(),
+            new LessThanOrEqualOperator()
         };
 
         var actions = new List<IActionExecutor>
@@ -603,6 +607,40 @@ public class RuleEngineIntegrationTests
 
         // Assert
         Assert.Equal(["Typed values matched!"], _logMessages);
+    }
+
+    [Fact]
+    public async Task RuleEngine_OrderingOperators_MatchThresholdsOnTypedProperties()
+    {
+        // Arrange
+        var json = """
+        {
+          "name": "Affordable and recent",
+          "eventType": "ListingUpdated",
+          "condition": {
+            "operator": "and",
+            "operands": [
+              { "operator": "gte", "operands": [{ "path": "Price" }, { "value": 100 }] },
+              { "operator": "lt", "operands": [{ "path": "Price" }, { "value": 250.5 }] },
+              { "operator": "gt", "operands": [{ "path": "ListedAt" }, { "value": "2026-04-30" }] }
+            ]
+          },
+          "actions": [
+            { "type": "test-log", "parameters": { "message": "Within range!" } }
+          ]
+        }
+        """;
+
+        var rule = RuleJsonParser.Parse(json);
+        var inRange = new TestListing { Price = 100m, ListedAt = new DateTimeOffset(2026, 5, 1, 9, 0, 0, TimeSpan.Zero) };
+        var tooExpensive = new TestListing { Price = 250.5m, ListedAt = inRange.ListedAt };
+
+        // Act
+        await _engine.ExecuteAsync("ListingUpdated", inRange, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ListingUpdated", tooExpensive, [rule], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["Within range!"], _logMessages);
     }
 
     // Helper class for testing

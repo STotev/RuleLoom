@@ -223,7 +223,12 @@ so a value matches when it means the same thing:
 | `string` | String | Exactly equal (case-sensitive) |
 
 Values that don't fit these rules never match: e.g. a non-ISO date string (`"05/01/2026"`), a number as text
-(`"100"` vs `100`), or `NaN`. Custom operators can call `ValueComparer.AreEqual` / `ValueComparer.TryCompare`
+(`"100"` vs `100`), or `NaN`.
+
+`gt`, `gte`, `lt` and `lte` order values with the same rules: numbers by value, enums by underlying number (so
+`"Active"` is compared as `Status.Active`'s value), dates as instants, and strings ordinally (`"B"` < `"a"`). When two
+values can't be ordered — a `null`, a number against a non-numeric string, or the cases above — all four evaluate
+to `false`, so `gt` and `lte` aren't opposites for such values. Custom operators can call `ValueComparer.AreEqual` / `ValueComparer.TryCompare`
 to follow the same rules.
 
 ## Integration with RuleEngine
@@ -235,7 +240,8 @@ var rule = RuleJsonParser.Parse(jsonString);
 // Use with RuleEngine
 IConditionOperator[] operators =
 [
-    new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator()
+    new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator(),
+    new GreaterThanOperator(), new GreaterThanOrEqualOperator(), new LessThanOperator(), new LessThanOrEqualOperator()
 ];
 IActionExecutor[] actions = [new LogAction()];
 
