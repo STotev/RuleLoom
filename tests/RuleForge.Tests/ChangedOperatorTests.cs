@@ -1,4 +1,6 @@
 using RuleForge.Abstractions;
+using RuleForge.Operators;
+using RuleForge.Abstractions.Condition;
 using static RuleForge.Tests.Conditions;
 
 namespace RuleForge.Tests;
@@ -69,6 +71,18 @@ public class ChangedOperatorTests
         var context = new EvaluationContext(new Listing(), new Listing());
 
         Assert.Throws<InvalidOperationException>(() => Evaluator().Evaluate(context, Op("changed", Value("Price"))));
+    }
+
+    [Theory]
+    [InlineData(100, 90, true)]
+    [InlineData(100, 100, false)]
+    public void Evaluate_DirectlyWithOperatorContext_DetectsChange(int current, int previous, bool expected)
+    {
+        var context = new OperatorContext(
+            Op("changed", Path("Price")),
+            new EvaluationContext(new Listing { Price = current }, new Listing { Price = previous }));
+
+        Assert.Equal(expected, new ChangedOperator().Evaluate(context));
     }
 
     private sealed class Listing

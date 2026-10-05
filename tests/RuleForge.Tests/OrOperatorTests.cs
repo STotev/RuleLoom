@@ -1,4 +1,6 @@
 using RuleForge.Abstractions;
+using RuleForge.Operators;
+using RuleForge.Abstractions.Condition;
 using static RuleForge.Tests.Conditions;
 
 namespace RuleForge.Tests;
@@ -27,5 +29,23 @@ public class OrOperatorTests
         evaluator.Evaluate(Context, Op("or", operands));
 
         Assert.Equal([1, 1, 0], counters.Select(c => c.Calls));
+    }
+
+    [Theory]
+    [InlineData(false, true, true)]
+    [InlineData(false, false, false)]
+    public void Evaluate_DirectlyWithBoolOperands_CombinesThem(bool first, bool second, bool expected)
+    {
+        var context = new OperatorContext(Op("or", Value(first), Value(second)), Context);
+
+        Assert.Equal(expected, new OrOperator().Evaluate(context));
+    }
+
+    [Fact]
+    public void Evaluate_BoolPathOperands_AreAccepted()
+    {
+        var context = new EvaluationContext(new { IsActive = true, IsDeleted = false });
+
+        Assert.True(Evaluator().Evaluate(context, Op("or", Path("IsActive"), Path("IsDeleted"))));
     }
 }

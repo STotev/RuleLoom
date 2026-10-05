@@ -52,8 +52,7 @@ internal sealed class CountingOperator(string name, bool result) : IConditionOpe
     public int MinOperands => 0;
     public int MaxOperands => 0;
 
-    public bool Evaluate(EvaluationContext context, IReadOnlyList<ConditionNode> operands,
-        IConditionEvaluator evaluator)
+    public bool Evaluate(OperatorContext context)
     {
         Calls++;
         return result;

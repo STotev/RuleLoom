@@ -1,4 +1,6 @@
 using RuleForge.Abstractions;
+using RuleForge.Operators;
+using RuleForge.Abstractions.Condition;
 using static RuleForge.Tests.Conditions;
 
 namespace RuleForge.Tests;
@@ -126,6 +128,16 @@ public class EqualsOperatorTests
         var context = new EvaluationContext(new { ListedAt = new DateTime(2026, 5, 1, 12, 0, 0, DateTimeKind.Utc) });
 
         Assert.Equal(expected, Evaluator().Evaluate(context, Op("eq", Path("ListedAt"), Value(value))));
+    }
+
+    [Theory]
+    [InlineData(100, true)]
+    [InlineData(101, false)]
+    public void Evaluate_DirectlyWithOperatorContext_ComparesOperands(int value, bool expected)
+    {
+        var context = new OperatorContext(Op("eq", Path("Price"), Value(value)), new EvaluationContext(Item));
+
+        Assert.Equal(expected, new EqualsOperator().Evaluate(context));
     }
 
     private enum ListingStatus
