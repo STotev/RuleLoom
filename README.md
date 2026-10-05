@@ -197,28 +197,37 @@ Create custom actions by implementing `IActionExecutor`!
 
 ### Custom Operator
 
+Operators read their operands through an `OperatorContext`: `GetValue(i)` for values, `Test(i)` for conditions
+(evaluated only when called), `GetPath(i)` for paths, and `AreEqual`/`TryCompare` for the
+[comparison rules](docs/guides/json-rules.md#comparing-values).
+
 ```csharp
-public class GreaterThanOperator : IConditionOperator
+public sealed class ContainsOperator : IConditionOperator
 {
-    public string Name => "gt";
+    public string Name => "contains";
     public int MinOperands => 2;
     public int MaxOperands => 2;
 
-    public bool Evaluate(
-        EvaluationContext ctx,
-        IReadOnlyList<ConditionNode> operands,
-        IConditionEvaluator evaluator)
-    {
-        var left = evaluator.ResolveValue(ctx, operands[0]);
-        var right = evaluator.ResolveValue(ctx, operands[1]);
-
-        if (left is IComparable leftComparable && right != null)
-            return leftComparable.CompareTo(right) > 0;
-
-        return false;
-    }
+    public bool Evaluate(OperatorContext ctx) =>
+        ctx.GetValue(0) is string text && ctx.GetValue(1) is string part &&
+        text.Contains(part, StringComparison.Ordinal);
 }
 ```
+
+Unit-test it without the engine by building the context yourself:
+
+```csharp
+var condition = new OperatorCondition
+{
+    Operator = "contains",
+    Operands = [new PathOperand { Path = "Title" }, new ValueOperand { Value = "sale" }]
+};
+var ctx = new OperatorContext(condition, new EvaluationContext(new { Title = "Summer sale" }));
+
+Assert.True(new ContainsOperator().Evaluate(ctx));
+```
+
+Register it alongside the built-ins: `new ConditionEvaluator([new EqualsOperator(), ..., new ContainsOperator()])`.
 
 ### Custom Action
 

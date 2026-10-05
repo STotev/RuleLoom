@@ -62,7 +62,7 @@ Work in this order. Findings from the 2026-10-02 code review are tracked as the 
 | [#20](https://github.com/STotev/RuleForge/issues/20) | Unit tests for operators, evaluator, path resolution | ✅ Done — unit coverage of `RuleForge` 57% → 90% |
 | [#21](https://github.com/STotev/RuleForge/issues/21) | Align test package versions, coverage in both projects | ✅ Done — central package management, xunit v3 on Microsoft.Testing.Platform, coverage in both projects |
 | [#16](https://github.com/STotev/RuleForge/issues/16) | `changed` always false for scoped paths | Folded into [#38](https://github.com/STotev/RuleForge/issues/38) |
-| [#17](https://github.com/STotev/RuleForge/issues/17) | Unclear errors for duplicates and non-operator operands | Folded into [#34](https://github.com/STotev/RuleForge/issues/34) |
+| [#17](https://github.com/STotev/RuleForge/issues/17) | Unclear errors for duplicates and non-operator operands | ✅ Fixed in [#34](https://github.com/STotev/RuleForge/issues/34) |
 | [#18](https://github.com/STotev/RuleForge/issues/18) | Cancellation not checked between rules/actions | ✅ Fixed in [#32](https://github.com/STotev/RuleForge/issues/32) |
 | [#19](https://github.com/STotev/RuleForge/issues/19) | String dates for schedule `ReferencePath` | Decided: keep, ISO 8601 only — folded into [#33](https://github.com/STotev/RuleForge/issues/33) |
 
@@ -79,9 +79,9 @@ maintainer to review that spec before implementation.
 |---|---|---|---|---|
 | [#30](https://github.com/STotev/RuleForge/issues/30) | ✅ Shared value comparer, used by `eq` — PR #41 | AFK | — | |
 | [#31](https://github.com/STotev/RuleForge/issues/31) | ✅ Parse-time structural validation — PR #43 | AFK | — | |
-| [#32](https://github.com/STotev/RuleForge/issues/32) | ✅ Complete engine results | HITL | — | #18 |
+| [#32](https://github.com/STotev/RuleForge/issues/32) | ✅ Complete engine results — PR #44 | HITL | — | #18 |
 | [#33](https://github.com/STotev/RuleForge/issues/33) | ISO 8601 string dates for schedule `ReferencePath` | AFK | #30 | #19 |
-| [#34](https://github.com/STotev/RuleForge/issues/34) | `OperatorContext` operator API | HITL | #30 | #17 |
+| [#34](https://github.com/STotev/RuleForge/issues/34) | ✅ `OperatorContext` operator API | HITL | #30 | #17 |
 | [#35](https://github.com/STotev/RuleForge/issues/35) | Normalised action parameters, `GetParameter<T>` | AFK | #30 | |
 | [#36](https://github.com/STotev/RuleForge/issues/36) | `gt`, `gte`, `lt`, `lte` | AFK | #34 | |
 | [#37](https://github.com/STotev/RuleForge/issues/37) | Case-insensitive names | AFK | #34 | |
@@ -153,7 +153,6 @@ scenario samples. Detail: [old roadmap §1.4](archive/roadmap-2026-03.md), [PRD 
 Fluent rule builder API; more operators — comparison (`between` `in`; `gt` `gte` `lt` `lte` are in #22), string
 (`contains` `startsWith` `endsWith` `matches`), collection (`any` `all` `count`), date. DI moved to #5.
 Detail: [old roadmap Phase 2](archive/roadmap-2026-03.md).
-
 
 A **test-helpers package** for consumers (builders for `OperatorContext`, rules and fake actions) — raised when
 reviewing #34; reconsider once plugin authors exist. Source: [OperatorContext spec](specs/2026-10-05-operator-context-design.md) Q3.
