@@ -3,7 +3,7 @@
 **Issue:** [#32 API hardening: complete engine results](https://github.com/STotev/RuleForge/issues/32) (also closes #18)
 **Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (module 8)
 **Date:** 2026-10-05
-**Status:** Draft — awaiting maintainer review (HITL)
+**Status:** Approved 2026-10-05 (HITL review; Q1–Q4 resolved as recommended)
 
 ---
 
@@ -34,7 +34,7 @@ public sealed record RuleEngineResult
     // True if any rule or any action has status Failed.
     public bool HasFailures { get; }
 
-    // Every Scheduled action across all rules, with its rule identity (see Q1).
+    // Every Scheduled action across all rules, with its rule identity and definition (Q1).
     public IReadOnlyList<ScheduledAction> ScheduledActions { get; }
 }
 
@@ -99,27 +99,29 @@ A rule whose actions failed keeps `Status = Matched` (the rule did match); the f
 | Cancellation | Checked before each rule and before each action (#18) | |
 | Wrapper type | `RuleEngineResult` instead of a bare list | PRD decision: room for later additions (event type, timings) without another breaking change |
 
-## Open questions for review
+## Resolved questions
+
+All four were reviewed on 2026-10-05 and resolved as recommended.
 
 **Q1 — Should `ScheduledActions` include the `ActionDefinition`?**
-*Recommendation: yes.* Whoever dispatches a scheduled action later (your own scheduler, or a future Hangfire/Quartz
+*Resolved: yes.* Whoever dispatches a scheduled action later (your own scheduler, or a future Hangfire/Quartz
 integration) needs its `Type` **and** `Parameters`. Without the definition, callers have to look it up again via the
 rule ID and `ActionIndex`. The alternative is a smaller record with `RuleId`, `RuleName` and the `ActionResult`
 only.
 
 **Q2 — How should a rule with failed actions be reported?**
-*Recommendation: `Matched` + `HasFailures`*, as above. The rule's own evaluation succeeded; the status describes the
+*Resolved: `Matched` + `HasFailures`*, as above. The rule's own evaluation succeeded; the status describes the
 rule, and action outcomes stay on the actions. The alternative is a fourth status, `PartiallyFailed` (or marking the
 rule `Failed`), which is quicker to scan but mixes up the rule and its actions.
 
 **Q3 — Should action identity be stamped onto `ActionResult`, or should results be wrapped?**
-*Recommendation: stamp `ActionType`/`ActionIndex` onto `ActionResult`* (the engine applies `result with { ... }`,
+*Resolved: stamp `ActionType`/`ActionIndex` onto `ActionResult`* (the engine applies `result with { ... }`,
 overriding anything an executor set). Callers keep working with one result type. The alternative is a wrapper
 `ActionOutcome(ActionType, ActionIndex, ActionResult Result)`, which keeps executor-created results untouched but adds
 a level of nesting to every access (`rule.ActionResults[0].Result.Status`).
 
 **Q4 — What happens to partial results when execution is cancelled?**
-*Recommendation: they are discarded* — `OperationCanceledException` propagates, as it does today, which is the
+*Resolved: they are discarded* — `OperationCanceledException` propagates, as it does today, which is the
 standard .NET contract. Callers that need to know which actions ran before cancellation can't find out. The
 alternative is to stop and return the partial result with a `Cancelled` marker, which is unusual and easy to
 mistake for a completed run.
