@@ -123,12 +123,12 @@ public static class RuleJsonParserExample
           {
             "name": "Rule 1",
             "eventType": "Event1",
-            "condition": { "path": "Field1" }
+            "condition": { "operator": "changed", "operands": [{ "path": "Field1" }] }
           },
           {
             "name": "Rule 2",
             "eventType": "Event2",
-            "condition": { "value": 42 }
+            "condition": { "operator": "eq", "operands": [{ "path": "Field2" }, { "value": 42 }] }
           }
         ]
         """;

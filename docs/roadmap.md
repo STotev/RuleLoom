@@ -77,8 +77,8 @@ maintainer to review that spec before implementation.
 
 | Issue | Slice | Type | Blocked by | Closes |
 |---|---|---|---|---|
-| [#30](https://github.com/STotev/RuleForge/issues/30) | Shared value comparer, used by `eq` | AFK | — | |
-| [#31](https://github.com/STotev/RuleForge/issues/31) | Parse-time structural validation | AFK | — | |
+| [#30](https://github.com/STotev/RuleForge/issues/30) | ✅ Shared value comparer, used by `eq` — PR #41 | AFK | — | |
+| [#31](https://github.com/STotev/RuleForge/issues/31) | ✅ Parse-time structural validation | AFK | — | |
 | [#32](https://github.com/STotev/RuleForge/issues/32) | Complete engine results | HITL | — | #18 |
 | [#33](https://github.com/STotev/RuleForge/issues/33) | ISO 8601 string dates for schedule `ReferencePath` | AFK | #30 | #19 |
 | [#34](https://github.com/STotev/RuleForge/issues/34) | `OperatorContext` operator API | HITL | #30 | #17 |

@@ -17,13 +17,13 @@ public class RuleDefinition
     /// <summary>
     /// Human-readable name for the rule.
     /// </summary>
-    public string Name { get; init; } = null!;
+    public required string Name { get; init; }
     
     /// <summary>
     /// The event type this rule responds to (e.g., "PropertyUpdated", "OrderCreated").
     /// Only rules matching the event type will be evaluated.
     /// </summary>
-    public string EventType { get; init; } = null!;
+    public required string EventType { get; init; }
     
     /// <summary>
     /// Execution priority. Higher priority rules execute first.

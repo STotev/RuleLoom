@@ -16,7 +16,7 @@ public class RuleJsonParserTests
               "name": "Test Rule",
               "eventType": "PropertyUpdated",
               "priority": 1,
-              "condition": { "path": "Price" },
+              "condition": { "operator": "changed", "operands": [{ "path": "Price" }] },
               "actions": []
             }
             """;
@@ -27,7 +27,8 @@ public class RuleJsonParserTests
         Assert.Equal("Test Rule", rule.Name);
         Assert.Equal("PropertyUpdated", rule.EventType);
         Assert.Equal(1, rule.Priority);
-        Assert.IsType<PathOperand>(rule.Condition);
+        var condition = Assert.IsType<OperatorCondition>(rule.Condition);
+        Assert.Equal("Price", Assert.IsType<PathOperand>(Assert.Single(condition.Operands)).Path);
         Assert.Empty(rule.Actions);
     }
 
@@ -39,15 +40,15 @@ public class RuleJsonParserTests
             {
               "name": "Value Test",
               "eventType": "Event1",
-              "condition": { "value": 42 },
+              "condition": { "operator": "eq", "operands": [{ "path": "Answer" }, { "value": 42 }] },
               "actions": []
             }
             """;
 
         var rule = RuleJsonParser.Parse(json);
 
-        Assert.IsType<ValueOperand>(rule.Condition);
-        var valueOperand = (ValueOperand)rule.Condition;
+        var condition = Assert.IsType<OperatorCondition>(rule.Condition);
+        var valueOperand = Assert.IsType<ValueOperand>(condition.Operands[1]);
         Assert.Equal(42, valueOperand.Value);
     }
 
@@ -138,7 +139,7 @@ public class RuleJsonParserTests
             {
               "name": "Action Test",
               "eventType": "Event1",
-              "condition": { "path": "Field" },
+              "condition": { "operator": "changed", "operands": [{ "path": "Field" }] },
               "actions": [
                 {
                   "type": "log",
@@ -176,7 +177,7 @@ public class RuleJsonParserTests
             {
               "name": "No Schedule Test",
               "eventType": "Event1",
-              "condition": { "value": true },
+              "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
               "actions": [
                 {
                   "type": "log",
@@ -200,7 +201,7 @@ public class RuleJsonParserTests
             {
               "name": "Immediate Schedule Test",
               "eventType": "Event1",
-              "condition": { "value": true },
+              "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
               "actions": [
                 {
                   "type": "log",
@@ -229,7 +230,7 @@ public class RuleJsonParserTests
             {
               "name": "Delay Schedule Test",
               "eventType": "Event1",
-              "condition": { "value": true },
+              "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
               "actions": [
                 {
                   "type": "log",
@@ -262,7 +263,7 @@ public class RuleJsonParserTests
             {
               "name": "Advance Schedule Test",
               "eventType": "Event1",
-              "condition": { "value": true },
+              "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
               "actions": [
                 {
                   "type": "log",
@@ -296,7 +297,7 @@ public class RuleJsonParserTests
             {
               "name": "Case-insensitive Schedule Test",
               "eventType": "Event1",
-              "condition": { "value": true },
+              "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
               "actions": [
                 {
                   "type": "log",
@@ -328,7 +329,7 @@ public class RuleJsonParserTests
             {
               "NAME": "Test",
               "EVENTTYPE": "Event1",
-              "CONDITION": { "PATH": "Field" },
+              "CONDITION": { "OPERATOR": "changed", "OPERANDS": [{ "PATH": "Field" }] },
               "ACTIONS": []
             }
             """;
@@ -345,24 +346,24 @@ public class RuleJsonParserTests
         const string json =
             """
             [
-              { "name": "R1", "eventType": "E", "condition": { "value": null }, "actions": [] },
-              { "name": "R2", "eventType": "E", "condition": { "value": true }, "actions": [] },
-              { "name": "R3", "eventType": "E", "condition": { "value": "string" }, "actions": [] },
-              { "name": "R4", "eventType": "E", "condition": { "value": 42 }, "actions": [] },
-              { "name": "R5", "eventType": "E", "condition": { "value": 3.14 }, "actions": [] },
-              { "name": "R6", "eventType": "E", "condition": { "value": [1, 2, 3] }, "actions": [] }
+              { "name": "R1", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": null }] }, "actions": [] },
+              { "name": "R2", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": true }] }, "actions": [] },
+              { "name": "R3", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": "string" }] }, "actions": [] },
+              { "name": "R4", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": 42 }] }, "actions": [] },
+              { "name": "R5", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": 3.14 }] }, "actions": [] },
+              { "name": "R6", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": [1, 2, 3] }] }, "actions": [] }
             ]
             """;
 
         var rules = RuleJsonParser.ParseMany(json);
 
         Assert.Equal(6, rules.Count);
-        Assert.Null(((ValueOperand)rules[0].Condition).Value);
-        Assert.True((bool)((ValueOperand)rules[1].Condition).Value!);
-        Assert.Equal("string", (string)((ValueOperand)rules[2].Condition).Value!);
-        Assert.Equal(42, (int)((ValueOperand)rules[3].Condition).Value!);
-        Assert.Equal(3.14, (double)((ValueOperand)rules[4].Condition).Value!);
-        Assert.IsType<List<object?>>(((ValueOperand)rules[5].Condition).Value);
+        Assert.Null(FirstValue(rules[0]).Value);
+        Assert.True((bool)FirstValue(rules[1]).Value!);
+        Assert.Equal("string", (string)FirstValue(rules[2]).Value!);
+        Assert.Equal(42, (int)FirstValue(rules[3]).Value!);
+        Assert.Equal(3.14, (double)FirstValue(rules[4]).Value!);
+        Assert.IsType<List<object?>>(FirstValue(rules[5]).Value);
     }
 
     [Fact]
@@ -374,20 +375,19 @@ public class RuleJsonParserTests
     }
 
     [Fact]
-    public void Parse_MissingRequiredProperty_ThrowsException()
+    public void Parse_MissingName_ThrowsRuleParseException()
     {
         const string json =
             """
             {
               "eventType": "Event1",
-              "condition": { "path": "Field" },
+              "condition": { "operator": "changed", "operands": [{ "path": "Field" }] },
               "actions": []
             }
             """;
 
-        // Missing "name" is allowed (null! property)
-        var rule = RuleJsonParser.Parse(json);
-        Assert.Null(rule.Name);
+        var ex = Assert.Throws<RuleParseException>(() => RuleJsonParser.Parse(json));
+        Assert.Equal("$.name", ex.Path);
     }
 
     [Fact]
@@ -403,7 +403,8 @@ public class RuleJsonParserTests
             }
             """;
 
-        Assert.Throws<JsonException>(() => RuleJsonParser.Parse(json));
+        var ex = Assert.Throws<RuleParseException>(() => RuleJsonParser.Parse(json));
+        Assert.Equal("$.condition", ex.Path);
     }
 
     [Fact]
@@ -412,9 +413,9 @@ public class RuleJsonParserTests
         const string json =
             """
             [
-              { "name": "Rule1", "eventType": "E1", "condition": { "path": "A" }, "actions": [] },
-              { "name": "Rule2", "eventType": "E2", "condition": { "path": "B" }, "actions": [] },
-              { "name": "Rule3", "eventType": "E3", "condition": { "path": "C" }, "actions": [] }
+              { "name": "Rule1", "eventType": "E1", "condition": { "operator": "changed", "operands": [{ "path": "A" }] }, "actions": [] },
+              { "name": "Rule2", "eventType": "E2", "condition": { "operator": "changed", "operands": [{ "path": "B" }] }, "actions": [] },
+              { "name": "Rule3", "eventType": "E3", "condition": { "operator": "changed", "operands": [{ "path": "C" }] }, "actions": [] }
             ]
             """;
 
@@ -434,7 +435,7 @@ public class RuleJsonParserTests
             {
               "name": "Test",
               "eventType": "Event1",
-              "condition": { "path": "Field" },
+              "condition": { "operator": "changed", "operands": [{ "path": "Field" }] },
               "actions": []
             }
             """;
@@ -454,7 +455,7 @@ public class RuleJsonParserTests
               "id": "custom-id-123",
               "name": "Test",
               "eventType": "Event1",
-              "condition": { "path": "Field" },
+              "condition": { "operator": "changed", "operands": [{ "path": "Field" }] },
               "actions": []
             }
             """;
@@ -535,4 +536,7 @@ public class RuleJsonParserTests
         Assert.Single(rule.Actions);
         Assert.NotNull(rule.Actions[0].Condition);
     }
+
+    private static ValueOperand FirstValue(RuleDefinition rule) =>
+        (ValueOperand)((OperatorCondition)rule.Condition).Operands[0];
 }

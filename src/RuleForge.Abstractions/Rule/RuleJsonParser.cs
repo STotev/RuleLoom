@@ -15,28 +15,44 @@ public static class RuleJsonParser
     /// <summary>
     /// Parses a JSON string into a RuleDefinition.
     /// </summary>
+    /// <exception cref="JsonException">The JSON is malformed.</exception>
+    /// <exception cref="RuleParseException">The JSON doesn't describe a valid rule.</exception>
     public static RuleDefinition Parse(string json)
     {
-        return JsonSerializer.Deserialize<RuleDefinition>(json, DefaultOptions)
-            ?? throw new JsonException("Failed to deserialize rule definition");
+        return ToRule(JsonSerializer.Deserialize<JsonElement>(json, DefaultOptions), "$");
     }
 
     /// <summary>
     /// Parses a JSON string into a RuleDefinition asynchronously.
     /// </summary>
+    /// <exception cref="JsonException">The JSON is malformed.</exception>
+    /// <exception cref="RuleParseException">The JSON doesn't describe a valid rule.</exception>
     public static async Task<RuleDefinition> ParseAsync(Stream jsonStream)
     {
-        return await JsonSerializer.DeserializeAsync<RuleDefinition>(jsonStream, DefaultOptions)
-            ?? throw new JsonException("Failed to deserialize rule definition");
+        return ToRule(await JsonSerializer.DeserializeAsync<JsonElement>(jsonStream, DefaultOptions), "$");
     }
 
     /// <summary>
     /// Parses multiple rules from a JSON array.
     /// </summary>
+    /// <exception cref="JsonException">The JSON is malformed.</exception>
+    /// <exception cref="RuleParseException">The JSON isn't an array of valid rules; the path names the failing rule's index.</exception>
     public static List<RuleDefinition> ParseMany(string json)
     {
-        return JsonSerializer.Deserialize<List<RuleDefinition>>(json, DefaultOptions)
-            ?? throw new JsonException("Failed to deserialize rules");
+        var document = JsonSerializer.Deserialize<JsonElement>(json, DefaultOptions);
+
+        if (document.ValueKind != JsonValueKind.Array)
+            throw new RuleParseException("Expected a JSON array of rules.", "$");
+
+        return document.EnumerateArray().Select((rule, index) => ToRule(rule, $"$[{index}]")).ToList();
+    }
+
+    private static RuleDefinition ToRule(JsonElement rule, string path)
+    {
+        RuleJsonValidator.ValidateRule(rule, path);
+
+        return rule.Deserialize<RuleDefinition>(DefaultOptions)
+            ?? throw new JsonException("Failed to deserialize rule definition");
     }
 
     private static JsonSerializerOptions CreateDefaultOptions()
