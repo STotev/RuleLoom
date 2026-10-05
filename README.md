@@ -178,6 +178,14 @@ await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, [rule]);
 | `and` | All true | 1+ | `A && B && C` |
 | `or` | Any true | 1+ | `A \|\| B \|\| C` |
 | `not` | Invert | 1 | `!(Status == "Inactive")` |
+| `gt` | Greater than | 2 | `Price > 1000000` |
+| `gte` | Greater than or equal | 2 | `Price >= 1000000` |
+| `lt` | Less than | 2 | `DueDate < "2026-12-31"` |
+| `lte` | Less than or equal | 2 | `Stock <= 5` |
+
+`eq` and the ordering operators follow the same [comparison rules](docs/guides/json-rules.md#comparing-values).
+Values that can't be ordered — a `null`, or a number against a non-numeric string — make `gt`/`gte`/`lt`/`lte`
+evaluate to `false`.
 
 More operators are on the [roadmap](docs/roadmap.md).
 
