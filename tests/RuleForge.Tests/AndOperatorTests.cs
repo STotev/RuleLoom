@@ -1,4 +1,6 @@
 using RuleForge.Abstractions;
+using RuleForge.Operators;
+using RuleForge.Abstractions.Condition;
 using static RuleForge.Tests.Conditions;
 
 namespace RuleForge.Tests;
@@ -40,5 +42,23 @@ public class AndOperatorTests
                 Op("eq", Path("Price"), Value(1)))));
 
         Assert.True(Evaluator().Evaluate(context, condition));
+    }
+
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    public void Evaluate_DirectlyWithBoolOperands_CombinesThem(bool first, bool second, bool expected)
+    {
+        var context = new OperatorContext(Op("and", Value(first), Value(second)), Context);
+
+        Assert.Equal(expected, new AndOperator().Evaluate(context));
+    }
+
+    [Fact]
+    public void Evaluate_BoolPathOperands_AreAccepted()
+    {
+        var context = new EvaluationContext(new { IsActive = true, IsDeleted = false });
+
+        Assert.False(Evaluator().Evaluate(context, Op("and", Path("IsActive"), Path("IsDeleted"))));
     }
 }

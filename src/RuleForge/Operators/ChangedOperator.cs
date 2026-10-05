@@ -1,4 +1,3 @@
-using RuleForge.Abstractions;
 using RuleForge.Abstractions.Condition;
 
 namespace RuleForge.Operators;
@@ -9,17 +8,10 @@ public class ChangedOperator : IConditionOperator
     public int MinOperands => 1;
     public int MaxOperands => 1;
 
-    public bool Evaluate(
-        EvaluationContext context,
-        IReadOnlyList<ConditionNode> operands,
-        IConditionEvaluator evaluator)
+    public bool Evaluate(OperatorContext context)
     {
-        var pathNode = operands[0] as PathOperand ??
-                       throw new InvalidOperationException("changed expects a path");
+        var path = context.GetPath(0);
 
-        var current = context.Resolve($"current.{pathNode.Path}");
-        var previous = context.Resolve($"previous.{pathNode.Path}");
-
-        return !Equals(current, previous);
+        return !Equals(context.Resolve($"current.{path}"), context.Resolve($"previous.{path}"));
     }
 }

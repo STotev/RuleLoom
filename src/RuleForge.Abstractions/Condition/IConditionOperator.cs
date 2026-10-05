@@ -22,7 +22,9 @@ public interface IConditionOperator
     int MaxOperands { get; }
 
     /// <summary>
-    /// Evaluates the operator with the given operands.
+    /// Evaluates the operator. Read operands through <paramref name="context"/>:
+    /// <see cref="OperatorContext.GetValue"/> for values, <see cref="OperatorContext.Test"/> for conditions,
+    /// <see cref="OperatorContext.GetPath"/> for paths.
     /// </summary>
-    bool Evaluate(EvaluationContext context, IReadOnlyList<ConditionNode> operands, IConditionEvaluator evaluator);
+    bool Evaluate(OperatorContext context);
 }

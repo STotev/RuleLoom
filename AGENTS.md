@@ -129,7 +129,10 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 ### Extension points
 
 - **Operator**: implement `IConditionOperator` — lowercase `Name`, `MinOperands`/`MaxOperands`
-  (`int.MaxValue` = unlimited), resolve operands via `IConditionEvaluator.ResolveValue`/`Evaluate`.
+  (`int.MaxValue` = unlimited), `bool Evaluate(OperatorContext ctx)`. Read operands via `ctx.GetValue(i)` (value),
+  `ctx.Test(i)` (condition, lazy; bool paths/values allowed), `ctx.GetPath(i)` (path string); compare with
+  `ctx.AreEqual`/`ctx.TryCompare`. Unit-test operators with `new OperatorContext(condition, evaluationContext)`
+  (pass an evaluator only when operands are nested operators).
 - **Action**: implement `IActionExecutor` — kebab-case `Type`,
   `Task<ActionResult> ExecuteAsync(ActionDefinition, EvaluationContext, CancellationToken)`;
   return `ActionResult.Success()` or `ActionResult.Failed(...)`.

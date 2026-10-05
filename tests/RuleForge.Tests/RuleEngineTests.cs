@@ -479,7 +479,6 @@ public class RuleEngineTests
             return node is ValueOperand { Value: false } ? actionConditionResult : conditionResult;
         }
 
-        public object? ResolveValue(EvaluationContext context, ConditionNode node) => null;
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider

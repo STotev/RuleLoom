@@ -34,9 +34,11 @@ public class ConditionEvaluatorTests
     }
 
     [Fact]
-    public void Constructor_DuplicateOperatorNames_Throws()
+    public void Constructor_DuplicateOperatorNames_ThrowsNamingTheOperator()
     {
-        Assert.Throws<ArgumentException>(() => new ConditionEvaluator([new EqualsOperator(), new EqualsOperator()]));
+        var ex = Assert.Throws<ArgumentException>(() => new ConditionEvaluator([new EqualsOperator(), new EqualsOperator()]));
+
+        Assert.StartsWith("Operator 'eq' is registered more than once.", ex.Message);
     }
 
     [Fact]
@@ -78,36 +80,13 @@ public class ConditionEvaluatorTests
 
     [Theory]
     [MemberData(nameof(NonOperatorNodes))]
-    public void Evaluate_NonOperatorNode_Throws(ConditionNode node)
+    public void Evaluate_NonOperatorNode_ThrowsNamingTheNodeType(ConditionNode node)
     {
-        Assert.Throws<InvalidOperationException>(() => Evaluator().Evaluate(Context, node));
+        var ex = Assert.Throws<InvalidOperationException>(() => Evaluator().Evaluate(Context, node));
+
+        Assert.Equal($"Expected an operator condition but got {node.GetType().Name}.", ex.Message);
+        Assert.DoesNotContain("root", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     public static TheoryData<ConditionNode> NonOperatorNodes => new() { Path("Price"), Value(true) };
-
-    [Fact]
-    public void ResolveValue_ValueOperand_ReturnsValue()
-    {
-        Assert.Equal(42, Evaluator().ResolveValue(Context, Value(42)));
-    }
-
-    [Fact]
-    public void ResolveValue_PathOperand_ReturnsResolvedProperty()
-    {
-        Assert.Equal("Lamp", Evaluator().ResolveValue(Context, Path("Name")));
-    }
-
-    [Fact]
-    public void ResolveValue_MissingPath_ReturnsNull()
-    {
-        Assert.Null(Evaluator().ResolveValue(Context, Path("Missing")));
-    }
-
-    [Theory]
-    [InlineData(100, true)]
-    [InlineData(1, false)]
-    public void ResolveValue_OperatorCondition_ReturnsBooleanResult(int value, bool expected)
-    {
-        Assert.Equal(expected, Evaluator().ResolveValue(Context, Op("eq", Path("Price"), Value(value))));
-    }
 }

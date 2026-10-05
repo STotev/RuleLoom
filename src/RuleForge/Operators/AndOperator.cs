@@ -1,4 +1,3 @@
-using RuleForge.Abstractions;
 using RuleForge.Abstractions.Condition;
 
 namespace RuleForge.Operators;
@@ -9,15 +8,14 @@ public class AndOperator : IConditionOperator
     public int MinOperands => 1;
     public int MaxOperands => int.MaxValue;
 
-    public bool Evaluate(EvaluationContext ctx, IReadOnlyList<ConditionNode> operands, IConditionEvaluator evaluator)
+    public bool Evaluate(OperatorContext context)
     {
-        foreach (var operand in operands)
+        for (var i = 0; i < context.OperandCount; i++)
         {
-            if (!evaluator.Evaluate(ctx, operand))
+            if (!context.Test(i))
                 return false;
         }
 
         return true;
     }
 }
-
