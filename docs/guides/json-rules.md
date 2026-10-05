@@ -240,7 +240,7 @@ IConditionOperator[] operators =
 IActionExecutor[] actions = [new LogAction()];
 
 var engine = new RuleEngine(new ConditionEvaluator(operators), new DirectActionExecutorFactory(actions));
-IReadOnlyList<RuleExecutionResult> results = await engine.ExecuteAsync(eventType, current, previous, [rule]);
+RuleEngineResult result = await engine.ExecuteAsync(eventType, current, previous, [rule]);
 ```
 
 ## Best Practices

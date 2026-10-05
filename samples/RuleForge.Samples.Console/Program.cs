@@ -167,12 +167,21 @@ var currentProperty = new Property
 
 // await engine.ExecuteAsync("PropertyUpdated", currentProperty, previousProperty, [rule2]);
 // await engine.ExecuteAsync("PropertyUpdated", currentProperty, [rule]);
-var executionResults = await engine.ExecuteAsync("PropertyUpdated", currentProperty, [rule3]);
+var result = await engine.ExecuteAsync("PropertyUpdated", currentProperty, [rule3]);
 
-foreach (var executionResult in executionResults)
+foreach (var ruleResult in result.Rules)
 {
-    foreach (var actionResult in executionResult.ActionResults)
+    Console.WriteLine($"[{ruleResult.RuleName}] {ruleResult.Status}{(ruleResult.Error is null ? "" : $": {ruleResult.Error.Message}")}");
+
+    foreach (var actionResult in ruleResult.ActionResults)
     {
-        Console.WriteLine($"[{executionResult.RuleName}] '{actionResult.Status}': {actionResult.Message}");
+        Console.WriteLine($"  #{actionResult.ActionIndex} '{actionResult.ActionType}' {actionResult.Status}: {actionResult.Message}");
     }
 }
+
+foreach (var scheduled in result.ScheduledActions)
+{
+    Console.WriteLine($"Scheduled '{scheduled.Action.Type}' from [{scheduled.RuleName}] for {scheduled.Result.ScheduledFor:O}");
+}
+
+Console.WriteLine($"Has failures: {result.HasFailures}");
