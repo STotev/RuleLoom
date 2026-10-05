@@ -20,7 +20,13 @@ public sealed class RuleEngine(
 
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
-    public async Task<IReadOnlyList<RuleExecutionResult>> ExecuteAsync(
+    /// <summary>
+    /// Evaluates every rule for <paramref name="eventType"/> against the current and previous state and processes
+    /// the actions of the rules that match.
+    /// </summary>
+    /// <returns>One result per rule whose event type matched; failures are reported in the results, not thrown.</returns>
+    /// <exception cref="OperationCanceledException">Cancellation was requested.</exception>
+    public async Task<RuleEngineResult> ExecuteAsync(
         string eventType,
         object current,
         object? previous,
@@ -29,102 +35,59 @@ public sealed class RuleEngine(
     {
         var context = new EvaluationContext(current, previous);
         var ruleResults = new List<RuleExecutionResult>();
+        var scheduledActions = new List<ScheduledAction>();
 
         var matchingRules = rules
             .Where(r => r.EventType == eventType)
-            .OrderByDescending(r => r.Priority)
-            .ToList();
+            .OrderByDescending(r => r.Priority);
 
         foreach (var rule in matchingRules)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            bool matched;
             try
             {
-                if (!_conditionEvaluator.Evaluate(context, rule.Condition))
-                {
-                    continue;
-                }
-
-                var actionResults = new List<ActionResult>();
-
-                foreach (var action in rule.Actions)
-                {
-                    if (action.Condition is not null && !_conditionEvaluator.Evaluate(context, action.Condition))
-                    {
-                        actionResults.Add(
-                            ActionResult.Skipped($"Action '{action.Type}' skipped because condition was not met."));
-
-                        continue;
-                    }
-
-                    if (action.Schedule is { Mode: not ScheduleMode.Immediate } schedule)
-                    {
-                        try
-                        {
-                            var scheduledFor =
-                                ScheduleCalculator.Calculate(schedule, context, _timeProvider.GetUtcNow());
-
-                            actionResults.Add(
-                                ActionResult.Scheduled(
-                                    scheduledFor,
-                                    $"Action '{action.Type}' scheduled for {scheduledFor:O}."));
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            throw;
-                        }
-                        catch (Exception ex)
-                        {
-                            actionResults.Add(ActionResult.Failed(ex, $"Action '{action.Type}' scheduling failed. Reason: {ex.Message}"));
-                        }
-
-                        continue;
-                    }
-
-                    if (!_actionFactory.TryGetExecutor(action.Type, out var executor) || executor is null)
-                    {
-                        var ex = new InvalidOperationException(
-                            $"No action executor is registered for action type '{action.Type}'.");
-
-                        actionResults.Add(ActionResult.Failed(ex, $"Action '{action.Type}' is not supported."));
-
-                        continue;
-                    }
-
-                    try
-                    {
-                        var actionResult = await executor.ExecuteAsync(action, context, cancellationToken);
-
-                        actionResults.Add(actionResult);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        actionResults.Add(ActionResult.Failed(ex, $"Action '{action.Type}' execution failed."));
-                    }
-                }
-
-                ruleResults.Add(new RuleExecutionResult
-                {
-                    RuleName = rule.Name,
-                    ActionResults = actionResults
-                });
+                matched = _conditionEvaluator.Evaluate(context, rule.Condition);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // Log error but continue with next rule to prevent one failing rule from stopping all execution
-                // TODO: Replace with structured logging when observability is implemented (Phase 4.3)
-                await Console.Error.WriteLineAsync(
-                    $"[RuleForge] Rule '{rule.Name}' (ID: {rule.Id}) failed: {ex.GetType().Name}: {ex.Message}");
+                ruleResults.Add(CreateRuleResult(rule, RuleExecutionStatus.Failed, error: ex));
+                continue;
             }
+
+            if (!matched)
+            {
+                ruleResults.Add(CreateRuleResult(rule, RuleExecutionStatus.NotMatched));
+                continue;
+            }
+
+            var actionResults = new List<ActionResult>(rule.Actions.Count);
+
+            for (var index = 0; index < rule.Actions.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var action = rule.Actions[index];
+                var result = await ProcessActionAsync(action, context, cancellationToken)
+                    with { ActionType = action.Type, ActionIndex = index };
+
+                actionResults.Add(result);
+
+                if (result.Status == ActionExecutionStatus.Scheduled)
+                    scheduledActions.Add(new ScheduledAction(rule.Id, rule.Name, action, result));
+            }
+
+            ruleResults.Add(CreateRuleResult(rule, RuleExecutionStatus.Matched, actionResults));
         }
 
-        return ruleResults;
+        return new RuleEngineResult { Rules = ruleResults, ScheduledActions = scheduledActions };
     }
 
-    public Task<IReadOnlyList<RuleExecutionResult>> ExecuteAsync(
+    /// <summary>
+    /// Evaluates rules for an event that has no previous state.
+    /// </summary>
+    public Task<RuleEngineResult> ExecuteAsync(
         string eventType,
         object data,
         IEnumerable<RuleDefinition> rules,
@@ -132,4 +95,69 @@ public sealed class RuleEngine(
     {
         return ExecuteAsync(eventType, data, null, rules, cancellationToken);
     }
+
+    private async Task<ActionResult> ProcessActionAsync(
+        ActionDefinition action,
+        EvaluationContext context,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (action.Condition is not null && !_conditionEvaluator.Evaluate(context, action.Condition))
+                return ActionResult.Skipped($"Action '{action.Type}' skipped because condition was not met.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return ActionResult.Failed(ex, $"Action '{action.Type}' condition could not be evaluated. Reason: {ex.Message}");
+        }
+
+        if (action.Schedule is { Mode: not ScheduleMode.Immediate } schedule)
+        {
+            try
+            {
+                var scheduledFor = ScheduleCalculator.Calculate(schedule, context, _timeProvider.GetUtcNow());
+
+                return ActionResult.Scheduled(scheduledFor, $"Action '{action.Type}' scheduled for {scheduledFor:O}.");
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return ActionResult.Failed(ex, $"Action '{action.Type}' scheduling failed. Reason: {ex.Message}");
+            }
+        }
+
+        if (!_actionFactory.TryGetExecutor(action.Type, out var executor) || executor is null)
+        {
+            var ex = new InvalidOperationException($"No action executor is registered for action type '{action.Type}'.");
+
+            return ActionResult.Failed(ex, $"Action '{action.Type}' is not supported.");
+        }
+
+        try
+        {
+            // Guards against executors that return null despite the non-nullable contract.
+            ActionResult? result = await executor.ExecuteAsync(action, context, cancellationToken);
+
+            return result ?? ActionResult.Failed(
+                new InvalidOperationException($"The executor for action type '{action.Type}' returned no result."),
+                $"Action '{action.Type}' execution failed.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return ActionResult.Failed(ex, $"Action '{action.Type}' execution failed.");
+        }
+    }
+
+    private static RuleExecutionResult CreateRuleResult(
+        RuleDefinition rule,
+        RuleExecutionStatus status,
+        IReadOnlyList<ActionResult>? actionResults = null,
+        Exception? error = null) =>
+        new()
+        {
+            RuleId = rule.Id,
+            RuleName = rule.Name,
+            Status = status,
+            Error = error,
+            ActionResults = actionResults ?? []
+        };
 }

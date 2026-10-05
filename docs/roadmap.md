@@ -63,7 +63,7 @@ Work in this order. Findings from the 2026-10-02 code review are tracked as the 
 | [#21](https://github.com/STotev/RuleForge/issues/21) | Align test package versions, coverage in both projects | ✅ Done — central package management, xunit v3 on Microsoft.Testing.Platform, coverage in both projects |
 | [#16](https://github.com/STotev/RuleForge/issues/16) | `changed` always false for scoped paths | Folded into [#38](https://github.com/STotev/RuleForge/issues/38) |
 | [#17](https://github.com/STotev/RuleForge/issues/17) | Unclear errors for duplicates and non-operator operands | Folded into [#34](https://github.com/STotev/RuleForge/issues/34) |
-| [#18](https://github.com/STotev/RuleForge/issues/18) | Cancellation not checked between rules/actions | Folded into [#32](https://github.com/STotev/RuleForge/issues/32) |
+| [#18](https://github.com/STotev/RuleForge/issues/18) | Cancellation not checked between rules/actions | ✅ Fixed in [#32](https://github.com/STotev/RuleForge/issues/32) |
 | [#19](https://github.com/STotev/RuleForge/issues/19) | String dates for schedule `ReferencePath` | Decided: keep, ISO 8601 only — folded into [#33](https://github.com/STotev/RuleForge/issues/33) |
 
 ### 2. API hardening — PRD [#22](https://github.com/STotev/RuleForge/issues/22)
@@ -78,8 +78,8 @@ maintainer to review that spec before implementation.
 | Issue | Slice | Type | Blocked by | Closes |
 |---|---|---|---|---|
 | [#30](https://github.com/STotev/RuleForge/issues/30) | ✅ Shared value comparer, used by `eq` — PR #41 | AFK | — | |
-| [#31](https://github.com/STotev/RuleForge/issues/31) | ✅ Parse-time structural validation | AFK | — | |
-| [#32](https://github.com/STotev/RuleForge/issues/32) | Complete engine results | HITL | — | #18 |
+| [#31](https://github.com/STotev/RuleForge/issues/31) | ✅ Parse-time structural validation — PR #43 | AFK | — | |
+| [#32](https://github.com/STotev/RuleForge/issues/32) | ✅ Complete engine results | HITL | — | #18 |
 | [#33](https://github.com/STotev/RuleForge/issues/33) | ISO 8601 string dates for schedule `ReferencePath` | AFK | #30 | #19 |
 | [#34](https://github.com/STotev/RuleForge/issues/34) | `OperatorContext` operator API | HITL | #30 | #17 |
 | [#35](https://github.com/STotev/RuleForge/issues/35) | Normalised action parameters, `GetParameter<T>` | AFK | #30 | |

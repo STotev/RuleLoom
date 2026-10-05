@@ -26,6 +26,16 @@ public sealed record ActionResult
     /// </summary>
     public Exception? Error { get; init; }
 
+    /// <summary>
+    /// The <see cref="ActionDefinition.Type"/> of the action this result belongs to. Set by the rule engine.
+    /// </summary>
+    public string ActionType { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The position of the action in its rule's <c>Actions</c> list. Set by the rule engine.
+    /// </summary>
+    public int ActionIndex { get; init; }
+
     public static ActionResult Success(string? message = null)
     {
         if (message is null) return _success;

@@ -82,10 +82,12 @@ var engine = new RuleEngine(
 var previousData = new { Price = 100000 };
 var currentData = new { Price = 150000 };
 
-IReadOnlyList<RuleExecutionResult> results =
+RuleEngineResult result =
     await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, [rule]);
 // Output: "Price changed!"
-// results[0].ActionResults[0].Status == ActionExecutionStatus.ExecutedImmediately
+// result.Rules[0].Status == RuleExecutionStatus.Matched
+// result.Rules[0].ActionResults[0].Status == ActionExecutionStatus.ExecutedImmediately
+// result.HasFailures == false
 ```
 
 ### JSON Example

@@ -90,17 +90,20 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 ### Execution flow (`RuleEngine.ExecuteAsync`)
 
 ```
-(eventType, current, previous, rules) → IReadOnlyList<RuleExecutionResult>
-  → filter rules by EventType, order by Priority descending (higher runs first)
-  → for each rule: rule condition false → no result for that rule
-    → for each action:
-        action condition false            → ActionResult.Skipped
-        Schedule with Mode != Immediate   → ScheduleCalculator → ActionResult.Scheduled (executor NOT called)
-                                            calculation error → ActionResult.Failed
-        no executor for action.Type       → ActionResult.Failed
-        otherwise                         → executor.ExecuteAsync → its ActionResult (exception → Failed)
-  → an exception in a rule is written to stderr and the next rule continues (fail-safe);
-    OperationCanceledException always propagates
+(eventType, current, previous, rules) → RuleEngineResult { Rules, HasFailures, ScheduledActions }
+  → rules with another EventType are not included
+  → order by Priority descending (higher runs first); cancellation checked before each rule and action
+  → per rule (RuleExecutionResult with RuleId, RuleName, Status, Error, ActionResults):
+      condition throws → Failed (Error set, no actions)   condition false → NotMatched   true → Matched
+    → per action (ActionResult stamped with ActionType and ActionIndex by the engine):
+        action condition throws           → Failed (only this action; later actions still run)
+        action condition false            → Skipped
+        Schedule with Mode != Immediate   → ScheduleCalculator → Scheduled (executor NOT called;
+                                            also listed in ScheduledActions) / calculation error → Failed
+        no executor for action.Type       → Failed
+        otherwise                         → executor.ExecuteAsync → its ActionResult (exception/null → Failed)
+  → failures are reported in the result, never written to the console;
+    OperationCanceledException always propagates (partial results are discarded)
 ```
 
 ### Key concepts
