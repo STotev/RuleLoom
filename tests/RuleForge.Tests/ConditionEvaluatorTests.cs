@@ -16,10 +16,17 @@ public class ConditionEvaluatorTests
     [InlineData("and", 1, int.MaxValue)]
     [InlineData("or", 1, int.MaxValue)]
     [InlineData("not", 1, 1)]
+    [InlineData("gt", 2, 2)]
+    [InlineData("gte", 2, 2)]
+    [InlineData("lt", 2, 2)]
+    [InlineData("lte", 2, 2)]
     public void BuiltInOperators_DeclareNameAndOperandLimits(string name, int min, int max)
     {
         IConditionOperator[] operators =
-            [new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator()];
+        [
+            new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator(),
+            new GreaterThanOperator(), new GreaterThanOrEqualOperator(), new LessThanOperator(), new LessThanOrEqualOperator()
+        ];
 
         var op = Assert.Single(operators, o => o.Name == name);
 
@@ -53,7 +60,8 @@ public class ConditionEvaluatorTests
     [Fact]
     public void Evaluate_UnknownOperator_Throws()
     {
-        Assert.Throws<InvalidOperationException>(() => Evaluator().Evaluate(Context, Op("gt", Value(1), Value(2))));
+        Assert.Throws<InvalidOperationException>(
+            () => Evaluator().Evaluate(Context, Op("no-such-operator", Value(1), Value(2))));
     }
 
     [Fact]

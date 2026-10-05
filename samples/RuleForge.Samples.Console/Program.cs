@@ -142,7 +142,8 @@ var rule3 = RuleJsonParser.Parse(json);
 
 var conditions = new List<IConditionOperator>
 {
-    new AndOperator(), new EqualsOperator(), new NotOperator(), new ChangedOperator(), new OrOperator()
+    new AndOperator(), new EqualsOperator(), new NotOperator(), new ChangedOperator(), new OrOperator(),
+    new GreaterThanOperator(), new GreaterThanOrEqualOperator(), new LessThanOperator(), new LessThanOrEqualOperator()
 };
 
 var actions = new List<IActionExecutor> { new LogAction() };
