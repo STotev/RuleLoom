@@ -66,7 +66,7 @@ public class RuleEngineIntegrationTests
         var property = new { Price = 100000 };
 
         // Act
-        var result = await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken);
+        var result = (await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken)).Rules;
 
         // Assert
         Assert.Single(_logMessages);
@@ -429,7 +429,7 @@ public class RuleEngineIntegrationTests
         var property = new { Status = "Active" };
 
         // Act
-        var result = await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken);
+        var result = (await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken)).Rules;
 
         // Assert
         Assert.Equal(2, _logMessages.Count);

@@ -23,7 +23,7 @@ public class RuleEngineTests
         var engine = new RuleEngine(evaluator, factory);
         RuleDefinition[] rules = [CreateRule("Rule A", "ok-action")];
 
-        var result = await engine.ExecuteAsync("Event", new { }, rules, TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", new { }, rules, TestContext.Current.CancellationToken)).Rules;
 
         Assert.Single(result);
         Assert.Equal("Rule A", result[0].RuleName);
@@ -56,7 +56,7 @@ public class RuleEngineTests
             ]
         };
 
-        var result = await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken)).Rules;
 
         Assert.Single(result);
         Assert.Equal(2, result[0].ActionResults.Count);
@@ -94,7 +94,7 @@ public class RuleEngineTests
             ]
         };
 
-        var result = await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken)).Rules;
 
         Assert.Single(result);
         Assert.Equal(2, result[0].ActionResults.Count);
@@ -130,7 +130,7 @@ public class RuleEngineTests
             ]
         };
 
-        var result = await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken)).Rules;
 
         Assert.Single(result);
         Assert.Single(result[0].ActionResults);
@@ -138,16 +138,19 @@ public class RuleEngineTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_RuleConditionFalse_ExcludesRuleResult()
+    public async Task ExecuteAsync_RuleConditionFalse_ReturnsNotMatchedWithoutActions()
     {
         var evaluator = new TestConditionEvaluator(conditionResult: false);
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>());
         var engine = new RuleEngine(evaluator, factory);
         RuleDefinition[] rules = [CreateRule("Rule A", "missing")];
 
-        var result = await engine.ExecuteAsync("Event", new { }, rules, TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", new { }, rules, TestContext.Current.CancellationToken)).Rules;
 
-        Assert.Empty(result);
+        var rule = Assert.Single(result);
+        Assert.Equal(RuleExecutionStatus.NotMatched, rule.Status);
+        Assert.Empty(rule.ActionResults);
+        Assert.Null(rule.Error);
     }
 
     [Fact]
@@ -169,7 +172,7 @@ public class RuleEngineTests
             CreateRule("Medium", "ok", priority: 5)
         };
 
-        var result = await engine.ExecuteAsync("Event", new { }, rules, TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", new { }, rules, TestContext.Current.CancellationToken)).Rules;
 
         Assert.Equal(3, result.Count);
         Assert.Equal("High", result[0].RuleName);
@@ -239,7 +242,7 @@ public class RuleEngineTests
             ]
         };
 
-        var result = await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken)).Rules;
 
         Assert.Single(result);
         Assert.Single(result[0].ActionResults);
@@ -285,7 +288,7 @@ public class RuleEngineTests
             ]
         };
 
-        var result = await engine.ExecuteAsync("Event", current, [rule], TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", current, [rule], TestContext.Current.CancellationToken)).Rules;
 
         Assert.Single(result);
         Assert.Single(result[0].ActionResults);
@@ -327,7 +330,7 @@ public class RuleEngineTests
             ]
         };
 
-        var result = await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken)).Rules;
 
         Assert.Single(result);
         Assert.Single(result[0].ActionResults);
@@ -368,7 +371,7 @@ public class RuleEngineTests
             ]
         };
 
-        var result = await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken)).Rules;
 
         Assert.Single(result);
         Assert.Single(result[0].ActionResults);
@@ -410,7 +413,7 @@ public class RuleEngineTests
             ]
         };
 
-        var result = await engine.ExecuteAsync("Event", current, [rule], TestContext.Current.CancellationToken);
+        var result = (await engine.ExecuteAsync("Event", current, [rule], TestContext.Current.CancellationToken)).Rules;
 
         Assert.Single(result);
         Assert.Single(result[0].ActionResults);
