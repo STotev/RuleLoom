@@ -69,7 +69,7 @@ Work in this order. Findings from the 2026-10-02 code review are tracked as the 
 ### 2. API hardening — PRD [#22](https://github.com/STotev/RuleForge/issues/22)
 
 One breaking release before 1.0: shared value comparison (numbers, enums, ISO dates), `OperatorContext` operator API
-(revised [proposal](proposals/operator-context-api-redesign.md)), `gt`/`gte`/`lt`/`lte`, complete results
+([spec](specs/2026-10-05-operator-context-design.md), superseding the March [proposal](archive/operator-context-api-redesign.md)), `gt`/`gte`/`lt`/`lte`, complete results
 (`Matched`/`NotMatched`/`Failed`, rule and action identity, `RuleEngineResult` wrapper), case-insensitive names,
 normalised action parameters with `GetParameter<T>`, parse-time and registry-based validation, `$current`/`$previous`.
 Ten slices, each a sub-issue of #22. Every slice gets a spec in [`specs/`](specs/) first; **HITL** slices need the
@@ -153,6 +153,10 @@ scenario samples. Detail: [old roadmap §1.4](archive/roadmap-2026-03.md), [PRD 
 Fluent rule builder API; more operators — comparison (`between` `in`; `gt` `gte` `lt` `lte` are in #22), string
 (`contains` `startsWith` `endsWith` `matches`), collection (`any` `all` `count`), date. DI moved to #5.
 Detail: [old roadmap Phase 2](archive/roadmap-2026-03.md).
+
+
+A **test-helpers package** for consumers (builders for `OperatorContext`, rules and fake actions) — raised when
+reviewing #34; reconsider once plugin authors exist. Source: [OperatorContext spec](specs/2026-10-05-operator-context-design.md) Q3.
 
 ### Rule management (old Phase 3)
 Rule CRUD, versioning and lifecycle (draft/active/archived); rule simulator and evaluation trace;

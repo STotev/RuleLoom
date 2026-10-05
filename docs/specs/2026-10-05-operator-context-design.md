@@ -2,9 +2,9 @@
 
 **Issue:** [#34 API hardening: OperatorContext operator API](https://github.com/STotev/RuleForge/issues/34) (also closes #17)
 **Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (modules 2–4)
-**Supersedes:** `docs/proposals/operator-context-api-redesign.md` (March 2026), with the revisions agreed in PRD #22
+**Supersedes:** `docs/archive/operator-context-api-redesign.md` (March 2026 proposal), with the revisions agreed in PRD #22
 **Date:** 2026-10-05
-**Status:** Draft — awaiting maintainer review (HITL)
+**Status:** Approved 2026-10-05 (HITL review; Q1–Q4 resolved as recommended)
 
 ---
 
@@ -132,28 +132,31 @@ public void Evaluate_TextContainsPart_ReturnsTrue()
 | `changed` | Same semantics; `GetPath(0)` gives a clear error for non-path operands | `$current`/`$previous` and scoped paths are #38 (folds in #16) |
 | The March proposal | Moved to `docs/archive/` with a pointer to this spec | Superseded |
 
-## Open questions for review
+## Resolved questions
+
+All four were reviewed on 2026-10-05 and resolved as recommended.
 
 **Q1 — Keep `IConditionEvaluator` public, reduced to `Evaluate`?**
-*Recommendation: yes.* `RuleEngine` depends on it, tests fake it, and DI (#5) registers it. `ResolveValue` is only
+*Resolved: yes.* `RuleEngine` depends on it, tests fake it, and DI (#5) registers it. `ResolveValue` is only
 used by operators, which now use `OperatorContext.GetValue`, so it's removed. The alternative is to make the
 interface internal and have `RuleEngine` take `ConditionEvaluator`, which removes a public type but also the ability
 to substitute the evaluator.
 
 **Q2 — What does `Test(i)` do with a path or value operand?**
-*Recommendation: accept it when the value is a `bool`*, so `{"operator": "and", "operands": [{"path": "IsActive"},
+*Resolved: accept it when the value is a `bool`*, so `{"operator": "and", "operands": [{"path": "IsActive"},
 {...}]}` works, and throw a descriptive `InvalidOperationException` otherwise (e.g. `Operator 'and' expects a
 condition at operand 0, but path 'Name' resolved to String.`). The alternative is to require operator operands only,
 which is stricter but forces `{"operator": "eq", "operands": [{"path": "IsActive"}, {"value": true}]}` for simple
 flags.
 
 **Q3 — How do plugin authors build an `OperatorContext` in tests?**
-*Recommendation: the public constructor above*, with the evaluator optional: tests for value operators need no
+*Resolved: the public constructor above*, with the evaluator optional: tests for value operators need no
 evaluator, and tests for composite operators pass any `IConditionEvaluator` (e.g. a real `ConditionEvaluator`). The
-alternative is a separate test-helper package or factory, which is more to maintain for little gain.
+alternative is a separate test-helper package or factory, which is more to maintain for little gain. *Maintainer note:* a test-helpers package for consumers may be
+reconsidered later (recorded in the roadmap backlog).
 
 **Q4 — Should `OperatorContext` expose the raw operand nodes?**
-*Recommendation: no, not now.* `GetValue`, `Test` and `GetPath` cover the built-in and planned operators, and hiding
+*Resolved: no, not now.* `GetValue`, `Test` and `GetPath` cover the built-in and planned operators, and hiding
 the nodes is the point of the redesign. If a real operator needs to inspect operand kinds, an `GetOperandKind(i)` (or
 similar) can be added later without breaking anything. The alternative is an `Operands` property, which is flexible
 but brings back the plumbing.

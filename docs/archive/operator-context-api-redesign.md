@@ -1,3 +1,7 @@
+> **Superseded** by [`specs/2026-10-05-operator-context-design.md`](../specs/2026-10-05-operator-context-design.md)
+> (issue #34). Kept for history; the adopted design drops `Test(ConditionNode)` composition and keeps
+> `EvaluationContext` public.
+
 # RuleForge Architecture Plan: Operator API Redesign
 
 ## Problem
