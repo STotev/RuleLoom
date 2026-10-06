@@ -299,10 +299,12 @@ RuleForge/
 ## 🗺️ Roadmap
 
 - ✅ **Done**: core engine and operators, stability fixes, action results, scheduling model,
-  action factory, schedule calculation (0.2.0)
+  action factory, schedule calculation (0.2.0); API hardening — value comparison, `OperatorContext`,
+  `gt`/`gte`/`lt`/`lte`, complete results, case-insensitive names, typed action parameters,
+  `$current`/`$previous`, rule validation (0.3.0)
 - 🎯 **Next**: dependency injection extensions ([#5](https://github.com/STotev/RuleForge/issues/5)),
-  then integration tests, samples and migration guide ([#6](https://github.com/STotev/RuleForge/issues/6))
-- 📋 **Backlog**: operator API redesign, schema system, event system, NuGet packaging, more operators,
+  then integration tests, samples and the 0.3.0 migration guide ([#6](https://github.com/STotev/RuleForge/issues/6))
+- 📋 **Backlog**: benchmarks, time semantics, schema system, event system, NuGet packaging, more operators,
   rule management, persistence, observability
 
 See the [full roadmap](docs/roadmap.md) for details.
