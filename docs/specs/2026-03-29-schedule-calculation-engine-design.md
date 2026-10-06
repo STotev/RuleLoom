@@ -252,9 +252,10 @@ RuleEngine.ExecuteAsync(eventType, current, previous, rules)
 
 Recorded on 2026-09-30 when PR #10 was merged (see the comment on issue #4).
 
-- **String reference values are parsed** as invariant UTC date-times
-  (`DateTimeStyles.AssumeUniversal | AdjustToUniversal`) instead of throwing. Unparseable strings
-  still throw `InvalidOperationException`. Reason not recorded; to be revisited in the code review.
+- **String reference values are parsed as strict ISO 8601** (the spec said strings should throw). Originally the
+  code parsed them leniently with `DateTimeOffset.TryParse` (reason not recorded); #19 decided to keep string
+  support but restrict it to ISO 8601, implemented in #33 through `ValueConverter` (see
+  `2026-10-06-iso-reference-path-design.md`). Non-ISO strings throw `InvalidOperationException`.
 - **`Schedule.Unit` is required** for Delay/Advance: a null `Unit` throws `InvalidOperationException`
   (the spec only covered a null `Amount`).
 - **All inputs are normalised to UTC**: `utcNow`, `DateTimeOffset` references, and `DateTime`

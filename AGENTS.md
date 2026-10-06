@@ -119,6 +119,7 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   for non-DI use). Built-in action: `log`.
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
   in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now. UTC only.
+  `ReferencePath` values convert via `ValueConverter` (`DateTime`/`DateTimeOffset`, or strict ISO 8601 strings).
   RuleForge computes `ScheduledFor`; dispatching scheduled work is the consumer's responsibility.
 - **Value comparison**: `ValueComparer` (`AreEqual`, `TryCompare`) and `ValueConverter` (`TryConvert`) in
   `RuleForge.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
