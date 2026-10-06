@@ -3,7 +3,8 @@
 **Issue:** [#5 Phase 1.2C: Dependency Injection Extensions](https://github.com/STotev/RuleForge/issues/5)
 **Parent PRD:** [#1 Action Scheduling & Dependency Injection Support](https://github.com/STotev/RuleForge/issues/1)
 **Date:** 2026-10-06
-**Status:** Draft — awaiting maintainer review (HITL)
+**Status:** Approved 2026-10-06 (HITL review; Q1 as recommended, Q2 and Q3 revised — see Resolved questions)
+**Depends on:** #55 (action names by registration, PR #56)
 
 ---
 
@@ -17,9 +18,12 @@ Wiring RuleForge by hand means constructing the operator list, `ConditionEvaluat
 
 ```csharp
 services.AddRuleForge(rules => rules
-    .AddAction<SendEmailAction>()        // may inject IEmailService, DbContext, ILogger<T>, ...
-    .AddAction<LogAction>()
-    .AddOperator<ContainsOperator>());   // built-in operators are registered automatically (Q3)
+    .AddAction<SendEmailAction>()            // "send-email"; may inject IEmailService, DbContext, ILogger<T>, ...
+    .AddAction<SendEmailAction>("notify")    // the same action under another name
+    .AddAction<LogAction>()                  // "log" (not registered by default)
+    .AddOperator<ContainsOperator>()         // built-in operators are registered automatically
+    .ReplaceOperator<StrictEqualsOperator>() // replaces the built-in operator with the same Name ("eq")
+    .RemoveOperator("changed"));             // removes a built-in or previously added operator
 
 // In a request / message-handler scope:
 var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
@@ -44,8 +48,10 @@ namespace RuleForge.Extensions.DependencyInjection;
 public sealed class RuleForgeBuilder
 {
     public IServiceCollection Services { get; }
-    public RuleForgeBuilder AddAction<TAction>() where TAction : class, IActionExecutor;
+    public RuleForgeBuilder AddAction<TAction>(string? name = null) where TAction : class, IActionExecutor;
     public RuleForgeBuilder AddOperator<TOperator>() where TOperator : class, IConditionOperator;
+    public RuleForgeBuilder ReplaceOperator<TOperator>() where TOperator : class, IConditionOperator;
+    public RuleForgeBuilder RemoveOperator(string name);
 }
 
 public sealed class ServiceProviderActionExecutorFactory : IActionExecutorFactory   // registered by AddRuleForge
@@ -80,14 +86,22 @@ once (`TryAdd`) and every call adds its actions and operators.
 
 ## How the factory finds actions by name
 
-Rules refer to actions by `IActionExecutor.Type` (`"send-email"`), an **instance** property, but registration only
-knows the CLR type, and an action can't be created at startup because it may depend on scoped services (Q2).
+Names belong to registrations (#55). `AddAction<T>(name)` records `name ?? ActionNames.GetDefaultName(typeof(T))`
+→ `typeof(T)` in a singleton map when the services are configured, so the map is complete at startup and no action is
+instantiated to learn its name. `TryGetExecutor("send-email")` (any case) resolves only that action's CLR type from
+the current scope, giving a new instance per scope. `ActionNames` returns the map's keys. Two registrations under
+names that differ only in case throw while configuring, with the same messages as `DirectActionExecutorFactory`. One
+CLR type may be registered under several names.
 
-Proposal: the factory builds the name → CLR type map **lazily, once per application**. The first time any scope needs
-it, it resolves each registered action type once in that scope, reads `Type`, and caches the map in a singleton. After
-that, `TryGetExecutor("send-email")` resolves only `SendEmailAction`, a new instance per scope. Duplicate names
-(including names differing only in case, #37) throw with both CLR types in the message, like
-`DirectActionExecutorFactory`. `ActionTypes` returns the cached names.
+## Operators: add, replace, remove
+
+Operators keep their instance `Name`. The builder records operator registrations in order; when the evaluator is
+first built (it's a singleton), the operators are created and:
+
+- `RemoveOperator(name)` drops every operator (built-in or added) whose `Name` matches, ignoring case;
+- `ReplaceOperator<T>()` adds `T` and drops any *other* operator with the same `Name` as `T`;
+- `AddOperator<T>()` adds `T`; a name clash with an operator that wasn't removed or replaced fails with the existing
+  message (`Operator 'X' conflicts with 'x' …`).
 
 ## Decisions
 
@@ -101,28 +115,17 @@ that, `TryGetExecutor("send-email")` resolves only `SendEmailAction`, a new inst
 | Assembly scanning, keyed services, options/configuration binding | Out of scope | Can be added later without breaking this API |
 | Tests | New `tests/RuleForge.Extensions.DependencyInjection.Tests` project using `Microsoft.Extensions.DependencyInjection` | Keeps the core test project free of DI packages |
 
-## Open questions for review
+## Resolved questions (reviewed 2026-10-06)
 
-**Q1 — Lifetimes for operators and the evaluator.**
-#5 and PRD #1 say operators are Scoped. *Recommendation: Singleton* for operators and `ConditionEvaluator`. Operators
-are stateless, and a scoped evaluator would rebuild its operator dictionary on every request. Actions stay Scoped (they
-may need a `DbContext`), and so do the factory, `RuleEngine` and `RuleValidator`. The alternative is to follow the
-issue literally (everything Scoped); it costs a dictionary build per scope and allows operators with scoped
-dependencies, which no current operator needs.
+**Q1 — Lifetimes:** as recommended. Operators and `ConditionEvaluator` are Singleton; actions, the factory,
+`RuleEngine` and `RuleValidator` are Scoped. This deliberately deviates from #5's text ("operators Scoped").
 
-**Q2 — How the factory learns each action's name.**
-*Recommendation: lazy discovery* as described above: no extra registration input, and `Type` stays the single source
-of the name. Its costs: the first scope creates one instance of every registered action, and a constructor that throws
-fails that first lookup. Alternatives:
-- the name at registration: `AddAction<SendEmailAction>("send-email")`, explicit but duplicates `Type` and can drift;
-- an attribute `[ActionType("send-email")]` on the class, explicit and static but also duplicates `Type`;
-- `static abstract string ActionType` on `IActionExecutor` (C# 11), compile-time safe but a breaking change for every
-  action, also without DI.
+**Q2 — Action names:** neither lazy discovery nor another interface. Names moved to registrations (#55): a default
+from `[ActionName]` or the class name in kebab-case, overridable with `AddAction<T>(name)`. Aliases/remapping later.
+The rule JSON uses `"action"` (#55).
 
-**Q3 — Should `AddRuleForge` register the built-in operators automatically?**
-*Recommendation: yes*, so `AddRuleForge()` alone gives a working `eq`/`and`/`gt`/… evaluator, with `AddOperator<T>`
-adding custom ones. The alternative is opt-in (`rules.AddBuiltInOperators()`), which is more explicit but easy to
-forget.
+**Q3 — Built-in operators:** registered automatically, with `RemoveOperator(name)` and `ReplaceOperator<T>()` for
+flexibility. Operators keep their instance `Name` (no registration-name override for operators for now).
 
 ## Breaking changes
 
@@ -135,6 +138,8 @@ None. New package contents and `BuiltInOperators` are additions; the non-DI path
 - A rule runs end to end through a `RuleEngine` resolved from a scope, using built-in and custom operators.
 - An action with an injected service (a fake `IEmailService`) and an `ILogger<T>` executes; a new action instance per
   scope, the same within a scope.
-- Factory: lookup by name in any case, unknown name, `ActionTypes`, duplicate action names fail with both types named.
+- Factory: lookup by name in any case, unknown name, `ActionNames`, default and explicit names, one type under two
+  names, duplicate/case-conflicting names fail while configuring.
+- Operators: built-ins present by default; `AddOperator`, `ReplaceOperator`, `RemoveOperator`; conflicts fail.
 - `RuleValidator` resolved from DI knows the registered actions and operators.
 - `BuiltInOperators.Create()` returns all nine built-ins as new instances.
