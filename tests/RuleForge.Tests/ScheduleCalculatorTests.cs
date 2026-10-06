@@ -165,7 +165,7 @@ public class ScheduleCalculatorTests
     }
 
     [Fact]
-    public void Calculate_ReferencePathWrongType_ThrowsInvalidOperationException()
+    public void Calculate_ReferencePathNonIsoString_ThrowsInvalidOperationException()
     {
         var context = new EvaluationContext(new { DueDate = "not-a-date" });
         var schedule = new ScheduleMetadata
@@ -179,7 +179,67 @@ public class ScheduleCalculatorTests
         var ex = Assert.Throws<InvalidOperationException>(
             () => ScheduleCalculator.Calculate(schedule, context, DateTimeOffset.UtcNow));
 
-        Assert.Contains("invariant UTC date-time value", ex.Message);
+        Assert.Contains("is not an ISO 8601 date-time", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("2026-04-02T10:00:00Z", 10)]
+    [InlineData("2026-04-02T10:00:00", 10)]
+    [InlineData("2026-04-02T12:00:00+02:00", 10)]
+    [InlineData("2026-04-02T10:00", 10)]
+    [InlineData("2026-04-02", 0)]
+    public void Calculate_ReferencePathIsoString_UsesUtcInstant(string dueDate, int expectedHour)
+    {
+        var context = new EvaluationContext(new { DueDate = dueDate });
+        var schedule = new ScheduleMetadata
+        {
+            Mode = ScheduleMode.Delay,
+            Amount = 1,
+            Unit = ScheduleUnit.Hours,
+            ReferencePath = "DueDate"
+        };
+
+        var result = ScheduleCalculator.Calculate(schedule, context, DateTimeOffset.UtcNow);
+
+        Assert.Equal(new DateTimeOffset(2026, 4, 2, expectedHour + 1, 0, 0, TimeSpan.Zero), result);
+    }
+
+    [Theory]
+    [InlineData("2026-04-02 10:00:00")]
+    [InlineData("04/02/2026")]
+    [InlineData("2 April 2026")]
+    [InlineData(" 2026-04-02T10:00:00Z")]
+    public void Calculate_ReferencePathNonIsoString_IsRejected(string dueDate)
+    {
+        var context = new EvaluationContext(new { DueDate = dueDate });
+        var schedule = new ScheduleMetadata
+        {
+            Mode = ScheduleMode.Delay,
+            Amount = 1,
+            Unit = ScheduleUnit.Hours,
+            ReferencePath = "DueDate"
+        };
+
+        Assert.Throws<InvalidOperationException>(
+            () => ScheduleCalculator.Calculate(schedule, context, DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public void Calculate_ReferencePathUnsupportedType_ThrowsInvalidOperationException()
+    {
+        var context = new EvaluationContext(new { DueDate = 20260402 });
+        var schedule = new ScheduleMetadata
+        {
+            Mode = ScheduleMode.Delay,
+            Amount = 1,
+            Unit = ScheduleUnit.Hours,
+            ReferencePath = "DueDate"
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => ScheduleCalculator.Calculate(schedule, context, DateTimeOffset.UtcNow));
+
+        Assert.Contains("resolved to 'Int32'", ex.Message);
     }
 
     [Fact]
