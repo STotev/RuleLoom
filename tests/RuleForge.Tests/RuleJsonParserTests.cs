@@ -537,6 +537,40 @@ public class RuleJsonParserTests
         Assert.NotNull(rule.Actions[0].Condition);
     }
 
+    [Fact]
+    public void Parse_ActionParameters_AreParsedAsClrValues()
+    {
+        const string json =
+            """
+            {
+              "name": "Parameters",
+              "eventType": "E",
+              "condition": { "operator": "eq", "operands": [{ "value": 1 }, { "value": 1 }] },
+              "actions": [
+                {
+                  "type": "notify",
+                  "parameters": {
+                    "text": "hi", "count": 3, "big": 3000000000, "ratio": 0.25, "urgent": true, "none": null,
+                    "tags": ["a", 1], "options": { "retry": 2 }
+                  }
+                }
+              ]
+            }
+            """;
+
+        var parameters = RuleJsonParser.Parse(json).Actions[0].Parameters;
+
+        Assert.Equal("hi", parameters["text"]);
+        Assert.Equal(3, parameters["count"]);
+        Assert.Equal(3_000_000_000L, parameters["big"]);
+        Assert.Equal(0.25, parameters["ratio"]);
+        Assert.Equal(true, parameters["urgent"]);
+        Assert.Null(parameters["none"]);
+        Assert.Equal(new List<object?> { "a", 1 }, parameters["tags"]);
+        Assert.Equal(new Dictionary<string, object?> { ["retry"] = 2 }, parameters["options"]);
+        Assert.DoesNotContain(parameters.Values, v => v is JsonElement);
+    }
+
     private static ValueOperand FirstValue(RuleDefinition rule) =>
         (ValueOperand)((OperatorCondition)rule.Condition).Operands[0];
 }
