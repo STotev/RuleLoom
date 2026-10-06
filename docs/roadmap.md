@@ -22,6 +22,7 @@ connect to historical docs — they were reused inconsistently between documents
 | 0.2.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.0) 2026-10-02 | Action results, scheduling model, action factory, schedule calculation |
 | 0.2.1 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.1) 2026-10-03 | Nested path fix (#14), shared path cache (#15) |
 | 0.3.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.3.0) 2026-10-06 | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
+| 0.4.0 | **Ready** — release PR [#57](https://github.com/STotev/RuleForge/pull/57), held until #6 merges | Action names by registration, `IAction`, dependency injection, upgrading guide |
 
 ---
 
@@ -79,13 +80,17 @@ titles, central package management, issue/PR templates, Claude Code setup (`AGEN
 
 ## 🎯 Next
 
-### Finish PRD #1
+### Finish PRD #1 (last slices)
 
 | Issue | Slice | Status |
 |---|---|---|
-| [#5](https://github.com/STotev/RuleForge/issues/5) | DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionFactory` | In review: [#54](https://github.com/STotev/RuleForge/pull/54) (spec approved) |
+| [#5](https://github.com/STotev/RuleForge/issues/5) | ✅ DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionFactory` | Merged: [#54](https://github.com/STotev/RuleForge/pull/54) |
 | [#55](https://github.com/STotev/RuleForge/issues/55) | ✅ Action names by registration (prerequisite for #5) | Merged: [#56](https://github.com/STotev/RuleForge/pull/56) |
-| [#6](https://github.com/STotev/RuleForge/issues/6) | Integration tests, samples, migration guide, doc refresh | Blocked by #5. Includes the **0.3.0 migration guide**, refreshing [`guides/`](guides/) (the quick start is outdated), and wiring up the sample's unused `RuleJsonParserExample` |
+| [#6](https://github.com/STotev/RuleForge/issues/6) | ✅ Integration tests, samples, upgrading guide, quick start refresh | This PR |
+
+With #6 merged, PRD #1 is complete: release 0.4.0 (#57), then **pick the next PRD from the backlog** below. Candidates
+discussed so far: the time semantics review, path variables and functions, the Schema System, benchmarks (#27) and
+NuGet packaging.
 
 ---
 
