@@ -27,7 +27,7 @@ public class AddRuleForgeTests
 
         Assert.Equal(ServiceLifetime.Singleton, Lifetime<IConditionEvaluator>(services));
         Assert.Equal(ServiceLifetime.Singleton, Lifetime<TimeProvider>(services));
-        Assert.Equal(ServiceLifetime.Scoped, Lifetime<IActionExecutorFactory>(services));
+        Assert.Equal(ServiceLifetime.Scoped, Lifetime<IActionFactory>(services));
         Assert.Equal(ServiceLifetime.Scoped, Lifetime<RuleEngine>(services));
         Assert.Equal(ServiceLifetime.Scoped, Lifetime<RuleValidator>(services));
         Assert.Equal(ServiceLifetime.Scoped, Lifetime<SendEmailAction>(services));
@@ -46,7 +46,7 @@ public class AddRuleForgeTests
 
         using var provider = Build(services);
         using var scope = provider.CreateScope();
-        var factory = scope.ServiceProvider.GetRequiredService<IActionExecutorFactory>();
+        var factory = scope.ServiceProvider.GetRequiredService<IActionFactory>();
 
         Assert.Equal(["audit", "send-email"], factory.ActionNames.Order());
     }
@@ -89,17 +89,17 @@ public class AddRuleForgeTests
             .AddRuleForge(rules => rules.AddAction<SendEmailAction>());
 
         using var provider = Build(services);
-        IActionExecutor? first, again, other;
+        IAction? first, again, other;
 
         using (var scope = provider.CreateScope())
         {
-            var factory = scope.ServiceProvider.GetRequiredService<IActionExecutorFactory>();
-            factory.TryGetExecutor("send-email", out first);
-            factory.TryGetExecutor("SEND-EMAIL", out again);
+            var factory = scope.ServiceProvider.GetRequiredService<IActionFactory>();
+            factory.TryGetAction("send-email", out first);
+            factory.TryGetAction("SEND-EMAIL", out again);
         }
 
         using (var scope = provider.CreateScope())
-            scope.ServiceProvider.GetRequiredService<IActionExecutorFactory>().TryGetExecutor("send-email", out other);
+            scope.ServiceProvider.GetRequiredService<IActionFactory>().TryGetAction("send-email", out other);
 
         Assert.NotNull(first);
         Assert.Same(first, again);
@@ -115,12 +115,12 @@ public class AddRuleForgeTests
 
         using var provider = Build(services);
         using var scope = provider.CreateScope();
-        var factory = scope.ServiceProvider.GetRequiredService<IActionExecutorFactory>();
+        var factory = scope.ServiceProvider.GetRequiredService<IActionFactory>();
 
         Assert.Equal(["notify", "send-email"], factory.ActionNames.Order());
-        Assert.True(factory.TryGetExecutor("notify", out var executor));
+        Assert.True(factory.TryGetAction("notify", out var executor));
         Assert.IsType<SendEmailAction>(executor);
-        Assert.False(factory.TryGetExecutor("unknown", out _));
+        Assert.False(factory.TryGetAction("unknown", out _));
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public sealed class Outbox : IEmailSender
     public void Send(string template) => Sent.Add(template);
 }
 
-public sealed class SendEmailAction(IEmailSender sender) : IActionExecutor
+public sealed class SendEmailAction(IEmailSender sender) : IAction
 {
     public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
     {
@@ -193,7 +193,7 @@ public sealed class SendEmailAction(IEmailSender sender) : IActionExecutor
     }
 }
 
-public sealed class AuditAction : IActionExecutor
+public sealed class AuditAction : IAction
 {
     public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default) =>
         Task.FromResult(ActionResult.Success());

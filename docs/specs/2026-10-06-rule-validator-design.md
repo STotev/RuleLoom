@@ -20,7 +20,7 @@ namespace RuleForge.Validation;
 
 public sealed class RuleValidator
 {
-    public RuleValidator(IEnumerable<IConditionOperator> operators, IActionExecutorFactory actionFactory);
+    public RuleValidator(IEnumerable<IConditionOperator> operators, IActionFactory actionFactory);
 
     // All problems at once; never throws for an invalid rule.
     public RuleValidationResult Validate(RuleDefinition rule);
@@ -34,7 +34,7 @@ public sealed record RuleValidationResult(IReadOnlyList<RuleValidationError> Err
 public sealed record RuleValidationError(string Path, string Message);
 ```
 
-`IActionExecutorFactory` gains:
+`IActionFactory` gains:
 
 ```csharp
 IReadOnlyCollection<string> ActionTypes { get; }   // the action types this factory can resolve
@@ -44,7 +44,7 @@ IReadOnlyCollection<string> ActionTypes { get; }   // the action types this fact
 
 | Question | Decision | Rationale |
 |---|---|---|
-| Inputs | The same operator list given to `ConditionEvaluator`, and the `IActionExecutorFactory` given to `RuleEngine` | No new registry concept; DI (#5) can build all three from one registration |
+| Inputs | The same operator list given to `ConditionEvaluator`, and the `IActionFactory` given to `RuleEngine` | No new registry concept; DI (#5) can build all three from one registration |
 | Where | `RuleForge.Validation` in the `RuleForge` package | Validation needs registries; Abstractions only gains the factory member |
 | Location format | JSONPath, as in `RuleParseException.Path`: `$.condition.operands[1]`, `$.actions[0].type` | One format for parse and validation errors (PRD) |
 | Collect or throw | Collect every error; `Validate` never throws for invalid rules | UIs show all problems at once (PRD user story 42) |
@@ -56,11 +56,11 @@ IReadOnlyCollection<string> ActionTypes { get; }   // the action types this fact
 
 ## Breaking change (`feat!:`)
 
-`IActionExecutorFactory` gains `ActionTypes`; custom factories must implement it. (#5's DI factory will.)
+`IActionFactory` gains `ActionTypes`; custom factories must implement it. (#5's DI factory will.)
 
 ## Test plan
 
 - Valid rules (including case-variant names) → `IsValid`.
 - One test per error kind with its exact path and message; several errors in one rule reported together;
   errors inside nested operators and action conditions; unknown operator whose operands are also invalid.
-- `DirectActionExecutorFactory.ActionTypes` lists registered types.
+- `DirectActionFactory.ActionTypes` lists registered types.

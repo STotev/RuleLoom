@@ -14,7 +14,7 @@ public class RuleValidatorTests
 {
     private static readonly RuleValidator Validator = new(
         [new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator()],
-        new DirectActionExecutorFactory().Add(new NoOpAction(), "log").Add(new NoOpAction(), "send-email"));
+        new DirectActionFactory().Add(new NoOpAction(), "log").Add(new NoOpAction(), "send-email"));
 
     private static readonly OperatorCondition Valid = Op("eq", Path("Price"), Value(1));
 
@@ -76,7 +76,7 @@ public class RuleValidatorTests
     {
         var result = Validator.Validate(Rule(Valid, Action("log"), Action("send-sms")));
 
-        AssertSingleError(result, "$.actions[1].action", "No action executor is registered for action 'send-sms'.");
+        AssertSingleError(result, "$.actions[1].action", "No action is registered under the name 'send-sms'.");
     }
 
     [Fact]
@@ -133,13 +133,13 @@ public class RuleValidatorTests
     public void Constructor_DuplicateOperatorNames_Throws()
     {
         Assert.Throws<ArgumentException>(() => new RuleValidator(
-            [new EqualsOperator(), new EqualsOperator()], new DirectActionExecutorFactory([])));
+            [new EqualsOperator(), new EqualsOperator()], new DirectActionFactory([])));
     }
 
     [Fact]
-    public void DirectActionExecutorFactory_ActionNames_ListsRegisteredNames()
+    public void DirectActionFactory_ActionNames_ListsRegisteredNames()
     {
-        var factory = new DirectActionExecutorFactory().Add(new NoOpAction(), "log").Add(new NoOpAction(), "send-email");
+        var factory = new DirectActionFactory().Add(new NoOpAction(), "log").Add(new NoOpAction(), "send-email");
 
         Assert.Equal(["log", "send-email"], factory.ActionNames.Order());
     }
@@ -156,7 +156,7 @@ public class RuleValidatorTests
     private static ActionDefinition Action(string type, ConditionNode? condition = null, ScheduleMetadata? schedule = null) =>
         new() { Action = type, Condition = condition, Schedule = schedule };
 
-    private sealed class NoOpAction : IActionExecutor
+    private sealed class NoOpAction : IAction
     {
 
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,

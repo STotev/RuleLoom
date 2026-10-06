@@ -20,7 +20,7 @@ public static class RuleForgeServiceCollectionExtensions
     /// </summary>
     /// <remarks>
     /// Lifetimes: operators and <see cref="IConditionEvaluator"/> are Singleton; actions,
-    /// <see cref="IActionExecutorFactory"/>, <see cref="RuleEngine"/> and <see cref="RuleValidator"/> are Scoped.
+    /// <see cref="IActionFactory"/>, <see cref="RuleEngine"/> and <see cref="RuleValidator"/> are Scoped.
     /// <see cref="TimeProvider.System"/> is registered if no <see cref="TimeProvider"/> is.
     /// </remarks>
     public static IServiceCollection AddRuleForge(this IServiceCollection services, Action<RuleForgeBuilder>? configure = null)
@@ -32,14 +32,14 @@ public static class RuleForgeServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton(sp => new RuleForgeOperators(registry.BuildOperators(sp)));
         services.TryAddSingleton<IConditionEvaluator>(sp => new ConditionEvaluator(sp.GetRequiredService<RuleForgeOperators>().All));
-        services.TryAddScoped<IActionExecutorFactory>(sp => new ServiceProviderActionExecutorFactory(sp, registry));
+        services.TryAddScoped<IActionFactory>(sp => new ServiceProviderActionFactory(sp, registry));
         services.TryAddScoped(sp => new RuleEngine(
             sp.GetRequiredService<IConditionEvaluator>(),
-            sp.GetRequiredService<IActionExecutorFactory>(),
+            sp.GetRequiredService<IActionFactory>(),
             sp.GetRequiredService<TimeProvider>()));
         services.TryAddScoped(sp => new RuleValidator(
             sp.GetRequiredService<RuleForgeOperators>().All,
-            sp.GetRequiredService<IActionExecutorFactory>()));
+            sp.GetRequiredService<IActionFactory>()));
 
         configure?.Invoke(new RuleForgeBuilder(services, registry));
 

@@ -10,7 +10,7 @@
 
 ## Problem
 
-Wiring RuleForge by hand means constructing the operator list, `ConditionEvaluator`, an `IActionExecutorFactory` and
+Wiring RuleForge by hand means constructing the operator list, `ConditionEvaluator`, an `IActionFactory` and
 `RuleEngine`, and actions can't take constructor dependencies such as an email service or a scoped `DbContext`.
 `RuleForge.Extensions.DependencyInjection` is an empty project.
 
@@ -50,13 +50,13 @@ namespace RuleForge.Extensions.DependencyInjection;
 public sealed class RuleForgeBuilder
 {
     public IServiceCollection Services { get; }
-    public RuleForgeBuilder AddAction<TAction>(string? name = null) where TAction : class, IActionExecutor;
+    public RuleForgeBuilder AddAction<TAction>(string? name = null) where TAction : class, IAction;
     public RuleForgeBuilder AddOperator<TOperator>() where TOperator : class, IConditionOperator;
     public RuleForgeBuilder RemoveOperator(string name);
     public RuleForgeBuilder RemoveBuiltInOperators();
 }
 
-public sealed class ServiceProviderActionExecutorFactory : IActionExecutorFactory   // registered by AddRuleForge
+public sealed class ServiceProviderActionFactory : IActionFactory   // registered by AddRuleForge
 ```
 
 And, in the core `RuleForge` package (useful without DI too, and used by `AddRuleForge`):
@@ -78,7 +78,7 @@ public static class BuiltInOperators
 | `IConditionOperator` (each built-in and each `AddOperator<T>`) | the operator | **Singleton** |
 | `IConditionEvaluator` | `ConditionEvaluator` (all registered operators) | **Singleton** |
 | each `AddAction<T>` | `T` | **Scoped** |
-| `IActionExecutorFactory` | `ServiceProviderActionExecutorFactory` | Scoped |
+| `IActionFactory` | `ServiceProviderActionFactory` | Scoped |
 | `RuleEngine` | `RuleEngine` | Scoped |
 | `RuleValidator` | `RuleValidator` | Scoped (it reads the factory's action types) |
 | `TimeProvider` | `TimeProvider.System`, only if none is registered (`TryAdd`) | Singleton |
@@ -90,9 +90,9 @@ once (`TryAdd`) and every call adds its actions and operators.
 
 Names belong to registrations (#55). `AddAction<T>(name)` records `name ?? ActionNames.GetDefaultName(typeof(T))`
 → `typeof(T)` in a singleton map when the services are configured, so the map is complete at startup and no action is
-instantiated to learn its name. `TryGetExecutor("send-email")` (any case) resolves only that action's CLR type from
+instantiated to learn its name. `TryGetAction("send-email")` (any case) resolves only that action's CLR type from
 the current scope, giving a new instance per scope. `ActionNames` returns the map's keys. Two registrations under
-names that differ only in case throw while configuring, with the same messages as `DirectActionExecutorFactory`. One
+names that differ only in case throw while configuring, with the same messages as `DirectActionFactory`. One
 CLR type may be registered under several names.
 
 ## Operators: add and remove

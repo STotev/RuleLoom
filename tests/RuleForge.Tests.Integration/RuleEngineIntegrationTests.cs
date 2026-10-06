@@ -31,12 +31,12 @@ public class RuleEngineIntegrationTests
             new LessThanOrEqualOperator()
         };
 
-        var actions = new List<IActionExecutor>
+        var actions = new List<IAction>
         {
             new TestLogAction(_logMessages)
         };
 
-        _engine = new RuleEngine(new ConditionEvaluator(operators), new DirectActionExecutorFactory(actions));
+        _engine = new RuleEngine(new ConditionEvaluator(operators), new DirectActionFactory(actions));
     }
 
     [Fact]
@@ -591,7 +591,7 @@ public class RuleEngineIntegrationTests
         """;
 
         var reminder = new ReminderAction();
-        var engine = new RuleEngine(new ConditionEvaluator([new EqualsOperator()]), new DirectActionExecutorFactory([reminder]));
+        var engine = new RuleEngine(new ConditionEvaluator([new EqualsOperator()]), new DirectActionFactory([reminder]));
 
         // Act
         var result = await engine.ExecuteAsync(
@@ -738,7 +738,7 @@ public class RuleEngineIntegrationTests
     }
 
     // Helper class for testing
-    private class TestLogAction(List<string> messages) : IActionExecutor
+    private class TestLogAction(List<string> messages) : IAction
     {
 
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
@@ -752,7 +752,7 @@ public class RuleEngineIntegrationTests
         }
     }
 
-    private sealed class ReminderAction : IActionExecutor
+    private sealed class ReminderAction : IAction
     {
         public decimal Amount { get; private set; }
         public DateTimeOffset SendAt { get; private set; }

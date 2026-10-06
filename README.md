@@ -75,7 +75,7 @@ var rule = new RuleDefinition
 // Create rule engine
 var engine = new RuleEngine(
     new ConditionEvaluator([new ChangedOperator(), new EqualsOperator()]),
-    new DirectActionExecutorFactory([new LogAction()])
+    new DirectActionFactory([new LogAction()])
 );
 
 // Execute rules
@@ -213,7 +213,7 @@ More operators are on the [roadmap](docs/roadmap.md).
 |--------|-------------|------------|
 | `log` | Console logging | `message` |
 
-Create custom actions by implementing `IActionExecutor`!
+Create custom actions by implementing `IAction`!
 
 ---
 
@@ -260,7 +260,7 @@ suffix, in kebab-case (`SendEmailAction` → `send-email`); `[ActionName("notify
 and a name given at registration overrides both.
 
 ```csharp
-public class SendEmailAction : IActionExecutor          // "action": "send-email"
+public class SendEmailAction : IAction          // "action": "send-email"
 {
     public async Task<ActionResult> ExecuteAsync(
         ActionDefinition action,
@@ -277,7 +277,7 @@ public class SendEmailAction : IActionExecutor          // "action": "send-email
     }
 }
 
-var actions = new DirectActionExecutorFactory()
+var actions = new DirectActionFactory()
     .Add(new SendEmailAction())             // registered as "send-email"
     .Add(new SendEmailAction(), "notify");  // ...and under another name
 ```

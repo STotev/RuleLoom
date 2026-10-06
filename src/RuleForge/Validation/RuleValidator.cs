@@ -19,7 +19,7 @@ public sealed class RuleValidator
     /// Creates a validator for the given operators and action factory — the same ones given to the
     /// <c>ConditionEvaluator</c> and <c>RuleEngine</c>.
     /// </summary>
-    public RuleValidator(IEnumerable<IConditionOperator> operators, IActionExecutorFactory actionFactory)
+    public RuleValidator(IEnumerable<IConditionOperator> operators, IActionFactory actionFactory)
     {
         ArgumentNullException.ThrowIfNull(operators);
         ArgumentNullException.ThrowIfNull(actionFactory);
@@ -61,7 +61,7 @@ public sealed class RuleValidator
         if (string.IsNullOrWhiteSpace(action.Action))
             errors.Add(new($"{path}.action", "'action' must be a non-empty string."));
         else if (!_actionNames.Contains(action.Action))
-            errors.Add(new($"{path}.action", $"No action executor is registered for action '{action.Action}'."));
+            errors.Add(new($"{path}.action", $"No action is registered under the name '{action.Action}'."));
 
         if (action.Condition is not null)
             ValidateRootCondition(action.Condition, $"{path}.condition", "An action's condition", errors);
