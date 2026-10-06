@@ -117,9 +117,61 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 | Item | Notes | Source |
 |---|---|---|
 | Scheduler backends (`IScheduler`; Hangfire, Quartz, background service) | RuleForge currently only computes `ScheduledFor` | PRD #1 Out of Scope |
-| Timezone support | UTC-only today | PRD #1 Out of Scope |
+| Timezone support | UTC-only today; decide together with the time-semantics review below | PRD #1 Out of Scope |
 | `BlockPastEvents` flag; validation of zero/negative `Amount` | Past dates are currently returned as-is | [PRD #1 plan](archive/action-scheduling-di-plan.md) |
 | Cron / recurring schedules, business-day calculations | | PRD #1 Out of Scope; old roadmap Phase 4.4 |
+
+### Time semantics review (needs a proper breakdown)
+Keeping the current behaviour for now, but it needs a dedicated discussion and design before 1.0. Raised on
+2026-10-06 while reviewing #33 / PR #48.
+
+**Today**, every date conversion goes through `ValueConverter` (#30) and assumes UTC when no time zone is known:
+- `DateTime` with `Kind = Unspecified` is treated as UTC — in condition comparisons (`eq`, `gt`, …), schedule
+  `ReferencePath` values (#33) and `GetParameter<DateTime/DateTimeOffset>` (#35).
+- ISO 8601 strings without an offset (`"2026-05-01T09:00:00"`) are UTC, and date-only strings (`"2026-05-01"`) are
+  UTC midnight.
+
+**The risk**: `Unspecified` values are common (most databases/ORMs return them) and usually mean *local* time. In the
+US, treating such a value as UTC shifts it by 4–10 hours (and by a different amount across DST changes), so a
+reminder scheduled "2 hours before 09:00" fires at the wrong time, and date comparisons can land on the wrong day.
+Date-only values are arguably calendar dates, not instants.
+
+**To work out**:
+- What `Unspecified` should mean: reject it (fail loudly), use a configured default time zone (engine option or
+  DI), treat it as server-local time (fragile on servers), or take it from a per-field time zone in the Schema System.
+- Whether date-only values should compare as calendar dates (`DateOnly`) rather than UTC midnight instants.
+- How offset-less ISO strings in rules relate to that same default.
+- How this interacts with **Timezone support** for schedules, and with scheduler backends that dispatch at local times.
+- Migration: whichever default is chosen changes results for existing rules.
+
+### Path variables and functions (for consideration)
+Raised on 2026-10-06 while reviewing #38 / PR #50. Worth a design pass before more `$` names are added.
+
+**Today** `$current` and `$previous` are the only variables. They're constants on `EvaluationContext`, and the knowledge
+of what is valid lives in three places: `EvaluationContext.Resolve`, `ChangedOperator` (which strips the scope) and the
+parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variable would mean touching all three.
+
+**Ideas to explore**:
+- **One place for variables**: a single resolver/registry that the engine, `changed`, the parser and `RuleValidator`
+  (#39) all consult, instead of hard-coded checks. A sign of success: `changed` no longer has to strip a
+  `$current.`/`$previous.` prefix from its operand to get the bare property (#50); operators should get the property
+  and pick a state through the API instead.
+- **A public API to define and register variables**, e.g. `$event` (event metadata), `$rule`, `$tenant`, or
+  application-specific ones, registered alongside operators and actions (and through DI, #5).
+- **Functions**, e.g. `$now()`, `$today()`, `$now(Europe/London)`. Possibly with their own sigil, such as `@now(...)`,
+  to tell functions from variables. They'd have to use the injected `TimeProvider`, so they stay deterministic in
+  tests, and they tie directly into the **time semantics review** above.
+
+**Questions**:
+- Syntax: `$` for both, or `$` for variables and `@` for functions? Is `$current()` a function or a variable?
+- Strings vs structure: parse function calls out of `path` strings (a small expression language), or add a structured
+  JSON node such as `{ "function": "now", "args": ["Europe/London"] }` (a new `ConditionNode` type) that the parser
+  and UIs handle without string parsing?
+- Registration and discovery: how do custom variables and functions declare their arguments and return types, so
+  `RuleValidator` and rule-authoring UIs (Schema System) can check and offer them?
+- Safety: what custom functions may do when end users write rules, and whether results are cached per event.
+- Overlap with **expression support** (e.g. `Price * 1.2 > 100`), which the March analysis also suggested
+  ([analysis §7](archive/business-rules-analysis.md)); functions could be its first step or a separate feature.
 
 ### Schema & validation (old Phase 1.2)
 `FieldSchema` / `EventSchema` / `ISchemaProvider`, schema-based `IRuleValidator`, JSON export of schemas for
