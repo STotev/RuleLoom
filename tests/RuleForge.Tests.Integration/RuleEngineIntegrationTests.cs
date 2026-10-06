@@ -573,6 +573,38 @@ public class RuleEngineIntegrationTests
     }
 
     [Fact]
+    public async Task RuleEngine_JsonActionParameters_ReachActionAsTypedValues()
+    {
+        // Arrange
+        var json = """
+        {
+          "name": "Invoice reminder",
+          "eventType": "InvoiceDue",
+          "condition": { "operator": "eq", "operands": [{ "path": "Paid" }, { "value": false }] },
+          "actions": [
+            {
+              "type": "remind",
+              "parameters": { "amount": 250, "sendAt": "2026-05-01T09:00:00Z", "recipients": ["ada@example.com"] }
+            }
+          ]
+        }
+        """;
+
+        var reminder = new ReminderAction();
+        var engine = new RuleEngine(new ConditionEvaluator([new EqualsOperator()]), new DirectActionExecutorFactory([reminder]));
+
+        // Act
+        var result = await engine.ExecuteAsync(
+            "InvoiceDue", new { Paid = false }, [RuleJsonParser.Parse(json)], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.HasFailures);
+        Assert.Equal(250m, reminder.Amount);
+        Assert.Equal(new DateTimeOffset(2026, 5, 1, 9, 0, 0, TimeSpan.Zero), reminder.SendAt);
+        Assert.Equal(["ada@example.com"], reminder.Recipients);
+    }
+
+    [Fact]
     public async Task RuleEngine_JsonValuesAgainstTypedProperties_MatchByValue()
     {
         // Arrange
@@ -685,6 +717,24 @@ public class RuleEngineIntegrationTests
             {
                 messages.Add(message?.ToString() ?? string.Empty);
             }
+
+            return Task.FromResult(ActionResult.Success());
+        }
+    }
+
+    private sealed class ReminderAction : IActionExecutor
+    {
+        public decimal Amount { get; private set; }
+        public DateTimeOffset SendAt { get; private set; }
+        public IReadOnlyList<object?> Recipients { get; private set; } = [];
+
+        public string Type => "remind";
+
+        public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
+        {
+            Amount = action.GetParameter<decimal>("amount");
+            SendAt = action.GetParameter<DateTimeOffset>("sendAt");
+            Recipients = action.GetParameter<IReadOnlyList<object?>>("recipients");
 
             return Task.FromResult(ActionResult.Success());
         }

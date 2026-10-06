@@ -65,6 +65,7 @@ public static class RuleJsonParser
             Converters =
             {
                 new ConditionNodeJsonConverter(),
+                new ClrValueJsonConverter(),
                 new JsonStringEnumConverter()
             }
         };
@@ -162,7 +163,7 @@ internal class ConditionNodeJsonConverter : JsonConverter<ConditionNode>
         if (HasProperty(element, "value"))
         {
             var valueProp = GetPropertyCaseInsensitive(element, "value");
-            value = ParseJsonValue(valueProp);
+            value = JsonClrValues.ToClrValue(valueProp);
         }
 
         return new ValueOperand { Value = value };
@@ -206,11 +207,16 @@ internal class ConditionNodeJsonConverter : JsonConverter<ConditionNode>
 
         throw new JsonException("Unknown ConditionNode type in operands");
     }
+}
 
-    /// <summary>
-    /// Converts a JsonElement to a CLR object, preserving type information where possible.
-    /// </summary>
-    private static object? ParseJsonValue(JsonElement element)
+/// <summary>
+/// Converts JSON values to plain CLR values, so rule values look the same whether a rule came from JSON or code:
+/// <c>null</c>, <see cref="bool"/>, <see cref="int"/>/<see cref="long"/>/<see cref="double"/>, <see cref="string"/>,
+/// <see cref="List{T}"/> of values, and <see cref="Dictionary{TKey,TValue}"/> of values.
+/// </summary>
+internal static class JsonClrValues
+{
+    public static object? ToClrValue(JsonElement element)
     {
         return element.ValueKind switch
         {
@@ -221,12 +227,35 @@ internal class ConditionNodeJsonConverter : JsonConverter<ConditionNode>
             JsonValueKind.Number when element.TryGetInt64(out var longVal) => longVal,
             JsonValueKind.Number when element.TryGetDouble(out var doubleVal) => doubleVal,
             JsonValueKind.String => element.GetString(),
-            JsonValueKind.Array => element.EnumerateArray().Select(ParseJsonValue).ToList(),
+            JsonValueKind.Array => element.EnumerateArray().Select(ToClrValue).ToList(),
             JsonValueKind.Object => element.EnumerateObject()
-                .ToDictionary(p => p.Name, p => ParseJsonValue(p.Value)),
+                .ToDictionary(p => p.Name, p => ToClrValue(p.Value)),
             _ => element.GetRawText()
         };
     }
 }
 
+/// <summary>
+/// Reads <see cref="object"/>-typed values (such as action parameters) as plain CLR values instead of
+/// <see cref="JsonElement"/>; writes them by their runtime type.
+/// </summary>
+internal sealed class ClrValueJsonConverter : JsonConverter<object>
+{
+    public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using var document = JsonDocument.ParseValue(ref reader);
+        return JsonClrValues.ToClrValue(document.RootElement);
+    }
 
+    public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
+    {
+        if (value.GetType() == typeof(object))
+        {
+            writer.WriteStartObject();
+            writer.WriteEndObject();
+            return;
+        }
+
+        JsonSerializer.Serialize(writer, value, value.GetType(), options);
+    }
+}
