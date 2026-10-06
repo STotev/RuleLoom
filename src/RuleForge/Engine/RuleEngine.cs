@@ -38,7 +38,7 @@ public sealed class RuleEngine(
         var scheduledActions = new List<ScheduledAction>();
 
         var matchingRules = rules
-            .Where(r => r.EventType == eventType)
+            .Where(r => string.Equals(r.EventType, eventType, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(r => r.Priority);
 
         foreach (var rule in matchingRules)

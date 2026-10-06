@@ -44,7 +44,32 @@ public class DirectActionExecutorFactoryTests
             new StubActionExecutor("duplicate")
         };
 
-        Assert.Throws<ArgumentException>(() => new DirectActionExecutorFactory(executors));
+        var ex = Assert.Throws<ArgumentException>(() => new DirectActionExecutorFactory(executors));
+
+        Assert.StartsWith("Action type 'duplicate' is registered more than once.", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("send-email")]
+    [InlineData("Send-Email")]
+    [InlineData("SEND-EMAIL")]
+    public void TryGetExecutor_TypeInAnyCase_ReturnsExecutor(string type)
+    {
+        var expectedExecutor = new StubActionExecutor("send-email");
+        var factory = new DirectActionExecutorFactory([expectedExecutor]);
+
+        Assert.True(factory.TryGetExecutor(type, out var executor));
+        Assert.Same(expectedExecutor, executor);
+    }
+
+    [Fact]
+    public void Constructor_TypesDifferingOnlyInCase_ThrowsNamingBoth()
+    {
+        var executors = new IActionExecutor[] { new StubActionExecutor("log"), new StubActionExecutor("Log") };
+
+        var ex = Assert.Throws<ArgumentException>(() => new DirectActionExecutorFactory(executors));
+
+        Assert.StartsWith("Action type 'Log' conflicts with 'log' (types are case-insensitive).", ex.Message);
     }
 
     private sealed class StubActionExecutor(string type) : IActionExecutor

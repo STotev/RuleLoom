@@ -1,11 +1,13 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace RuleForge.Abstractions;
 
 /// <summary>
 /// Resolves property paths on objects using compiled expression trees for performance.
 /// Returns null for missing properties instead of throwing exceptions.
+/// Path segments match property names ignoring case; an exact-case match takes precedence.
 /// Accessors are cached per (type, path), including paths that don't exist. Instances are thread-safe.
 /// </summary>
 public class PathResolver
@@ -51,7 +53,7 @@ public class PathResolver
 
             foreach (var part in path.Split('.'))
             {
-                var prop = current.Type.GetProperty(part);
+                var prop = FindProperty(current.Type, part);
                 if (prop == null)
                 {
                     // Property doesn't exist, return null accessor
@@ -69,5 +71,22 @@ public class PathResolver
             // Failed to build accessor, return null accessor
             return null;
         }
+    }
+
+    /// <summary>
+    /// Finds a property by exact name, or else by a unique case-insensitive match (ambiguous matches count as missing).
+    /// </summary>
+    private static PropertyInfo? FindProperty(Type type, string name)
+    {
+        var exact = type.GetProperty(name);
+        if (exact is not null)
+            return exact;
+
+        var matches = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.GetIndexParameters().Length == 0 && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+            .Take(2)
+            .ToArray();
+
+        return matches.Length == 1 ? matches[0] : null;
     }
 }

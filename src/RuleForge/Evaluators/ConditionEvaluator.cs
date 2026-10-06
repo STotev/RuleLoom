@@ -5,7 +5,7 @@ namespace RuleForge.Evaluators;
 
 public class ConditionEvaluator : IConditionEvaluator
 {
-    private readonly Dictionary<string, IConditionOperator> _operators = [];
+    private readonly Dictionary<string, IConditionOperator> _operators = new(StringComparer.OrdinalIgnoreCase);
 
     public ConditionEvaluator(IEnumerable<IConditionOperator> operators)
     {
@@ -13,8 +13,16 @@ public class ConditionEvaluator : IConditionEvaluator
 
         foreach (var @operator in operators)
         {
-            if (!_operators.TryAdd(@operator.Name, @operator))
-                throw new ArgumentException($"Operator '{@operator.Name}' is registered more than once.", nameof(operators));
+            if (_operators.TryGetValue(@operator.Name, out var existing))
+            {
+                throw new ArgumentException(
+                    existing.Name == @operator.Name
+                        ? $"Operator '{@operator.Name}' is registered more than once."
+                        : $"Operator '{@operator.Name}' conflicts with '{existing.Name}' (names are case-insensitive).",
+                    nameof(operators));
+            }
+
+            _operators.Add(@operator.Name, @operator);
         }
     }
 

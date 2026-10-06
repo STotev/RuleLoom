@@ -50,6 +50,60 @@ public class PathResolverTests
         });
     }
 
+    [Theory]
+    [InlineData("Customer.Name")]
+    [InlineData("customer.name")]
+    [InlineData("CUSTOMER.NAME")]
+    [InlineData("current.customer.name")]
+    public void Resolve_PathInAnyCase_ResolvesProperty(string path)
+    {
+        var context = new EvaluationContext(new Order { Customer = new Customer { Name = "Ada" } });
+
+        Assert.Equal("Ada", context.Resolve(path));
+    }
+
+    [Theory]
+    [InlineData("Price", 1)]
+    [InlineData("price", 2)]
+    public void Resolve_PropertiesDifferingOnlyInCase_ExactCaseWins(string path, int expected)
+    {
+        Assert.Equal(expected, new PathResolver().Resolve(new CaseSensitiveProperties(), path));
+    }
+
+    [Fact]
+    public void Resolve_AmbiguousCaseInsensitiveMatch_ReturnsNull()
+    {
+        Assert.Null(new PathResolver().Resolve(new CaseSensitiveProperties(), "PRICE"));
+    }
+
+    [Fact]
+    public void Resolve_IndexerName_IsNotAProperty()
+    {
+        Assert.Null(new PathResolver().Resolve(new WithIndexer(), "item"));
+        Assert.Null(new PathResolver().Resolve(new WithIndexer(), "Item"));
+    }
+
+    private sealed class Order
+    {
+        public Customer Customer { get; init; } = new();
+    }
+
+    private sealed class Customer
+    {
+        public string Name { get; init; } = string.Empty;
+    }
+
+    private sealed class CaseSensitiveProperties
+    {
+        public int Price => 1;
+        public int price => 2;
+    }
+
+    private sealed class WithIndexer
+    {
+        public int this[int index] => index;
+    }
+
     private sealed class SharedCacheProbe
     {
         public int Price { get; init; }

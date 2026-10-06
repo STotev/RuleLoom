@@ -49,6 +49,24 @@ public class ConditionEvaluatorTests
     }
 
     [Fact]
+    public void Constructor_NamesDifferingOnlyInCase_ThrowsNamingBoth()
+    {
+        var ex = Assert.Throws<ArgumentException>(
+            () => new ConditionEvaluator([new EqualsOperator(), new CountingOperator("EQ", true)]));
+
+        Assert.StartsWith("Operator 'EQ' conflicts with 'eq' (names are case-insensitive).", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("eq")]
+    [InlineData("EQ")]
+    [InlineData("Eq")]
+    public void Evaluate_OperatorNameInAnyCase_IsFound(string name)
+    {
+        Assert.True(Evaluator().Evaluate(Context, Op(name, Path("Price"), Value(100))));
+    }
+
+    [Fact]
     public void Evaluate_RegisteredCustomOperator_IsUsed()
     {
         var custom = new CountingOperator("custom", true);
