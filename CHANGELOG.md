@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file. It is generated
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/) — do not edit it by hand.
 
+## [0.4.0](https://github.com/STotev/RuleForge/compare/v0.3.0...v0.4.0) (2026-10-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename IActionExecutor to IAction ([#59](https://github.com/STotev/RuleForge/issues/59))
+* name actions by registration and reference them as "action" ([#56](https://github.com/STotev/RuleForge/issues/56))
+
+### Features
+
+* add AddRuleForge dependency injection extensions ([#54](https://github.com/STotev/RuleForge/issues/54)) ([48401a3](https://github.com/STotev/RuleForge/commit/48401a37d30a5638f23362d3bd39cba9f6e394fe))
+* name actions by registration and reference them as "action" ([#56](https://github.com/STotev/RuleForge/issues/56)) ([3eea391](https://github.com/STotev/RuleForge/commit/3eea391f096da47778392c8f7c5ef250f31e7c1e))
+
+
+### Code Refactoring
+
+* rename IActionExecutor to IAction ([#59](https://github.com/STotev/RuleForge/issues/59)) ([766b887](https://github.com/STotev/RuleForge/commit/766b887d803f11d93f5b008081245f4e6f13456c))
+
 ## [0.3.0](https://github.com/STotev/RuleForge/compare/v0.2.1...v0.3.0) (2026-10-06)
 
 
