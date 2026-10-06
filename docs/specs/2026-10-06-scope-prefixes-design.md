@@ -23,8 +23,9 @@ such as `current.Price` became `current.current.Price` and `changed` was always 
 | `current.` / `previous.` | Ordinary property names when resolving | No ambiguity any more |
 | Other `$` names | Reserved: `EvaluationContext.Resolve` throws `InvalidOperationException`; the parser rejects them with their location | Keeps the namespace free for future `$now`, `$event` (PRD Out of Scope) |
 | Migration guard for the old prefixes | **None** (maintainer decision, 2026-10-06). `current.X` / `previous.X` are ordinary property paths in JSON and code alike, so a property named `Previous` is reached as `Previous.X` | The package has never been published, so no existing rules need migrating. PRD #22 user story 51 and the transitional guard first proposed here are dropped |
-| Constants | `EvaluationContext.CurrentVariable` / `PreviousVariable` (`"$current"`, `"$previous"`) | Used by the engine, `changed` and the parser; available to custom operators |
-| `changed` (#16) | Strips a leading `$current.`/`$previous.` from its operand, so `Price`, `$current.Price` and `$previous.Price` all compare current vs previous `Price`; unknown `$` names throw | `changed` always compares the two states; a scope on its operand only names the property |
+| How operators pick a state | Through the path string: `ctx.Resolve("$previous.Price")` or a `$previous.Price` operand via `GetValue`. No public constants or scope types | `Resolve` already understands the prefixes; a dedicated API waits for the variables/functions design (roadmap backlog) |
+| `changed` (#16) | Strips a leading `$current.`/`$previous.` from its operand and resolves `$current.{property}` and `$previous.{property}`, so `Price`, `$current.Price` and `$previous.Price` are equivalent | `changed` always compares the two states; a scope on its operand only names the property |
+| Unknown `$` name in a `changed` operand | Not detected by `changed` itself (it resolves to `null` on both sides, i.e. not changed). JSON rules are protected because the parser rejects unknown `$` names; every other operator throws via `Resolve` | Keeps `changed` to a plain prefix check rather than its own variable parsing |
 
 ## Breaking changes (`feat!:`)
 
@@ -36,7 +37,7 @@ such as `current.Price` became `current.current.Price` and `changed` was always 
 
 - `EvaluationContextTests`: `$current`/`$previous` in any case, nested; plain paths; legacy prefixes as property
   names; a property named `Previous` via a plain path; variables alone; unknown `$` variables throw.
-- `ChangedOperatorTests`: unscoped, `$current.`, `$previous.`, upper-case prefix; unknown variable throws.
+- `ChangedOperatorTests`: unscoped, `$current.`, `$previous.`, upper-case prefix.
 - `RuleJsonValidationTests`: unknown `$` variables rejected in paths and schedule `referencePath`, with locations;
   valid forms (`$current`, `current`, `current.Price`, `Previous.Order.Status`, `Currently.X`) accepted.
 - Integration: a JSON rule comparing `$current.Price` with `$previous.Price`.

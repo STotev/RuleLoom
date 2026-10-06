@@ -27,16 +27,6 @@ public class EvaluationContext
     }
 
     /// <summary>
-    /// The variable that selects the current state in a path, e.g. <c>$current.Price</c>.
-    /// </summary>
-    public const string CurrentVariable = "$current";
-
-    /// <summary>
-    /// The variable that selects the previous state in a path, e.g. <c>$previous.Price</c>.
-    /// </summary>
-    public const string PreviousVariable = "$previous";
-
-    /// <summary>
     /// Resolves a property path from the context.
     /// A leading <c>$current.</c> or <c>$previous.</c> (case-insensitive) selects the state; any other path,
     /// including nested ones such as <c>Address.City</c>, resolves against <see cref="Current"/>.
@@ -55,14 +45,14 @@ public class EvaluationContext
 
         if (parts[0].StartsWith('$'))
         {
-            if (parts[0].Equals(PreviousVariable, StringComparison.OrdinalIgnoreCase))
+            if (parts[0].Equals("$previous", StringComparison.OrdinalIgnoreCase))
             {
                 root = Previous;
             }
-            else if (!parts[0].Equals(CurrentVariable, StringComparison.OrdinalIgnoreCase))
+            else if (!parts[0].Equals("$current", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    $"Unknown variable '{parts[0]}' in path '{path}'. Use {CurrentVariable} or {PreviousVariable}.");
+                    $"Unknown variable '{parts[0]}' in path '{path}'. Use $current or $previous.");
             }
 
             remainingPath = parts.Length == 2 ? parts[1] : string.Empty;

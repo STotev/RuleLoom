@@ -116,12 +116,11 @@ internal static class RuleJsonValidator
         var first = value.Split('.', 2)[0];
 
         if (first.StartsWith('$') &&
-            !first.Equals(EvaluationContext.CurrentVariable, StringComparison.OrdinalIgnoreCase) &&
-            !first.Equals(EvaluationContext.PreviousVariable, StringComparison.OrdinalIgnoreCase))
+            !first.Equals("$current", StringComparison.OrdinalIgnoreCase) &&
+            !first.Equals("$previous", StringComparison.OrdinalIgnoreCase))
         {
             throw new RuleParseException(
-                $"Unknown variable '{first}' in path '{value}'. Use {EvaluationContext.CurrentVariable} or " +
-                $"{EvaluationContext.PreviousVariable}.",
+                $"Unknown variable '{first}' in path '{value}'. Use $current or $previous.",
                 path);
         }
     }

@@ -80,14 +80,6 @@ public class ChangedOperatorTests
     }
 
     [Fact]
-    public void Evaluate_UnknownVariable_Throws()
-    {
-        var context = new EvaluationContext(new Listing(), new Listing());
-
-        Assert.Throws<InvalidOperationException>(() => Evaluator().Evaluate(context, Op("changed", Path("$now.Price"))));
-    }
-
-    [Fact]
     public void Evaluate_NonPathOperand_Throws()
     {
         var context = new EvaluationContext(new Listing(), new Listing());
