@@ -12,7 +12,10 @@ The `RuleJsonParser` is a performant, type-safe JSON parser for converting JSON 
 - **Performant**: Uses System.Text.Json for fast, low-allocation parsing
 - **Type-Safe**: Automatically detects and deserializes the correct ConditionNode types
 - **Polymorphic**: Handles `PathOperand`, `ValueOperand`, and `OperatorCondition` transparently
-- **Case-Insensitive**: Property names are matched case-insensitively (e.g., `EventType` or `eventType`)
+- **Case-Insensitive**: JSON property names (`EventType` or `eventType`) and the names inside a rule — operator
+  names (`"EQ"`), action types (`"Send-Email"`), event types and property paths (`"price"` finds `Price`) — are
+  matched ignoring case. An exact-case property match wins if a type has properties differing only in case.
+  String *values* still compare case-sensitively.
 - **Streaming Support**: Supports both string and stream-based parsing for large rule sets
 - **Batch Parsing**: Parse multiple rules from a single JSON array
 

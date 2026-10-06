@@ -83,8 +83,8 @@ maintainer to review that spec before implementation.
 | [#33](https://github.com/STotev/RuleForge/issues/33) | ISO 8601 string dates for schedule `ReferencePath` | AFK | #30 | #19 |
 | [#34](https://github.com/STotev/RuleForge/issues/34) | ✅ `OperatorContext` operator API — PR #45 | HITL | #30 | #17 |
 | [#35](https://github.com/STotev/RuleForge/issues/35) | Normalised action parameters, `GetParameter<T>` | AFK | #30 | |
-| [#36](https://github.com/STotev/RuleForge/issues/36) | ✅ `gt`, `gte`, `lt`, `lte` | AFK | #34 | |
-| [#37](https://github.com/STotev/RuleForge/issues/37) | Case-insensitive names | AFK | #34 | |
+| [#36](https://github.com/STotev/RuleForge/issues/36) | ✅ `gt`, `gte`, `lt`, `lte` — PR #46 | AFK | #34 | |
+| [#37](https://github.com/STotev/RuleForge/issues/37) | ✅ Case-insensitive names | AFK | #34 | |
 | [#38](https://github.com/STotev/RuleForge/issues/38) | `$current` / `$previous` scope prefixes | AFK | #31, #34, #37 | #16 |
 | [#39](https://github.com/STotev/RuleForge/issues/39) | `RuleValidator` against registered operators and actions | AFK | #31, #34, #37 | |
 

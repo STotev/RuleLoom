@@ -110,6 +110,9 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 
 - **Conditions** are trees of `ConditionNode`: `OperatorCondition` (operator name + operands),
   `PathOperand`, `ValueOperand`. Built-in operators: `eq`, `changed`, `and`, `or`, `not`, `gt`, `gte`, `lt`, `lte`.
+- **Names ignore case** (`OrdinalIgnoreCase`): operator names, action types, event types and property path
+  segments (exact-case property match wins; ambiguous case-insensitive matches resolve to `null`). Registering
+  operators or action types that differ only in case throws. String values stay case-sensitive.
 - **Paths** resolve via `PathResolver` (compiled, cached expressions): `"Price"` = current,
   `"current.Price"` / `"previous.Price"` explicit. Missing properties resolve to `null`.
 - **Actions** are resolved by `Type` through `IActionExecutorFactory` (`DirectActionExecutorFactory`
