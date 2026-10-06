@@ -436,6 +436,8 @@ public class RuleEngineTests
     private sealed class TestActionExecutorFactory(
         IReadOnlyDictionary<string, IActionExecutor> executors) : IActionExecutorFactory
     {
+        public IReadOnlyCollection<string> ActionTypes => executors.Keys.ToArray();
+
         public bool TryGetExecutor(string type, out IActionExecutor? executor) =>
             executors.TryGetValue(type, out executor);
     }
