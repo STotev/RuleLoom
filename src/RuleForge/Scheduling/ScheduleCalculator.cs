@@ -1,6 +1,6 @@
-using System.Globalization;
 using RuleForge.Abstractions;
 using RuleForge.Abstractions.Scheduling;
+using RuleForge.Abstractions.Values;
 
 namespace RuleForge.Scheduling;
 
@@ -35,16 +35,21 @@ internal static class ScheduleCalculator
 
         var resolved = context.Resolve(schedule.ReferencePath);
 
-        return resolved switch
+        if (resolved is null)
         {
-            DateTimeOffset dto => dto.ToUniversalTime(),
-            DateTime dt => ResolveDateTime(dt),
-            string dt => ParseDateTimeOffset(dt, schedule.ReferencePath),
-            null => throw new InvalidOperationException(
-                $"ReferencePath '{schedule.ReferencePath}' resolved to null. Ensure the property exists and has a value."),
-            _ => throw new InvalidOperationException(
-                $"ReferencePath '{schedule.ReferencePath}' resolved to '{resolved.GetType().Name}' but a DateTime, DateTimeOffset or a stringified datetime value is required.")
-        };
+            throw new InvalidOperationException(
+                $"ReferencePath '{schedule.ReferencePath}' resolved to null. Ensure the property exists and has a value.");
+        }
+
+        // Same conversion as rule comparisons: DateTime/DateTimeOffset as UTC instants, strings as strict ISO 8601.
+        if (ValueConverter.TryConvert<DateTimeOffset>(resolved, out var instant))
+            return instant.ToUniversalTime();
+
+        throw new InvalidOperationException(resolved is string text
+            ? $"ReferencePath '{schedule.ReferencePath}' resolved to string '{text}', which is not an ISO 8601 date-time " +
+              "(e.g. 2026-05-01T12:00:00Z, 2026-05-01T14:00:00+02:00 or 2026-05-01)."
+            : $"ReferencePath '{schedule.ReferencePath}' resolved to '{resolved.GetType().Name}' but a DateTime, " +
+              "DateTimeOffset or ISO 8601 string is required.");
     }
 
     private static TimeSpan ComputeOffset(ScheduleMetadata schedule)
@@ -63,28 +68,5 @@ internal static class ScheduleCalculator
             ScheduleUnit.Days => TimeSpan.FromDays(amount),
             _ => throw new ArgumentException($"Unknown schedule unit '{schedule.Unit}'.", nameof(schedule))
         };
-    }
-
-    private static DateTimeOffset ResolveDateTime(DateTime value)
-    {
-        return value.Kind switch
-        {
-            DateTimeKind.Local => new DateTimeOffset(value.ToUniversalTime(), TimeSpan.Zero),
-            DateTimeKind.Utc => new DateTimeOffset(value, TimeSpan.Zero),
-            _ => new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc), TimeSpan.Zero)
-        };
-    }
-
-    private static DateTimeOffset ParseDateTimeOffset(string value, string? referencePath)
-    {
-        const DateTimeStyles styles = DateTimeStyles.AllowWhiteSpaces
-                                    | DateTimeStyles.AssumeUniversal
-                                    | DateTimeStyles.AdjustToUniversal;
-
-        if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, styles, out var parsed))
-            return parsed;
-
-        throw new InvalidOperationException(
-            $"ReferencePath '{referencePath}' resolved to string '{value}' which could not be parsed as an invariant UTC date-time value.");
     }
 }
