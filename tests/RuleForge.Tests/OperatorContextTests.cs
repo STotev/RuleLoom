@@ -30,7 +30,7 @@ public class OperatorContextTests
     public void GetValue_PathOperand_ReturnsResolvedValue()
     {
         Assert.Equal(100m, Context(Path("Price")).GetValue(0));
-        Assert.Equal(90m, Context(Path("previous.Price")).GetValue(0));
+        Assert.Equal(90m, Context(Path("$previous.Price")).GetValue(0));
         Assert.Null(Context(Path("Missing")).GetValue(0));
     }
 
@@ -56,7 +56,7 @@ public class OperatorContextTests
 
     [Theory]
     [InlineData("IsActive", true)]
-    [InlineData("previous.IsActive", false)]
+    [InlineData("$previous.IsActive", false)]
     public void Test_PathResolvingToBool_ReturnsIt(string path, bool expected)
     {
         Assert.Equal(expected, Context(Path(path)).Test(0));
@@ -130,7 +130,7 @@ public class OperatorContextTests
     {
         var context = Context();
 
-        Assert.Equal(90m, context.Resolve("previous.Price"));
+        Assert.Equal(90m, context.Resolve("$previous.Price"));
         Assert.Equal("Lamp", context.Resolve("Name"));
     }
 

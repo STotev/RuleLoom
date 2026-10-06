@@ -40,7 +40,11 @@ public class RuleJsonValidationTests
         { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "parameters": {} }] }""", "$.actions[0].type" },
         { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log" }, { "type": "" }] }""", "$.actions[1].type" },
         { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "parameters": [] }] }""", "$.actions[0].parameters" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "condition": { "path": "Active" } }] }""", "$.actions[0].condition" }
+        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "condition": { "path": "Active" } }] }""", "$.actions[0].condition" },
+        // Path variables: only $current and $previous
+        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$now" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
+        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$cur.Price" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
+        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "schedule": { "mode": "Delay", "amount": 1, "unit": "Hours", "referencePath": "$due" } }] }""", "$.actions[0].schedule.referencePath" }
     };
 
     [Theory]
@@ -51,6 +55,24 @@ public class RuleJsonValidationTests
 
         Assert.Equal(expectedPath, ex.Path);
         Assert.Contains($"(at {expectedPath})", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("$current.Price")]
+    [InlineData("$previous.Price")]
+    [InlineData("$Current.Price")]
+    [InlineData("$current")]
+    [InlineData("current")]
+    [InlineData("current.Price")]
+    [InlineData("Previous.Order.Status")]
+    [InlineData("Currently.Price")]
+    public void Parse_ValidPaths_AreAccepted(string path)
+    {
+        var json = $$"""{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "{{path}}" }, { "value": 1 }] } }""";
+
+        var rule = RuleJsonParser.Parse(json);
+
+        Assert.Equal(path, Assert.IsType<PathOperand>(((OperatorCondition)rule.Condition).Operands[0]).Path);
     }
 
     [Fact]

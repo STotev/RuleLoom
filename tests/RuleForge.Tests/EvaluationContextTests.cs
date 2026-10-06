@@ -19,10 +19,10 @@ public class EvaluationContextTests
     [Theory]
     [InlineData("Name", "John")]
     [InlineData("Address.City", "New York")]
-    [InlineData("current.Name", "John")]
-    [InlineData("current.Address.City", "New York")]
-    [InlineData("previous.Name", "Johnny")]
-    [InlineData("previous.Address.City", "Boston")]
+    [InlineData("$current.Name", "John")]
+    [InlineData("$current.Address.City", "New York")]
+    [InlineData("$previous.Name", "Johnny")]
+    [InlineData("$previous.Address.City", "Boston")]
     public void Resolve_Path_ReturnsValueFromExpectedScope(string path, string expected)
     {
         var context = new EvaluationContext(CurrentPerson, PreviousPerson);
@@ -33,8 +33,8 @@ public class EvaluationContextTests
     }
 
     [Theory]
-    [InlineData("Current.Address.City", "New York")]
-    [InlineData("PREVIOUS.Address.City", "Boston")]
+    [InlineData("$Current.Address.City", "New York")]
+    [InlineData("$PREVIOUS.Address.City", "Boston")]
     public void Resolve_ScopePrefixInAnyCase_SelectsScope(string path, string expected)
     {
         var context = new EvaluationContext(CurrentPerson, PreviousPerson);
@@ -49,7 +49,7 @@ public class EvaluationContextTests
     {
         var context = new EvaluationContext(CurrentPerson, PreviousPerson);
 
-        Assert.Equal(context.Resolve("current.Address.City"), context.Resolve("Address.City"));
+        Assert.Equal(context.Resolve("$current.Address.City"), context.Resolve("Address.City"));
     }
 
     [Theory]
@@ -76,16 +76,47 @@ public class EvaluationContextTests
     {
         var context = new EvaluationContext(CurrentPerson);
 
-        Assert.Null(context.Resolve("previous.Address.City"));
+        Assert.Null(context.Resolve("$previous.Address.City"));
     }
 
     [Fact]
-    public void Resolve_PropertyNamedLikeScope_RequiresExplicitScope()
+    public void Resolve_PropertyNamedLikeScope_ResolvesWithPlainPath()
     {
         var context = new EvaluationContext(new { Previous = new { Price = 90 } }, new { Price = 80 });
 
-        Assert.Equal(80, context.Resolve("previous.Price"));
-        Assert.Equal(90, context.Resolve("current.Previous.Price"));
+        Assert.Equal(90, context.Resolve("Previous.Price"));
+        Assert.Equal(80, context.Resolve("$previous.Price"));
+    }
+
+    [Fact]
+    public void Resolve_PrefixWithoutDollar_IsAnOrdinaryPropertyName()
+    {
+        var context = new EvaluationContext(CurrentPerson, PreviousPerson);
+
+        Assert.Null(context.Resolve("previous.Name"));
+        Assert.Null(context.Resolve("current.Name"));
+    }
+
+    [Theory]
+    [InlineData("$current", true)]
+    [InlineData("$previous", false)]
+    public void Resolve_VariableAlone_ReturnsWholeState(string path, bool isCurrent)
+    {
+        var context = new EvaluationContext(CurrentPerson, PreviousPerson);
+
+        Assert.Same(isCurrent ? CurrentPerson : PreviousPerson, context.Resolve(path));
+    }
+
+    [Theory]
+    [InlineData("$now")]
+    [InlineData("$event.Type")]
+    [InlineData("$cur.Name")]
+    public void Resolve_UnknownVariable_Throws(string path)
+    {
+        var context = new EvaluationContext(CurrentPerson, PreviousPerson);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => context.Resolve(path));
+        Assert.Contains("Use $current or $previous", ex.Message);
     }
 
     private sealed class Person

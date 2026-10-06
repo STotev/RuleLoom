@@ -211,6 +211,21 @@ The converter uses these rules to determine ConditionNode type:
 
 A node with none or more than one of these properties is rejected with a `RuleParseException` (see Error Handling).
 
+## Paths and State
+
+A `path` names a property, with `.` for nested properties (`"Address.City"`). Names ignore case. A path reads the
+**current** state unless it starts with a variable:
+
+| Path | Reads |
+|---|---|
+| `"Price"`, `"Address.City"` | the current state |
+| `"$current.Price"` | the current state (explicit) |
+| `"$previous.Price"` | the previous state (`null` if there is none) |
+
+Other names starting with `$` are reserved and rejected. Without the `$`, `current` and `previous` are ordinary
+property names, so a property called `Previous` is simply `"Previous.X"`. `changed` compares current with previous
+whichever way its path is written: `Price`, `$current.Price` and `$previous.Price` are equivalent.
+
 ## Comparing Values
 
 JSON values are parsed as `int`, `long`, `double`, `string`, `bool` or `null`, while domain properties are often

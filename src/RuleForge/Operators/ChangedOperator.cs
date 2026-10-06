@@ -10,8 +10,15 @@ public class ChangedOperator : IConditionOperator
 
     public bool Evaluate(OperatorContext context)
     {
-        var path = context.GetPath(0);
+        var property = WithoutScope(context.GetPath(0));
 
-        return !Equals(context.Resolve($"current.{path}"), context.Resolve($"previous.{path}"));
+        return !Equals(context.Resolve($"$current.{property}"), context.Resolve($"$previous.{property}"));
     }
+
+    // The operand may already name a state ("$current.Price"); changed always compares both, so keep the property.
+    private static string WithoutScope(string path) =>
+        path.StartsWith("$current.", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("$previous.", StringComparison.OrdinalIgnoreCase)
+            ? path[(path.IndexOf('.') + 1)..]
+            : path;
 }

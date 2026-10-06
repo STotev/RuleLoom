@@ -642,6 +642,37 @@ public class RuleEngineIntegrationTests
     }
 
     [Fact]
+    public async Task RuleEngine_ScopeVariables_CompareCurrentWithPrevious()
+    {
+        // Arrange
+        var json = """
+        {
+          "name": "Price dropped",
+          "eventType": "PropertyUpdated",
+          "condition": {
+            "operator": "and",
+            "operands": [
+              { "operator": "changed", "operands": [{ "path": "$current.Price" }] },
+              { "operator": "lt", "operands": [{ "path": "$current.Price" }, { "path": "$previous.Price" }] }
+            ]
+          },
+          "actions": [
+            { "type": "test-log", "parameters": { "message": "Price dropped!" } }
+          ]
+        }
+        """;
+
+        var rule = RuleJsonParser.Parse(json);
+
+        // Act
+        await _engine.ExecuteAsync("PropertyUpdated", new { Price = 90 }, new { Price = 100 }, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("PropertyUpdated", new { Price = 110 }, new { Price = 100 }, [rule], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["Price dropped!"], _logMessages);
+    }
+
+    [Fact]
     public async Task RuleEngine_OrderingOperators_MatchThresholdsOnTypedProperties()
     {
         // Arrange
