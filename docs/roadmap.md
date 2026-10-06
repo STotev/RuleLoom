@@ -1,6 +1,6 @@
 # RuleForge Roadmap
 
-**Last reviewed**: 2026-10-02
+**Last reviewed**: 2026-10-06
 
 The single overview of what has been built, what is next, and what is planned but not yet scheduled.
 Details live in GitHub issues and in [`specs/`](specs/); this page links to them rather than repeating them.
@@ -21,7 +21,7 @@ connect to historical docs — they were reused inconsistently between documents
 | 0.1.0 | Tagged `v0.1.0` (release-please bootstrap; no GitHub release or NuGet package) | Core engine, operators, JSON parser, Phase 1.1 stability fixes |
 | 0.2.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.0) 2026-10-02 | Action results, scheduling model, action factory, schedule calculation |
 | 0.2.1 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.1) 2026-10-03 | Nested path fix (#14), shared path cache (#15) |
-| 0.3.0 | Planned | PRD #22 API hardening, as **one** breaking release: don't merge release-please PRs until all #22 slices are done |
+| 0.3.0 | **Ready** — release PR [#42](https://github.com/STotev/RuleForge/pull/42) | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
 
 ---
 
@@ -44,58 +44,51 @@ per rule, integration test project. Report: [`archive/phase-1-1-summary.md`](arc
 | [#3](https://github.com/STotev/RuleForge/issues/3) | Action factory & per-rule results | [#9](https://github.com/STotev/RuleForge/pull/9) | [action-factory-pattern](specs/2026-03-28-action-factory-pattern-design.md) |
 | [#4](https://github.com/STotev/RuleForge/issues/4) | Schedule calculation engine | [#10](https://github.com/STotev/RuleForge/pull/10) | [schedule-calculation-engine](specs/2026-03-29-schedule-calculation-engine-design.md) |
 
+### Code review bug batch (2026-10-02)
+| Issue | Change | Fixed by |
+|---|---|---|
+| [#14](https://github.com/STotev/RuleForge/issues/14) | Unscoped nested paths (`Address.City`) threw | [#24](https://github.com/STotev/RuleForge/pull/24) |
+| [#15](https://github.com/STotev/RuleForge/issues/15) | Path accessor cache recreated per event (~290× faster now) | [#26](https://github.com/STotev/RuleForge/pull/26) |
+| [#20](https://github.com/STotev/RuleForge/issues/20) | Unit tests for operators, evaluator, path resolution (`RuleForge` coverage 57% → 90%) | [#29](https://github.com/STotev/RuleForge/pull/29) |
+| [#21](https://github.com/STotev/RuleForge/issues/21) | Test packages aligned; xunit v3 on Microsoft.Testing.Platform; coverage in both projects | [#28](https://github.com/STotev/RuleForge/pull/28) |
+| [#16](https://github.com/STotev/RuleForge/issues/16) · [#17](https://github.com/STotev/RuleForge/issues/17) · [#18](https://github.com/STotev/RuleForge/issues/18) · [#19](https://github.com/STotev/RuleForge/issues/19) | `changed` with scoped paths · clearer errors · cancellation checks · ISO-only string dates | folded into #38 · #34 · #32 · #33 |
+
+### API hardening — PRD [#22](https://github.com/STotev/RuleForge/issues/22) ✅ (ships in 0.3.0)
+Shared value comparison, `OperatorContext`, ordering operators, complete results, case-insensitive names, typed action
+parameters, `$current`/`$previous`, parse-time and registry-based validation. Every slice has a spec in
+[`specs/`](specs/).
+
+| Issue | Slice | PR |
+|---|---|---|
+| [#30](https://github.com/STotev/RuleForge/issues/30) | Shared value comparer (`ValueComparer`/`ValueConverter`), used by `eq` | [#41](https://github.com/STotev/RuleForge/pull/41) |
+| [#31](https://github.com/STotev/RuleForge/issues/31) | Parse-time structural validation (`RuleParseException`) | [#43](https://github.com/STotev/RuleForge/pull/43) |
+| [#32](https://github.com/STotev/RuleForge/issues/32) | Complete engine results (`RuleEngineResult`, rule status, action identity) — HITL | [#44](https://github.com/STotev/RuleForge/pull/44) |
+| [#33](https://github.com/STotev/RuleForge/issues/33) | ISO 8601 string dates for schedule `ReferencePath` | [#48](https://github.com/STotev/RuleForge/pull/48) |
+| [#34](https://github.com/STotev/RuleForge/issues/34) | `OperatorContext` operator API — HITL | [#45](https://github.com/STotev/RuleForge/pull/45) |
+| [#35](https://github.com/STotev/RuleForge/issues/35) | Action parameters as CLR values, `GetParameter<T>` | [#49](https://github.com/STotev/RuleForge/pull/49) |
+| [#36](https://github.com/STotev/RuleForge/issues/36) | `gt`, `gte`, `lt`, `lte` | [#46](https://github.com/STotev/RuleForge/pull/46) |
+| [#37](https://github.com/STotev/RuleForge/issues/37) | Case-insensitive names | [#47](https://github.com/STotev/RuleForge/pull/47) |
+| [#38](https://github.com/STotev/RuleForge/issues/38) | `$current` / `$previous` scope prefixes (no migration guard: package unpublished) | [#50](https://github.com/STotev/RuleForge/pull/50) |
+| [#39](https://github.com/STotev/RuleForge/issues/39) | `RuleValidator` against registered operators and actions | [#51](https://github.com/STotev/RuleForge/pull/51) |
+
 ### Tooling
-CI on PRs (build + test), release-please + MinVer versioning, issue/PR templates.
+CI on PRs (build + test, TRX and Cobertura artifacts), release-please + MinVer versioning with squash-merged PR
+titles, central package management, issue/PR templates, Claude Code setup (`AGENTS.md`, `.claude/settings.json`).
 
 ---
 
 ## 🎯 Next
 
-Work in this order. Findings from the 2026-10-02 code review are tracked as the bug batch and PRD #22.
+### 1. Release 0.3.0
+Merge release PR [#42](https://github.com/STotev/RuleForge/pull/42). It collects PRD #22's breaking changes; each PR description lists its own migration
+notes until the migration guide lands in #6.
 
-### 1. Bug batch (code review)
-
-| Issue | Change | Notes |
-|---|---|---|
-| [#14](https://github.com/STotev/RuleForge/issues/14) | Unscoped nested paths (`Address.City`) throw | ✅ Fixed — `RuleEngine_NestedProperties_ResolvesCorrectly` un-skipped |
-| [#15](https://github.com/STotev/RuleForge/issues/15) | Path accessor cache recreated per event | ✅ Fixed — shared, thread-safe cache |
-| [#20](https://github.com/STotev/RuleForge/issues/20) | Unit tests for operators, evaluator, path resolution | ✅ Done — unit coverage of `RuleForge` 57% → 90% |
-| [#21](https://github.com/STotev/RuleForge/issues/21) | Align test package versions, coverage in both projects | ✅ Done — central package management, xunit v3 on Microsoft.Testing.Platform, coverage in both projects |
-| [#16](https://github.com/STotev/RuleForge/issues/16) | `changed` always false for scoped paths | Folded into [#38](https://github.com/STotev/RuleForge/issues/38) |
-| [#17](https://github.com/STotev/RuleForge/issues/17) | Unclear errors for duplicates and non-operator operands | ✅ Fixed in [#34](https://github.com/STotev/RuleForge/issues/34) |
-| [#18](https://github.com/STotev/RuleForge/issues/18) | Cancellation not checked between rules/actions | ✅ Fixed in [#32](https://github.com/STotev/RuleForge/issues/32) |
-| [#19](https://github.com/STotev/RuleForge/issues/19) | String dates for schedule `ReferencePath` | Decided: keep, ISO 8601 only — folded into [#33](https://github.com/STotev/RuleForge/issues/33) |
-
-### 2. API hardening — PRD [#22](https://github.com/STotev/RuleForge/issues/22)
-
-One breaking release before 1.0: shared value comparison (numbers, enums, ISO dates), `OperatorContext` operator API
-([spec](specs/2026-10-05-operator-context-design.md), superseding the March [proposal](archive/operator-context-api-redesign.md)), `gt`/`gte`/`lt`/`lte`, complete results
-(`Matched`/`NotMatched`/`Failed`, rule and action identity, `RuleEngineResult` wrapper), case-insensitive names,
-normalised action parameters with `GetParameter<T>`, parse-time and registry-based validation, `$current`/`$previous`.
-Ten slices, each a sub-issue of #22. Every slice gets a spec in [`specs/`](specs/) first; **HITL** slices need the
-maintainer to review that spec before implementation.
-
-| Issue | Slice | Type | Blocked by | Closes |
-|---|---|---|---|---|
-| [#30](https://github.com/STotev/RuleForge/issues/30) | ✅ Shared value comparer, used by `eq` — PR #41 | AFK | — | |
-| [#31](https://github.com/STotev/RuleForge/issues/31) | ✅ Parse-time structural validation — PR #43 | AFK | — | |
-| [#32](https://github.com/STotev/RuleForge/issues/32) | ✅ Complete engine results — PR #44 | HITL | — | #18 |
-| [#33](https://github.com/STotev/RuleForge/issues/33) | ISO 8601 string dates for schedule `ReferencePath` | AFK | #30 | #19 |
-| [#34](https://github.com/STotev/RuleForge/issues/34) | ✅ `OperatorContext` operator API — PR #45 | HITL | #30 | #17 |
-| [#35](https://github.com/STotev/RuleForge/issues/35) | Normalised action parameters, `GetParameter<T>` | AFK | #30 | |
-| [#36](https://github.com/STotev/RuleForge/issues/36) | ✅ `gt`, `gte`, `lt`, `lte` — PR #46 | AFK | #34 | |
-| [#37](https://github.com/STotev/RuleForge/issues/37) | ✅ Case-insensitive names | AFK | #34 | |
-| [#38](https://github.com/STotev/RuleForge/issues/38) | `$current` / `$previous` scope prefixes | AFK | #31, #34, #37 | #16 |
-| [#39](https://github.com/STotev/RuleForge/issues/39) | `RuleValidator` against registered operators and actions | AFK | #31, #34, #37 | |
-
-#30, #31 and #32 can start immediately. The migration guide for the 0.3.0 breaking changes is part of #6.
-
-### 3. Finish PRD #1
+### 2. Finish PRD #1
 
 | Issue | Slice | Status |
 |---|---|---|
-| [#5](https://github.com/STotev/RuleForge/issues/5) | DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionExecutorFactory` | Needs a spec; after #22 (its factory must list action types). `RuleForge.Extensions.DependencyInjection` is an empty project |
-| [#6](https://github.com/STotev/RuleForge/issues/6) | Integration tests, samples, migration guide, doc refresh | Blocked by #5. Includes the migration guide for #22 and updating [`guides/`](guides/) to the current API |
+| [#5](https://github.com/STotev/RuleForge/issues/5) | DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionExecutorFactory` | Needs a spec. Its factory must implement `IActionExecutorFactory.ActionTypes` (#39), and `AddRuleForge()` can provide the central list of built-in operators. `RuleForge.Extensions.DependencyInjection` is an empty project |
+| [#6](https://github.com/STotev/RuleForge/issues/6) | Integration tests, samples, migration guide, doc refresh | Blocked by #5. Includes the **0.3.0 migration guide**, refreshing [`guides/`](guides/) (the quick start is outdated), and wiring up the sample's unused `RuleJsonParserExample` |
 
 ---
 
