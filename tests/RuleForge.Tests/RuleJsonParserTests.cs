@@ -142,11 +142,11 @@ public class RuleJsonParserTests
               "condition": { "operator": "changed", "operands": [{ "path": "Field" }] },
               "actions": [
                 {
-                  "type": "log",
+                  "action": "log",
                   "parameters": { "message": "Alert!", "level": "warning" }
                 },
                 {
-                  "type": "email",
+                  "action": "email",
                   "parameters": { "to": "admin@example.com" },
                   "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "error" }] }
                 }
@@ -159,12 +159,12 @@ public class RuleJsonParserTests
         Assert.Equal(2, rule.Actions.Count);
 
         // First action
-        Assert.Equal("log", rule.Actions[0].Type);
+        Assert.Equal("log", rule.Actions[0].Action);
         Assert.Null(rule.Actions[0].Condition);
         Assert.Equal("Alert!", rule.Actions[0].Parameters["message"]?.ToString());
 
         // Second action
-        Assert.Equal("email", rule.Actions[1].Type);
+        Assert.Equal("email", rule.Actions[1].Action);
         Assert.NotNull(rule.Actions[1].Condition);
         Assert.IsType<OperatorCondition>(rule.Actions[1].Condition);
     }
@@ -180,7 +180,7 @@ public class RuleJsonParserTests
               "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
               "actions": [
                 {
-                  "type": "log",
+                  "action": "log",
                   "parameters": { "message": "Immediate by default" }
                 }
               ]
@@ -204,7 +204,7 @@ public class RuleJsonParserTests
               "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
               "actions": [
                 {
-                  "type": "log",
+                  "action": "log",
                   "schedule": { "mode": "Immediate" },
                   "parameters": { "message": "Immediate explicitly" }
                 }
@@ -233,7 +233,7 @@ public class RuleJsonParserTests
               "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
               "actions": [
                 {
-                  "type": "log",
+                  "action": "log",
                   "schedule": {
                     "mode": "Delay",
                     "amount": 24,
@@ -266,7 +266,7 @@ public class RuleJsonParserTests
               "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
               "actions": [
                 {
-                  "type": "log",
+                  "action": "log",
                   "schedule": {
                     "mode": "Advance",
                     "amount": 2,
@@ -300,7 +300,7 @@ public class RuleJsonParserTests
               "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
               "actions": [
                 {
-                  "type": "log",
+                  "action": "log",
                   "schedule": {
                     "mode": "delay",
                     "amount": 30,
@@ -497,7 +497,7 @@ public class RuleJsonParserTests
               },
               "actions": [
                 {
-                  "type": "log",
+                  "action": "log",
                   "parameters": {
                     "message": "Product price changed!",
                     "severity": "warning"
@@ -548,7 +548,7 @@ public class RuleJsonParserTests
               "condition": { "operator": "eq", "operands": [{ "value": 1 }, { "value": 1 }] },
               "actions": [
                 {
-                  "type": "notify",
+                  "action": "notify",
                   "parameters": {
                     "text": "hi", "count": 3, "big": 3000000000, "ratio": 0.25, "urgent": true, "none": null,
                     "tags": ["a", 1], "options": { "retry": 2 }

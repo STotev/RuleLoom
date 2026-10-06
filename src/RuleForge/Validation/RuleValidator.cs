@@ -6,14 +6,14 @@ using RuleForge.Abstractions.Scheduling;
 namespace RuleForge.Validation;
 
 /// <summary>
-/// Checks a rule against the registered operators and action types before it is saved or run: unknown operators,
-/// operand counts outside an operator's limits, unknown action types, and incomplete schedules.
+/// Checks a rule against the registered operators and actions before it is saved or run: unknown operators,
+/// operand counts outside an operator's limits, unknown actions, and incomplete schedules.
 /// Property paths are not checked, since that needs to know each event's data type.
 /// </summary>
 public sealed class RuleValidator
 {
     private readonly Dictionary<string, IConditionOperator> _operators = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _actionTypes;
+    private readonly HashSet<string> _actionNames;
 
     /// <summary>
     /// Creates a validator for the given operators and action factory — the same ones given to the
@@ -30,7 +30,7 @@ public sealed class RuleValidator
                 throw new ArgumentException($"Operator '{@operator.Name}' is registered more than once.", nameof(operators));
         }
 
-        _actionTypes = new HashSet<string>(actionFactory.ActionTypes, StringComparer.OrdinalIgnoreCase);
+        _actionNames = new HashSet<string>(actionFactory.ActionNames, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -58,10 +58,10 @@ public sealed class RuleValidator
 
     private void ValidateAction(ActionDefinition action, string path, List<RuleValidationError> errors)
     {
-        if (string.IsNullOrWhiteSpace(action.Type))
-            errors.Add(new($"{path}.type", "'type' must be a non-empty string."));
-        else if (!_actionTypes.Contains(action.Type))
-            errors.Add(new($"{path}.type", $"No action executor is registered for action type '{action.Type}'."));
+        if (string.IsNullOrWhiteSpace(action.Action))
+            errors.Add(new($"{path}.action", "'action' must be a non-empty string."));
+        else if (!_actionNames.Contains(action.Action))
+            errors.Add(new($"{path}.action", $"No action executor is registered for action '{action.Action}'."));
 
         if (action.Condition is not null)
             ValidateRootCondition(action.Condition, $"{path}.condition", "An action's condition", errors);

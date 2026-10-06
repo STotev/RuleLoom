@@ -11,10 +11,10 @@ namespace RuleForge.Abstractions.Action;
 public class ActionDefinition
 {
     /// <summary>
-    /// The type of action to execute (e.g., "log", "send-email").
-    /// Must match an <see cref="IActionExecutor.Type"/> registered in the engine.
+    /// The name of the action to execute (e.g., "log", "send-email"), as registered with the action factory.
+    /// In rule JSON: <c>"action": "send-email"</c>.
     /// </summary>
-    public string Type { get; init; } = null!;
+    public string Action { get; init; } = null!;
     
     /// <summary>
     /// Optional condition that must be met for this action to execute.
@@ -23,7 +23,7 @@ public class ActionDefinition
     public ConditionNode? Condition { get; init; }
     
     /// <summary>
-    /// Parameters for the action executor. The structure depends on the action type.
+    /// Parameters for the action executor. The structure depends on the action.
     /// Values are plain CLR values (from JSON: <c>null</c>, <see cref="bool"/>, <see cref="int"/>/<see cref="long"/>/
     /// <see cref="double"/>, <see cref="string"/>, <see cref="List{T}"/> or <see cref="Dictionary{TKey,TValue}"/>).
     /// Read them with <see cref="GetParameter{T}"/> or <see cref="TryGetParameter{T}"/>.
@@ -46,12 +46,12 @@ public class ActionDefinition
     public T GetParameter<T>(string name)
     {
         if (!TryFindParameter(name, out var value))
-            throw new KeyNotFoundException($"Action '{Type}' has no parameter '{name}'.");
+            throw new KeyNotFoundException($"Action '{Action}' has no parameter '{name}'.");
 
         if (!ValueConverter.TryConvert<T>(value, out var converted))
         {
             throw new InvalidOperationException(
-                $"Parameter '{name}' of action '{Type}' is {(value is null ? "null" : value.GetType().Name)}, " +
+                $"Parameter '{name}' of action '{Action}' is {(value is null ? "null" : value.GetType().Name)}, " +
                 $"which can't be converted to {typeof(T).Name}.");
         }
 

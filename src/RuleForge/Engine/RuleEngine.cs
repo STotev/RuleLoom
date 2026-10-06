@@ -70,7 +70,7 @@ public sealed class RuleEngine(
 
                 var action = rule.Actions[index];
                 var result = await ProcessActionAsync(action, context, cancellationToken)
-                    with { ActionType = action.Type, ActionIndex = index };
+                    with { ActionName = action.Action, ActionIndex = index };
 
                 actionResults.Add(result);
 
@@ -104,11 +104,11 @@ public sealed class RuleEngine(
         try
         {
             if (action.Condition is not null && !_conditionEvaluator.Evaluate(context, action.Condition))
-                return ActionResult.Skipped($"Action '{action.Type}' skipped because condition was not met.");
+                return ActionResult.Skipped($"Action '{action.Action}' skipped because condition was not met.");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return ActionResult.Failed(ex, $"Action '{action.Type}' condition could not be evaluated. Reason: {ex.Message}");
+            return ActionResult.Failed(ex, $"Action '{action.Action}' condition could not be evaluated. Reason: {ex.Message}");
         }
 
         if (action.Schedule is { Mode: not ScheduleMode.Immediate } schedule)
@@ -117,19 +117,19 @@ public sealed class RuleEngine(
             {
                 var scheduledFor = ScheduleCalculator.Calculate(schedule, context, _timeProvider.GetUtcNow());
 
-                return ActionResult.Scheduled(scheduledFor, $"Action '{action.Type}' scheduled for {scheduledFor:O}.");
+                return ActionResult.Scheduled(scheduledFor, $"Action '{action.Action}' scheduled for {scheduledFor:O}.");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return ActionResult.Failed(ex, $"Action '{action.Type}' scheduling failed. Reason: {ex.Message}");
+                return ActionResult.Failed(ex, $"Action '{action.Action}' scheduling failed. Reason: {ex.Message}");
             }
         }
 
-        if (!_actionFactory.TryGetExecutor(action.Type, out var executor) || executor is null)
+        if (!_actionFactory.TryGetExecutor(action.Action, out var executor) || executor is null)
         {
-            var ex = new InvalidOperationException($"No action executor is registered for action type '{action.Type}'.");
+            var ex = new InvalidOperationException($"No action executor is registered for action '{action.Action}'.");
 
-            return ActionResult.Failed(ex, $"Action '{action.Type}' is not supported.");
+            return ActionResult.Failed(ex, $"Action '{action.Action}' is not supported.");
         }
 
         try
@@ -138,12 +138,12 @@ public sealed class RuleEngine(
             ActionResult? result = await executor.ExecuteAsync(action, context, cancellationToken);
 
             return result ?? ActionResult.Failed(
-                new InvalidOperationException($"The executor for action type '{action.Type}' returned no result."),
-                $"Action '{action.Type}' execution failed.");
+                new InvalidOperationException($"The executor for action '{action.Action}' returned no result."),
+                $"Action '{action.Action}' execution failed.");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return ActionResult.Failed(ex, $"Action '{action.Type}' execution failed.");
+            return ActionResult.Failed(ex, $"Action '{action.Action}' execution failed.");
         }
     }
 

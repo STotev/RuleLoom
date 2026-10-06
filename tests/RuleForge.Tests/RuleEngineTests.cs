@@ -13,9 +13,7 @@ public class RuleEngineTests
     public async Task ExecuteAsync_ActionExecutesSuccessfully_ReturnsPerRuleResults()
     {
         var evaluator = new TestConditionEvaluator(conditionResult: true);
-        var executor = new DelegatingActionExecutor(
-            "ok-action",
-            (_, _, _) => Task.FromResult(ActionResult.Success("done")));
+        var executor = new DelegatingActionExecutor((_, _, _) => Task.FromResult(ActionResult.Success("done")));
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
         {
             ["ok-action"] = executor
@@ -36,9 +34,7 @@ public class RuleEngineTests
     public async Task ExecuteAsync_UnknownActionType_ReturnsFailedResultAndContinues()
     {
         var evaluator = new TestConditionEvaluator(conditionResult: true);
-        var executor = new DelegatingActionExecutor(
-            "known",
-            (_, _, _) => Task.FromResult(ActionResult.Success("known-success")));
+        var executor = new DelegatingActionExecutor((_, _, _) => Task.FromResult(ActionResult.Success("known-success")));
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
         {
             ["known"] = executor
@@ -51,8 +47,8 @@ public class RuleEngineTests
             Condition = new ValueOperand { Value = true },
             Actions =
             [
-                new ActionDefinition { Type = "unknown" },
-                new ActionDefinition { Type = "known" }
+                new ActionDefinition { Action = "unknown" },
+                new ActionDefinition { Action = "known" }
             ]
         };
 
@@ -70,12 +66,8 @@ public class RuleEngineTests
     public async Task ExecuteAsync_ExecutorThrows_ReturnsFailedResultAndContinues()
     {
         var evaluator = new TestConditionEvaluator(conditionResult: true);
-        var fail = new DelegatingActionExecutor(
-            "fails",
-            (_, _, _) => throw new InvalidOperationException("boom"));
-        var ok = new DelegatingActionExecutor(
-            "ok",
-            (_, _, _) => Task.FromResult(ActionResult.Success("ok")));
+        var fail = new DelegatingActionExecutor((_, _, _) => throw new InvalidOperationException("boom"));
+        var ok = new DelegatingActionExecutor((_, _, _) => Task.FromResult(ActionResult.Success("ok")));
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
         {
             ["fails"] = fail,
@@ -89,8 +81,8 @@ public class RuleEngineTests
             Condition = new ValueOperand { Value = true },
             Actions =
             [
-                new ActionDefinition { Type = "fails" },
-                new ActionDefinition { Type = "ok" }
+                new ActionDefinition { Action = "fails" },
+                new ActionDefinition { Action = "ok" }
             ]
         };
 
@@ -107,9 +99,7 @@ public class RuleEngineTests
     public async Task ExecuteAsync_ActionConditionFalse_ReturnsSkippedResult()
     {
         var evaluator = new TestConditionEvaluator(conditionResult: true, actionConditionResult: false);
-        var executor = new DelegatingActionExecutor(
-            "ok",
-            (_, _, _) => Task.FromResult(ActionResult.Success()));
+        var executor = new DelegatingActionExecutor((_, _, _) => Task.FromResult(ActionResult.Success()));
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
         {
             ["ok"] = executor
@@ -124,7 +114,7 @@ public class RuleEngineTests
             [
                 new ActionDefinition
                 {
-                    Type = "ok",
+                    Action = "ok",
                     Condition = new ValueOperand { Value = false }
                 }
             ]
@@ -157,9 +147,7 @@ public class RuleEngineTests
     public async Task ExecuteAsync_MultipleRules_AggregatesPerRuleResultsInPriorityOrder()
     {
         var evaluator = new TestConditionEvaluator(conditionResult: true);
-        var executor = new DelegatingActionExecutor(
-            "ok",
-            (_, _, _) => Task.FromResult(ActionResult.Success()));
+        var executor = new DelegatingActionExecutor((_, _, _) => Task.FromResult(ActionResult.Success()));
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
         {
             ["ok"] = executor
@@ -189,9 +177,7 @@ public class RuleEngineTests
     public async Task ExecuteAsync_CancellationRequested_ThrowsOperationCanceledException()
     {
         var evaluator = new TestConditionEvaluator(conditionResult: true);
-        var executor = new DelegatingActionExecutor(
-            "cancellable",
-            (_, _, token) =>
+        var executor = new DelegatingActionExecutor((_, _, token) =>
             {
                 token.ThrowIfCancellationRequested();
                 return Task.FromResult(ActionResult.Success());
@@ -214,9 +200,7 @@ public class RuleEngineTests
     {
         var fixedNow = new DateTimeOffset(2026, 3, 29, 12, 0, 0, TimeSpan.Zero);
         var evaluator = new TestConditionEvaluator(conditionResult: true);
-        var executor = new CountingActionExecutor(
-            "scheduled",
-            (_, _, _) => Task.FromResult(ActionResult.Success()));
+        var executor = new CountingActionExecutor((_, _, _) => Task.FromResult(ActionResult.Success()));
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
         {
             ["scheduled"] = executor
@@ -231,7 +215,7 @@ public class RuleEngineTests
             [
                 new ActionDefinition
                 {
-                    Type = "scheduled",
+                    Action = "scheduled",
                     Schedule = new ScheduleMetadata
                     {
                         Mode = ScheduleMode.Delay,
@@ -258,9 +242,7 @@ public class RuleEngineTests
         var fixedNow = new DateTimeOffset(2026, 3, 29, 12, 0, 0, TimeSpan.Zero);
         var dueDate = new DateTimeOffset(2026, 4, 1, 10, 0, 0, TimeSpan.Zero);
         var evaluator = new TestConditionEvaluator(conditionResult: true);
-        var executor = new CountingActionExecutor(
-            "scheduled",
-            (_, _, _) => Task.FromResult(ActionResult.Success()));
+        var executor = new CountingActionExecutor((_, _, _) => Task.FromResult(ActionResult.Success()));
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
         {
             ["scheduled"] = executor
@@ -276,7 +258,7 @@ public class RuleEngineTests
             [
                 new ActionDefinition
                 {
-                    Type = "scheduled",
+                    Action = "scheduled",
                     Schedule = new ScheduleMetadata
                     {
                         Mode = ScheduleMode.Advance,
@@ -302,9 +284,7 @@ public class RuleEngineTests
     public async Task ExecuteAsync_ImmediateModeSchedule_ExecutesImmediately()
     {
         var evaluator = new TestConditionEvaluator(conditionResult: true);
-        var executor = new CountingActionExecutor(
-            "ok",
-            (_, _, _) => Task.FromResult(ActionResult.Success("executed")));
+        var executor = new CountingActionExecutor((_, _, _) => Task.FromResult(ActionResult.Success("executed")));
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
         {
             ["ok"] = executor
@@ -319,7 +299,7 @@ public class RuleEngineTests
             [
                 new ActionDefinition
                 {
-                    Type = "ok",
+                    Action = "ok",
                     Schedule = new ScheduleMetadata
                     {
                         Mode = ScheduleMode.Immediate,
@@ -342,9 +322,7 @@ public class RuleEngineTests
     public async Task ExecuteAsync_ActionConditionFalseWithSchedule_ReturnsSkipped()
     {
         var evaluator = new TestConditionEvaluator(conditionResult: true, actionConditionResult: false);
-        var executor = new CountingActionExecutor(
-            "scheduled",
-            (_, _, _) => Task.FromResult(ActionResult.Success()));
+        var executor = new CountingActionExecutor((_, _, _) => Task.FromResult(ActionResult.Success()));
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
         {
             ["scheduled"] = executor
@@ -359,7 +337,7 @@ public class RuleEngineTests
             [
                 new ActionDefinition
                 {
-                    Type = "scheduled",
+                    Action = "scheduled",
                     Condition = new ValueOperand { Value = false },
                     Schedule = new ScheduleMetadata
                     {
@@ -383,9 +361,7 @@ public class RuleEngineTests
     public async Task ExecuteAsync_InvalidReferencePath_ReturnsFailedResult()
     {
         var evaluator = new TestConditionEvaluator(conditionResult: true);
-        var executor = new CountingActionExecutor(
-            "scheduled",
-            (_, _, _) => Task.FromResult(ActionResult.Success()));
+        var executor = new CountingActionExecutor((_, _, _) => Task.FromResult(ActionResult.Success()));
         var factory = new TestActionExecutorFactory(new Dictionary<string, IActionExecutor>
         {
             ["scheduled"] = executor
@@ -401,7 +377,7 @@ public class RuleEngineTests
             [
                 new ActionDefinition
                 {
-                    Type = "scheduled",
+                    Action = "scheduled",
                     Schedule = new ScheduleMetadata
                     {
                         Mode = ScheduleMode.Delay,
@@ -430,23 +406,20 @@ public class RuleEngineTests
             EventType = "Event",
             Priority = priority,
             Condition = new ValueOperand { Value = true },
-            Actions = [new ActionDefinition { Type = actionType }]
+            Actions = [new ActionDefinition { Action = actionType }]
         };
 
     private sealed class TestActionExecutorFactory(
         IReadOnlyDictionary<string, IActionExecutor> executors) : IActionExecutorFactory
     {
-        public IReadOnlyCollection<string> ActionTypes => executors.Keys.ToArray();
+        public IReadOnlyCollection<string> ActionNames => executors.Keys.ToArray();
 
         public bool TryGetExecutor(string type, out IActionExecutor? executor) =>
             executors.TryGetValue(type, out executor);
     }
 
-    private sealed class DelegatingActionExecutor(
-        string type,
-        Func<ActionDefinition, EvaluationContext, CancellationToken, Task<ActionResult>> execute) : IActionExecutor
+    private sealed class DelegatingActionExecutor(Func<ActionDefinition, EvaluationContext, CancellationToken, Task<ActionResult>> execute) : IActionExecutor
     {
-        public string Type => type;
 
         public Task<ActionResult> ExecuteAsync(
             ActionDefinition action,
@@ -455,12 +428,9 @@ public class RuleEngineTests
             execute(action, context, cancellationToken);
     }
 
-    private sealed class CountingActionExecutor(
-        string type,
-        Func<ActionDefinition, EvaluationContext, CancellationToken, Task<ActionResult>> execute) : IActionExecutor
+    private sealed class CountingActionExecutor(Func<ActionDefinition, EvaluationContext, CancellationToken, Task<ActionResult>> execute) : IActionExecutor
     {
         public int ExecutionCount { get; private set; }
-        public string Type => type;
 
         public Task<ActionResult> ExecuteAsync(
             ActionDefinition action,

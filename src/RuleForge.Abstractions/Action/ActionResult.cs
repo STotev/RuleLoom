@@ -27,9 +27,9 @@ public sealed record ActionResult
     public Exception? Error { get; init; }
 
     /// <summary>
-    /// The <see cref="ActionDefinition.Type"/> of the action this result belongs to. Set by the rule engine.
+    /// The <see cref="ActionDefinition.Action"/> name of the action this result belongs to. Set by the rule engine.
     /// </summary>
-    public string ActionType { get; init; } = string.Empty;
+    public string ActionName { get; init; } = string.Empty;
 
     /// <summary>
     /// The position of the action in its rule's <c>Actions</c> list. Set by the rule engine.
