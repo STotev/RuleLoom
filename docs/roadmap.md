@@ -153,7 +153,9 @@ parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variab
 
 **Ideas to explore**:
 - **One place for variables**: a single resolver/registry that the engine, `changed`, the parser and `RuleValidator`
-  (#39) all consult, instead of hard-coded checks.
+  (#39) all consult, instead of hard-coded checks. A sign of success: `changed` no longer has to strip a
+  `$current.`/`$previous.` prefix from its operand to get the bare property (#50); operators should get the property
+  and pick a state through the API instead.
 - **A public API to define and register variables**, e.g. `$event` (event metadata), `$rule`, `$tenant`, or
   application-specific ones, registered alongside operators and actions (and through DI, #5).
 - **Functions**, e.g. `$now()`, `$today()`, `$now(Europe/London)`. Possibly with their own sigil, such as `@now(...)`,
