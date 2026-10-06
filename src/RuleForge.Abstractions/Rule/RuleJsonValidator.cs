@@ -42,6 +42,14 @@ internal static class RuleJsonValidator
 
             RequireNonEmptyString(action, "type", actionPath);
 
+            if (TryGetProperty(action, "schedule", out var schedule) &&
+                schedule.ValueKind == JsonValueKind.Object &&
+                TryGetProperty(schedule, "referencePath", out var referencePath) &&
+                referencePath.ValueKind == JsonValueKind.String)
+            {
+                ValidatePathVariables(referencePath.GetString()!, $"{actionPath}.schedule.referencePath");
+            }
+
             if (TryGetProperty(action, "parameters", out var parameters) && parameters.ValueKind != JsonValueKind.Object)
                 throw new RuleParseException("'parameters' must be an object.", $"{actionPath}.parameters");
 
@@ -82,6 +90,7 @@ internal static class RuleJsonValidator
                 break;
             case "path":
                 RequireNonEmptyString(node, "path", path);
+                ValidatePathVariables(GetString(node, "path"), $"{path}.path");
                 break;
         }
     }
@@ -98,6 +107,38 @@ internal static class RuleJsonValidator
         foreach (var operand in operands.EnumerateArray())
             ValidateCondition(operand, $"{path}.operands[{index++}]");
     }
+
+    /// <summary>
+    /// Only <c>$current</c> and <c>$previous</c> are known variables. The pre-0.3 prefixes <c>current.</c> and
+    /// <c>previous.</c> are rejected with a migration hint (transitional; they'd otherwise silently be property names).
+    /// </summary>
+    private static void ValidatePathVariables(string value, string path)
+    {
+        var parts = value.Split('.', 2);
+        var first = parts[0];
+
+        if (first.StartsWith('$') &&
+            !first.Equals(EvaluationContext.CurrentVariable, StringComparison.OrdinalIgnoreCase) &&
+            !first.Equals(EvaluationContext.PreviousVariable, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new RuleParseException(
+                $"Unknown variable '{first}' in path '{value}'. Use {EvaluationContext.CurrentVariable} or " +
+                $"{EvaluationContext.PreviousVariable}.",
+                path);
+        }
+
+        if (parts.Length == 2 &&
+            (first.Equals("current", StringComparison.OrdinalIgnoreCase) ||
+             first.Equals("previous", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new RuleParseException(
+                $"The '{first}.' prefix is no longer supported; use '${first.ToLowerInvariant()}.{parts[1]}' instead.",
+                path);
+        }
+    }
+
+    private static string GetString(JsonElement element, string name) =>
+        TryGetProperty(element, name, out var value) ? value.GetString() ?? string.Empty : string.Empty;
 
     private static void RequireNonEmptyString(JsonElement element, string name, string path)
     {

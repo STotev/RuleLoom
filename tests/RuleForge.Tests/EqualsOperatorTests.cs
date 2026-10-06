@@ -85,7 +85,7 @@ public class EqualsOperatorTests
     {
         var context = new EvaluationContext(Item, new Product { Name = "Desk", Price = 90 });
 
-        Assert.True(Evaluator().Evaluate(context, Op("eq", Path("previous.Name"), Value("Desk"))));
+        Assert.True(Evaluator().Evaluate(context, Op("eq", Path("$previous.Name"), Value("Desk"))));
     }
 
     public static TheoryData<object?, bool> CrossTypeValues => new()

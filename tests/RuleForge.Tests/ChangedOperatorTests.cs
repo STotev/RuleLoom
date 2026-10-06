@@ -65,6 +65,28 @@ public class ChangedOperatorTests
         Assert.True(Evaluator().Evaluate(context, Op("changed", Path("Status"))));
     }
 
+    [Theory]
+    [InlineData("Price")]
+    [InlineData("$current.Price")]
+    [InlineData("$previous.Price")]
+    [InlineData("$CURRENT.Price")]
+    public void Evaluate_ScopedOrUnscopedPath_ComparesCurrentWithPrevious(string path)
+    {
+        var changed = new EvaluationContext(new Listing { Price = 100 }, new Listing { Price = 90 });
+        var unchanged = new EvaluationContext(new Listing { Price = 100 }, new Listing { Price = 100 });
+
+        Assert.True(Evaluator().Evaluate(changed, Op("changed", Path(path))));
+        Assert.False(Evaluator().Evaluate(unchanged, Op("changed", Path(path))));
+    }
+
+    [Fact]
+    public void Evaluate_UnknownVariable_Throws()
+    {
+        var context = new EvaluationContext(new Listing(), new Listing());
+
+        Assert.Throws<InvalidOperationException>(() => Evaluator().Evaluate(context, Op("changed", Path("$now.Price"))));
+    }
+
     [Fact]
     public void Evaluate_NonPathOperand_Throws()
     {

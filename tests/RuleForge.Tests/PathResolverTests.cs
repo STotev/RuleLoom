@@ -54,7 +54,7 @@ public class PathResolverTests
     [InlineData("Customer.Name")]
     [InlineData("customer.name")]
     [InlineData("CUSTOMER.NAME")]
-    [InlineData("current.customer.name")]
+    [InlineData("$current.customer.name")]
     public void Resolve_PathInAnyCase_ResolvesProperty(string path)
     {
         var context = new EvaluationContext(new Order { Customer = new Customer { Name = "Ada" } });

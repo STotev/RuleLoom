@@ -59,7 +59,7 @@ public class OrderingOperatorTests
         var context = new EvaluationContext(new { Price = 150m, Budget = 200 }, new { Price = 120m, Budget = 200 });
 
         Assert.True(Evaluator().Evaluate(context, Op("lt", Path("Price"), Path("Budget"))));
-        Assert.True(Evaluator().Evaluate(context, Op("gt", Path("Price"), Path("previous.Price"))));
+        Assert.True(Evaluator().Evaluate(context, Op("gt", Path("Price"), Path("$previous.Price"))));
     }
 
     [Fact]
