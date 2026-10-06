@@ -199,7 +199,19 @@ A rule is rejected when:
   `{ "value": null }`), or its `operator`/`path` is empty
 - `operands` or `actions` isn't an array, an action has no `type`, or `parameters` isn't an object
 
-Whether an operator exists or has the right number of operands is checked when the rule runs, not when it is parsed.
+Whether an operator exists or has the right number of operands isn't checked by the parser. To catch those before a
+rule is saved or run, validate it against the operators and actions you've registered:
+
+```csharp
+var validator = new RuleValidator(operators, actionFactory);   // same ones as for the engine
+var result = validator.Validate(rule);
+
+foreach (var error in result.Errors)
+    Console.WriteLine($"{error.Path}: {error.Message}");   // e.g. "$.condition.operands[1].operator: Unknown operator 'gt'."
+```
+
+`RuleValidator` reports every problem at once: unknown operators, too few or too many operands, unknown action types,
+and `Delay`/`Advance` schedules without `amount` or `unit`. It doesn't check property paths.
 
 ## Type Inference Rules
 
@@ -293,7 +305,7 @@ RuleEngineResult result = await engine.ExecuteAsync(eventType, current, previous
 
 ## Custom Operators
 
-The parser doesn't validate operator names or operand counts. Validation occurs during rule evaluation. Ensure operators are registered in your `IConditionEvaluator` before executing rules.
+The parser doesn't validate operator names or operand counts; `RuleValidator` does (see Error Handling), and the engine reports an unknown operator as a `Failed` rule when it runs. Register custom operators with the `ConditionEvaluator` (and the `RuleValidator`) before executing rules.
 
 ```csharp
 // This will parse successfully but fail at runtime if "custom_op" isn't registered
@@ -306,6 +318,7 @@ var json = """
 }
 """;
 var rule = RuleJsonParser.Parse(json);
-// Exception thrown when evaluating if "custom_op" not found in operators
+// RuleValidator reports "$.condition.operator: Unknown operator 'custom_op'."
+// If it runs anyway, the rule's result has Status == Failed with the error.
 ```
 

@@ -29,6 +29,8 @@ public sealed class DirectActionExecutorFactory : IActionExecutorFactory
         }
     }
 
+    public IReadOnlyCollection<string> ActionTypes => _executors.Keys;
+
     public bool TryGetExecutor(string type, out IActionExecutor? executor) =>
         _executors.TryGetValue(type, out executor);
 }
