@@ -18,25 +18,9 @@ public class RuleEngineIntegrationTests
     {
         _logMessages = [];
 
-        var operators = new List<IConditionOperator>
-        {
-            new EqualsOperator(),
-            new ChangedOperator(),
-            new AndOperator(),
-            new OrOperator(),
-            new NotOperator(),
-            new GreaterThanOperator(),
-            new GreaterThanOrEqualOperator(),
-            new LessThanOperator(),
-            new LessThanOrEqualOperator()
-        };
-
-        var actions = new List<IAction>
-        {
-            new TestLogAction(_logMessages)
-        };
-
-        _engine = new RuleEngine(new ConditionEvaluator(operators), new DirectActionFactory(actions));
+        _engine = new RuleEngine(
+            new ConditionEvaluator(BuiltInOperators.Create()),
+            new DirectActionFactory([new TestLogAction(_logMessages)]));
     }
 
     [Fact]
@@ -642,6 +626,81 @@ public class RuleEngineIntegrationTests
     }
 
     [Fact]
+    public async Task RuleEngine_ImmediateAndScheduledActions_ReportsBothOutcomes()
+    {
+        // Arrange
+        var json = """
+        {
+          "name": "Order placed",
+          "eventType": "OrderPlaced",
+          "condition": { "operator": "gt", "operands": [{ "path": "Total" }, { "value": 0 }] },
+          "actions": [
+            { "action": "test-log", "parameters": { "message": "Thanks for your order!" } },
+            {
+              "action": "test-log",
+              "parameters": { "message": "Reminder" },
+              "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "DueAt" }
+            }
+          ]
+        }
+        """;
+
+        var dueAt = new DateTimeOffset(2026, 10, 9, 17, 0, 0, TimeSpan.Zero);
+        var order = new { Total = 120m, DueAt = dueAt };
+
+        // Act
+        var result = await _engine.ExecuteAsync("OrderPlaced", order, [RuleJsonParser.Parse(json)], TestContext.Current.CancellationToken);
+
+        // Assert
+        var rule = Assert.Single(result.Rules);
+        Assert.Equal(RuleExecutionStatus.Matched, rule.Status);
+        Assert.Equal(
+            [ActionExecutionStatus.ExecutedImmediately, ActionExecutionStatus.Scheduled],
+            rule.ActionResults.Select(a => a.Status));
+        Assert.Equal(dueAt.AddHours(-2), rule.ActionResults[1].ScheduledFor);
+
+        var scheduled = Assert.Single(result.ScheduledActions);
+        Assert.Equal(1, scheduled.Result.ActionIndex);
+        Assert.Equal("Reminder", scheduled.Action.GetParameter<string>("message"));
+
+        Assert.Equal(["Thanks for your order!"], _logMessages);
+    }
+
+    [Fact]
+    public async Task RuleEngine_FailingAction_IsReportedAndLaterActionsStillRun()
+    {
+        // Arrange
+        var json = """
+        {
+          "name": "Sync customer",
+          "eventType": "CustomerUpdated",
+          "condition": { "operator": "changed", "operands": [{ "path": "Email" }] },
+          "actions": [
+            { "action": "failing" },
+            { "action": "test-log", "parameters": { "message": "Audit written" } }
+          ]
+        }
+        """;
+
+        var engine = new RuleEngine(
+            new ConditionEvaluator(BuiltInOperators.Create()),
+            new DirectActionFactory([new FailingAction(), new TestLogAction(_logMessages)]));
+
+        // Act
+        var result = await engine.ExecuteAsync(
+            "CustomerUpdated", new { Email = "new@example.com" }, new { Email = "old@example.com" },
+            [RuleJsonParser.Parse(json)], TestContext.Current.CancellationToken);
+
+        // Assert
+        var actions = result.Rules[0].ActionResults;
+        Assert.Equal(ActionExecutionStatus.Failed, actions[0].Status);
+        Assert.IsType<TimeoutException>(actions[0].Error);
+        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, actions[1].Status);
+        Assert.True(result.HasFailures);
+        Assert.Equal(["Audit written"], _logMessages);
+    }
+
+    [Fact]
     public async Task RuleEngine_ScopeVariables_CompareCurrentWithPrevious()
     {
         // Arrange
@@ -750,6 +809,12 @@ public class RuleEngineIntegrationTests
 
             return Task.FromResult(ActionResult.Success());
         }
+    }
+
+    private sealed class FailingAction : IAction
+    {
+        public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default) =>
+            throw new TimeoutException("The CRM didn't respond.");
     }
 
     private sealed class ReminderAction : IAction
