@@ -98,8 +98,8 @@ CLR type may be registered under several names.
 Operators keep their instance `Name`. The builder records operator registrations in order; when the evaluator is
 first built (it's a singleton), the operators are created and:
 
-- `RemoveOperator(name)` drops every operator (built-in or added) whose `Name` matches, ignoring case;
-- `ReplaceOperator<T>()` adds `T` and drops any *other* operator with the same `Name` as `T`;
+- `RemoveOperator(name)` drops the operators registered **so far** (built-in or added) whose `Name` matches, ignoring case;
+- `ReplaceOperator<T>()` adds `T` and drops any operator registered so far with the same `Name` as `T`;
 - `AddOperator<T>()` adds `T`; a name clash with an operator that wasn't removed or replaced fails with the existing
   message (`Operator 'X' conflicts with 'x' …`).
 
@@ -143,3 +143,18 @@ None. New package contents and `BuiltInOperators` are additions; the non-DI path
 - Operators: built-ins present by default; `AddOperator`, `ReplaceOperator`, `RemoveOperator`; conflicts fail.
 - `RuleValidator` resolved from DI knows the registered actions and operators.
 - `BuiltInOperators.Create()` returns all nine built-ins as new instances.
+
+## Deviations
+
+Recorded before merge (2026-10-06):
+
+- **Operators aren't registered as individual `IConditionOperator` services.** The registrations table above listed
+  them; instead, an internal singleton operator set is built once from the built-ins plus the builder's
+  add/replace/remove calls, and shared by `ConditionEvaluator` and `RuleValidator`. Individual `IConditionOperator`
+  registrations would make `RemoveOperator`/`ReplaceOperator` impossible to express. Custom operators are created with
+  `ActivatorUtilities`, so they may take singleton dependencies.
+- **`RemoveOperator`/`ReplaceOperator` apply in call order** (to operators registered *so far*), rather than to every
+  matching operator regardless of order. `RemoveOperator("eq").AddOperator<MyEq>()` therefore keeps `MyEq`, which is
+  the intuitive reading.
+- **The test project uses `ILogger`-free fakes.** #5's text suggested `ILogger<T>`; an injected fake service proves the
+  same thing without adding logging packages.

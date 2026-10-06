@@ -21,7 +21,7 @@ connect to historical docs — they were reused inconsistently between documents
 | 0.1.0 | Tagged `v0.1.0` (release-please bootstrap; no GitHub release or NuGet package) | Core engine, operators, JSON parser, Phase 1.1 stability fixes |
 | 0.2.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.0) 2026-10-02 | Action results, scheduling model, action factory, schedule calculation |
 | 0.2.1 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.1) 2026-10-03 | Nested path fix (#14), shared path cache (#15) |
-| 0.3.0 | **Ready** — release PR [#42](https://github.com/STotev/RuleForge/pull/42) | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
+| 0.3.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.3.0) 2026-10-06 | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
 
 ---
 
@@ -79,15 +79,12 @@ titles, central package management, issue/PR templates, Claude Code setup (`AGEN
 
 ## 🎯 Next
 
-### 1. Release 0.3.0
-Merge release PR [#42](https://github.com/STotev/RuleForge/pull/42). It collects PRD #22's breaking changes; each PR description lists its own migration
-notes until the migration guide lands in #6.
-
-### 2. Finish PRD #1
+### Finish PRD #1
 
 | Issue | Slice | Status |
 |---|---|---|
-| [#5](https://github.com/STotev/RuleForge/issues/5) | DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionExecutorFactory` | Needs a spec. Its factory must implement `IActionExecutorFactory.ActionTypes` (#39), and `AddRuleForge()` can provide the central list of built-in operators. `RuleForge.Extensions.DependencyInjection` is an empty project |
+| [#5](https://github.com/STotev/RuleForge/issues/5) | DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionExecutorFactory` | In review: [#54](https://github.com/STotev/RuleForge/pull/54) (spec approved; builds on [#56](https://github.com/STotev/RuleForge/pull/56), which closes [#55](https://github.com/STotev/RuleForge/issues/55): action names by registration, `"action"` in rule JSON) |
+| [#55](https://github.com/STotev/RuleForge/issues/55) | Action names by registration (prerequisite for #5) | In review: [#56](https://github.com/STotev/RuleForge/pull/56) |
 | [#6](https://github.com/STotev/RuleForge/issues/6) | Integration tests, samples, migration guide, doc refresh | Blocked by #5. Includes the **0.3.0 migration guide**, refreshing [`guides/`](guides/) (the quick start is outdated), and wiring up the sample's unused `RuleJsonParserExample` |
 
 ---
