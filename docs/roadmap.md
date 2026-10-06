@@ -117,9 +117,32 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 | Item | Notes | Source |
 |---|---|---|
 | Scheduler backends (`IScheduler`; Hangfire, Quartz, background service) | RuleForge currently only computes `ScheduledFor` | PRD #1 Out of Scope |
-| Timezone support | UTC-only today | PRD #1 Out of Scope |
+| Timezone support | UTC-only today; decide together with the time-semantics review below | PRD #1 Out of Scope |
 | `BlockPastEvents` flag; validation of zero/negative `Amount` | Past dates are currently returned as-is | [PRD #1 plan](archive/action-scheduling-di-plan.md) |
 | Cron / recurring schedules, business-day calculations | | PRD #1 Out of Scope; old roadmap Phase 4.4 |
+
+### Time semantics review (needs a proper breakdown)
+Keeping the current behaviour for now, but it needs a dedicated discussion and design before 1.0. Raised on
+2026-10-06 while reviewing #33 / PR #48.
+
+**Today**, every date conversion goes through `ValueConverter` (#30) and assumes UTC when no time zone is known:
+- `DateTime` with `Kind = Unspecified` is treated as UTC — in condition comparisons (`eq`, `gt`, …), schedule
+  `ReferencePath` values (#33) and `GetParameter<DateTime/DateTimeOffset>` (#35).
+- ISO 8601 strings without an offset (`"2026-05-01T09:00:00"`) are UTC, and date-only strings (`"2026-05-01"`) are
+  UTC midnight.
+
+**The risk**: `Unspecified` values are common (most databases/ORMs return them) and usually mean *local* time. In the
+US, treating such a value as UTC shifts it by 4–10 hours (and by a different amount across DST changes), so a
+reminder scheduled "2 hours before 09:00" fires at the wrong time, and date comparisons can land on the wrong day.
+Date-only values are arguably calendar dates, not instants.
+
+**To work out**:
+- What `Unspecified` should mean: reject it (fail loudly), use a configured default time zone (engine option or
+  DI), treat it as server-local time (fragile on servers), or take it from a per-field time zone in the Schema System.
+- Whether date-only values should compare as calendar dates (`DateOnly`) rather than UTC midnight instants.
+- How offset-less ISO strings in rules relate to that same default.
+- How this interacts with **Timezone support** for schedules, and with scheduler backends that dispatch at local times.
+- Migration: whichever default is chosen changes results for existing rules.
 
 ### Schema & validation (old Phase 1.2)
 `FieldSchema` / `EventSchema` / `ISchemaProvider`, schema-based `IRuleValidator`, JSON export of schemas for
