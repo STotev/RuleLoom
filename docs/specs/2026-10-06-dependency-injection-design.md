@@ -22,8 +22,10 @@ services.AddRuleForge(rules => rules
     .AddAction<SendEmailAction>("notify")    // the same action under another name
     .AddAction<LogAction>()                  // "log" (not registered by default)
     .AddOperator<ContainsOperator>()         // built-in operators are registered automatically
-    .ReplaceOperator<StrictEqualsOperator>() // replaces the built-in operator with the same Name ("eq")
+    .RemoveOperator("eq")                    // swap an operator: remove it...
+    .AddOperator<StrictEqualsOperator>()     // ...then add yours (Name "eq")
     .RemoveOperator("changed"));             // removes a built-in or previously added operator
+// .RemoveBuiltInOperators() starts from a fully custom set
 
 // In a request / message-handler scope:
 var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
@@ -50,8 +52,8 @@ public sealed class RuleForgeBuilder
     public IServiceCollection Services { get; }
     public RuleForgeBuilder AddAction<TAction>(string? name = null) where TAction : class, IActionExecutor;
     public RuleForgeBuilder AddOperator<TOperator>() where TOperator : class, IConditionOperator;
-    public RuleForgeBuilder ReplaceOperator<TOperator>() where TOperator : class, IConditionOperator;
     public RuleForgeBuilder RemoveOperator(string name);
+    public RuleForgeBuilder RemoveBuiltInOperators();
 }
 
 public sealed class ServiceProviderActionExecutorFactory : IActionExecutorFactory   // registered by AddRuleForge
@@ -93,15 +95,15 @@ the current scope, giving a new instance per scope. `ActionNames` returns the ma
 names that differ only in case throw while configuring, with the same messages as `DirectActionExecutorFactory`. One
 CLR type may be registered under several names.
 
-## Operators: add, replace, remove
+## Operators: add and remove
 
 Operators keep their instance `Name`. The builder records operator registrations in order; when the evaluator is
 first built (it's a singleton), the operators are created and:
 
 - `RemoveOperator(name)` drops the operators registered **so far** (built-in or added) whose `Name` matches, ignoring case;
-- `ReplaceOperator<T>()` adds `T` and drops any operator registered so far with the same `Name` as `T`;
-- `AddOperator<T>()` adds `T`; a name clash with an operator that wasn't removed or replaced fails with the existing
-  message (`Operator 'X' conflicts with 'x' …`).
+- `RemoveBuiltInOperators()` drops all built-in operators registered so far and keeps added ones;
+- `AddOperator<T>()` adds `T`; a name clash with an operator that wasn't removed fails with the existing message
+  (`Operator 'X' conflicts with 'x' …`). To swap an operator out: `RemoveOperator("eq").AddOperator<MyEquals>()`.
 
 ## Decisions
 
@@ -124,8 +126,9 @@ first built (it's a singleton), the operators are created and:
 from `[ActionName]` or the class name in kebab-case, overridable with `AddAction<T>(name)`. Aliases/remapping later.
 The rule JSON uses `"action"` (#55).
 
-**Q3 — Built-in operators:** registered automatically, with `RemoveOperator(name)` and `ReplaceOperator<T>()` for
-flexibility. Operators keep their instance `Name` (no registration-name override for operators for now).
+**Q3 — Built-in operators:** registered automatically, with `RemoveOperator(name)` and `RemoveBuiltInOperators()` for
+flexibility. (A `ReplaceOperator<T>()` that replaced by matching name was dropped in follow-up review: implicit
+replacement is surprising, and remove + add says the same thing explicitly.) Operators keep their instance `Name` (no registration-name override for operators for now).
 
 ## Breaking changes
 
@@ -140,7 +143,8 @@ None. New package contents and `BuiltInOperators` are additions; the non-DI path
   scope, the same within a scope.
 - Factory: lookup by name in any case, unknown name, `ActionNames`, default and explicit names, one type under two
   names, duplicate/case-conflicting names fail while configuring.
-- Operators: built-ins present by default; `AddOperator`, `ReplaceOperator`, `RemoveOperator`; conflicts fail.
+- Operators: built-ins present by default; `AddOperator`, `RemoveOperator`, `RemoveBuiltInOperators`; call order;
+  conflicts fail.
 - `RuleValidator` resolved from DI knows the registered actions and operators.
 - `BuiltInOperators.Create()` returns all nine built-ins as new instances.
 
@@ -151,9 +155,9 @@ Recorded before merge (2026-10-06):
 - **Operators aren't registered as individual `IConditionOperator` services.** The registrations table above listed
   them; instead, an internal singleton operator set is built once from the built-ins plus the builder's
   add/replace/remove calls, and shared by `ConditionEvaluator` and `RuleValidator`. Individual `IConditionOperator`
-  registrations would make `RemoveOperator`/`ReplaceOperator` impossible to express. Custom operators are created with
+  registrations would make `RemoveOperator`/`RemoveBuiltInOperators` impossible to express. Custom operators are created with
   `ActivatorUtilities`, so they may take singleton dependencies.
-- **`RemoveOperator`/`ReplaceOperator` apply in call order** (to operators registered *so far*), rather than to every
+- **Operator changes apply in call order** (removals affect operators registered *so far*), rather than to every
   matching operator regardless of order. `RemoveOperator("eq").AddOperator<MyEq>()` therefore keeps `MyEq`, which is
   the intuitive reading.
 - **The test project uses `ILogger`-free fakes.** #5's text suggested `ILogger<T>`; an injected fake service proves the

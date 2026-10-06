@@ -6,7 +6,8 @@ using RuleForge.Abstractions.Condition;
 namespace RuleForge.Extensions.DependencyInjection;
 
 /// <summary>
-/// Registers actions and operators for <c>AddRuleForge</c>. The built-in operators are registered automatically.
+/// Registers actions and operators for <c>AddRuleForge</c>. The built-in operators are registered automatically;
+/// operator additions and removals apply in call order.
 /// </summary>
 public sealed class RuleForgeBuilder
 {
@@ -38,21 +39,11 @@ public sealed class RuleForgeBuilder
 
     /// <summary>
     /// Adds <typeparamref name="TOperator"/> (Singleton). Its name must not clash with an operator that is still
-    /// registered; use <see cref="ReplaceOperator{TOperator}"/> to swap one out.
+    /// registered: to swap out an operator, remove it first (<c>RemoveOperator("eq").AddOperator&lt;MyEquals&gt;()</c>).
     /// </summary>
     public RuleForgeBuilder AddOperator<TOperator>() where TOperator : class, IConditionOperator
     {
-        _registry.AddOperator(typeof(TOperator), replace: false);
-        return this;
-    }
-
-    /// <summary>
-    /// Adds <typeparamref name="TOperator"/> and removes any operator registered so far with the same name
-    /// (e.g. a built-in), ignoring case.
-    /// </summary>
-    public RuleForgeBuilder ReplaceOperator<TOperator>() where TOperator : class, IConditionOperator
-    {
-        _registry.AddOperator(typeof(TOperator), replace: true);
+        _registry.AddOperator(typeof(TOperator));
         return this;
     }
 
@@ -63,6 +54,15 @@ public sealed class RuleForgeBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         _registry.RemoveOperator(name);
+        return this;
+    }
+
+    /// <summary>
+    /// Removes all built-in operators, keeping operators added so far. Use it to start from a fully custom set.
+    /// </summary>
+    public RuleForgeBuilder RemoveBuiltInOperators()
+    {
+        _registry.RemoveBuiltInOperators();
         return this;
     }
 }

@@ -34,43 +34,55 @@ internal sealed class RuleForgeRegistry
 
     public bool TryGetActionType(string name, out Type? actionType) => _actions.TryGetValue(name, out actionType);
 
-    public void AddOperator(Type operatorType, bool replace)
+    public void AddOperator(Type operatorType)
     {
-        if (!replace && _operatorChanges.Any(change => change.Type == operatorType && !change.Replace))
+        if (_operatorChanges.Any(change => change.Kind == OperatorChangeKind.Add && change.Type == operatorType))
             return;
 
-        _operatorChanges.Add(new OperatorChange(operatorType, null, replace));
+        _operatorChanges.Add(new OperatorChange(OperatorChangeKind.Add, operatorType, null));
     }
 
-    public void RemoveOperator(string name) => _operatorChanges.Add(new OperatorChange(null, name, Replace: false));
+    public void RemoveOperator(string name) =>
+        _operatorChanges.Add(new OperatorChange(OperatorChangeKind.Remove, null, name));
+
+    public void RemoveBuiltInOperators() =>
+        _operatorChanges.Add(new OperatorChange(OperatorChangeKind.RemoveBuiltIns, null, null));
 
     /// <summary>
-    /// The built-in operators with every add, replace and remove applied in call order.
+    /// The built-in operators with every add and remove applied in call order.
     /// </summary>
     public IReadOnlyList<IConditionOperator> BuildOperators(IServiceProvider services)
     {
-        var operators = BuiltInOperators.Create().ToList();
+        var builtIns = BuiltInOperators.Create();
+        var operators = builtIns.ToList();
 
         foreach (var change in _operatorChanges)
         {
-            if (change.Type is null)
+            switch (change.Kind)
             {
-                operators.RemoveAll(op => string.Equals(op.Name, change.Name, StringComparison.OrdinalIgnoreCase));
-                continue;
+                case OperatorChangeKind.Add:
+                    operators.Add((IConditionOperator)ActivatorUtilities.CreateInstance(services, change.Type!));
+                    break;
+                case OperatorChangeKind.Remove:
+                    operators.RemoveAll(op => string.Equals(op.Name, change.Name, StringComparison.OrdinalIgnoreCase));
+                    break;
+                case OperatorChangeKind.RemoveBuiltIns:
+                    operators.RemoveAll(op => builtIns.Contains(op));
+                    break;
             }
-
-            var created = (IConditionOperator)ActivatorUtilities.CreateInstance(services, change.Type);
-
-            if (change.Replace)
-                operators.RemoveAll(op => string.Equals(op.Name, created.Name, StringComparison.OrdinalIgnoreCase));
-
-            operators.Add(created);
         }
 
         return operators;
     }
 
-    private sealed record OperatorChange(Type? Type, string? Name, bool Replace);
+    private enum OperatorChangeKind
+    {
+        Add,
+        Remove,
+        RemoveBuiltIns
+    }
+
+    private sealed record OperatorChange(OperatorChangeKind Kind, Type? Type, string? Name);
 }
 
 /// <summary>

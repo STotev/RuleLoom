@@ -47,14 +47,6 @@ public class OperatorRegistrationTests
     }
 
     [Fact]
-    public void ReplaceOperator_SwapsTheBuiltInWithTheSameName()
-    {
-        var evaluator = Evaluator(new ServiceCollection().AddRuleForge(rules => rules.ReplaceOperator<AlwaysTrueEqualsOperator>()));
-
-        Assert.True(evaluator.Evaluate(Context, Op("eq", Value(1), Value(2))));
-    }
-
-    [Fact]
     public void RemoveOperator_RemovesBuiltIn()
     {
         var evaluator = Evaluator(new ServiceCollection().AddRuleForge(rules => rules.RemoveOperator("CHANGED")));
@@ -68,6 +60,28 @@ public class OperatorRegistrationTests
     {
         var evaluator = Evaluator(new ServiceCollection().AddRuleForge(rules => rules
             .RemoveOperator("eq")
+            .AddOperator<AlwaysTrueEqualsOperator>()));
+
+        Assert.True(evaluator.Evaluate(Context, Op("eq", Value(1), Value(2))));
+    }
+
+    [Fact]
+    public void RemoveBuiltInOperators_KeepsOperatorsAddedBefore()
+    {
+        var evaluator = Evaluator(new ServiceCollection().AddRuleForge(rules => rules
+            .AddOperator<ContainsOperator>()
+            .RemoveBuiltInOperators()));
+
+        Assert.True(evaluator.Evaluate(Context, Op("contains", Path("Title"), Value("sale"))));
+        var ex = Assert.Throws<InvalidOperationException>(() => evaluator.Evaluate(Context, Op("eq", Value(1), Value(1))));
+        Assert.Contains("'eq' not found", ex.Message);
+    }
+
+    [Fact]
+    public void RemoveBuiltInOperators_ThenAddWithBuiltInName_IsAllowed()
+    {
+        var evaluator = Evaluator(new ServiceCollection().AddRuleForge(rules => rules
+            .RemoveBuiltInOperators()
             .AddOperator<AlwaysTrueEqualsOperator>()));
 
         Assert.True(evaluator.Evaluate(Context, Op("eq", Value(1), Value(2))));

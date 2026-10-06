@@ -123,8 +123,8 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   belong to the registration: `ActionNames.GetDefaultName(type)` gives `[ActionName]` or the class name minus an
   `Action` suffix in kebab-case; `Add(executor, name)` overrides it. Built-in action: `log`.
 - **DI** (`AddRuleForge`): one shared registry per service collection, so it can be called repeatedly. Operators
-  and `IConditionEvaluator` are Singleton (built-ins included; `AddOperator`/`ReplaceOperator`/`RemoveOperator` apply in
-  call order); actions, `IActionExecutorFactory` (`ServiceProviderActionExecutorFactory`), `RuleEngine` and
+  and `IConditionEvaluator` are Singleton (built-ins included; `AddOperator`/`RemoveOperator`/`RemoveBuiltInOperators` apply
+  in call order); actions, `IActionExecutorFactory` (`ServiceProviderActionExecutorFactory`), `RuleEngine` and
   `RuleValidator` are Scoped. `AddAction<T>(name?)` registers under the default or given name.
 - **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
   `RuleValidator` (`RuleForge.Validation`) checks a rule against the registered operators and actions

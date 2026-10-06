@@ -144,9 +144,9 @@ var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
 var result = await engine.ExecuteAsync("UserCreated", user, rules, cancellationToken);
 ```
 
-Actions are resolved per scope, so they can use scoped services. `ReplaceOperator<T>()` swaps a built-in operator for
-your own, and `RemoveOperator("name")` drops one. `RuleValidator` can be resolved the same way to check rules before
-saving them.
+Actions are resolved per scope, so they can use scoped services. To swap a built-in operator for your own, remove it
+first (`RemoveOperator("eq").AddOperator<MyEquals>()`); `RemoveBuiltInOperators()` starts from a fully custom set.
+`RuleValidator` can be resolved the same way to check rules before saving them.
 
 ## 📚 Documentation
 
