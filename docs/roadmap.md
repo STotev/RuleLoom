@@ -1,6 +1,6 @@
 # RuleForge Roadmap
 
-**Last reviewed**: 2026-10-06
+**Last reviewed**: 2026-10-07
 
 The single overview of what has been built, what is next, and what is planned but not yet scheduled.
 Details live in GitHub issues and in [`specs/`](specs/); this page links to them rather than repeating them.
@@ -23,7 +23,7 @@ connect to historical docs — they were reused inconsistently between documents
 | 0.2.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.0) 2026-10-02 | Action results, scheduling model, action factory, schedule calculation |
 | 0.2.1 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.1) 2026-10-03 | Nested path fix (#14), shared path cache (#15) |
 | 0.3.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.3.0) 2026-10-06 | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
-| 0.4.0 | **Ready** — release PR [#57](https://github.com/STotev/RuleForge/pull/57), held until #6 merges | Action names by registration, `IAction`, dependency injection, upgrading guide |
+| 0.4.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.4.0) 2026-10-06 | Action names by registration, `IAction`, dependency injection, upgrading guide |
 
 ---
 
@@ -38,13 +38,20 @@ Abstractions (`ConditionNode`, `IConditionOperator`, `IAction`), `RuleEngine`, `
 Priority ordering (higher first), operand-count validation, null-safe path resolution, continue-on-error
 per rule, integration test project. Report: [`archive/phase-1-1-summary.md`](archive/phase-1-1-summary.md).
 
-### Action scheduling & DI — PRD [#1](https://github.com/STotev/RuleForge/issues/1) (partially done)
+### Action scheduling & DI — PRD [#1](https://github.com/STotev/RuleForge/issues/1) ✅
 
 | Issue | Slice | PR | Spec |
 |---|---|---|---|
 | [#2](https://github.com/STotev/RuleForge/issues/2) | Scheduling model & `ActionResult` | [#7](https://github.com/STotev/RuleForge/pull/7) | [scheduling-model-abstractions](specs/2026-03-28-scheduling-model-abstractions-design.md) |
 | [#3](https://github.com/STotev/RuleForge/issues/3) | Action factory & per-rule results | [#9](https://github.com/STotev/RuleForge/pull/9) | [action-factory-pattern](specs/2026-03-28-action-factory-pattern-design.md) |
 | [#4](https://github.com/STotev/RuleForge/issues/4) | Schedule calculation engine | [#10](https://github.com/STotev/RuleForge/pull/10) | [schedule-calculation-engine](specs/2026-03-29-schedule-calculation-engine-design.md) |
+| [#55](https://github.com/STotev/RuleForge/issues/55) | Action names by registration, `"action"` in rule JSON | [#56](https://github.com/STotev/RuleForge/pull/56) | [action-names](specs/2026-10-06-action-names-design.md) |
+| [#5](https://github.com/STotev/RuleForge/issues/5) | Dependency injection (`AddRuleForge`) | [#54](https://github.com/STotev/RuleForge/pull/54) | [dependency-injection](specs/2026-10-06-dependency-injection-design.md) |
+| [#58](https://github.com/STotev/RuleForge/issues/58) | Rename `IActionExecutor` → `IAction` | [#59](https://github.com/STotev/RuleForge/pull/59) | — |
+| [#6](https://github.com/STotev/RuleForge/issues/6) | Integration tests, samples, [upgrading guide](guides/upgrading.md), quick start rewrite | [#60](https://github.com/STotev/RuleForge/pull/60) | [integration-samples-upgrading](specs/2026-10-07-integration-samples-upgrading-design.md) |
+
+Actually *dispatching* scheduled actions was out of scope for this PRD; see the vision's "Running scheduled actions
+later".
 
 ### Code review bug batch (2026-10-02)
 | Issue | Change | Fixed by |
@@ -81,17 +88,13 @@ titles, central package management, issue/PR templates, Claude Code setup (`AGEN
 
 ## 🎯 Next
 
-### Finish PRD #1 (last slices)
+PRD #1 and PRD #22 are complete. Before choosing the next PRD:
 
-| Issue | Slice | Status |
-|---|---|---|
-| [#5](https://github.com/STotev/RuleForge/issues/5) | ✅ DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionFactory` | Merged: [#54](https://github.com/STotev/RuleForge/pull/54) |
-| [#55](https://github.com/STotev/RuleForge/issues/55) | ✅ Action names by registration (prerequisite for #5) | Merged: [#56](https://github.com/STotev/RuleForge/pull/56) |
-| [#6](https://github.com/STotev/RuleForge/issues/6) | ✅ Integration tests, samples, upgrading guide, quick start refresh | This PR |
-
-With #6 merged, PRD #1 is complete: release 0.4.0 (#57), then **pick the next PRD from the backlog** below. Candidates
-discussed so far: the time semantics review, path variables and functions, the Schema System, benchmarks (#27) and
-NuGet packaging.
+1. **Settle the deployment and ownership questions** in [`vision.md`](vision.md): the operations dashboard,
+   snapshotter, event envelope, schema generator and schema REST API, evaluating rules on JSON state, running scheduled
+   actions later, and whether the library offers a rule source abstraction.
+2. **Reorder this roadmap into milestones** (0.5 → 1.0, post-1.0) based on those decisions, and decide the priority
+   (scheduler integration or Schema System first) and when to first publish to NuGet.
 
 ---
 
@@ -143,7 +146,7 @@ Date-only values are arguably calendar dates, not instants.
 ### Path variables and functions (for consideration)
 Raised on 2026-10-06 while reviewing #38 / PR #50. Worth a design pass before more `$` names are added.
 
-**Today** `$current` and `$previous` are the only variables. They're constants on `EvaluationContext`, and the knowledge
+**Today** `$current` and `$previous` are the only variables, written as plain path prefixes, and the knowledge
 of what is valid lives in three places: `EvaluationContext.Resolve`, `ChangedOperator` (which strips the scope) and the
 parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variable would mean touching all three.
 
@@ -211,7 +214,7 @@ multi-tenancy. Detail: [old roadmap Phase 3](archive/roadmap-2026-03.md).
 
 ### Infrastructure & scale (old Phase 4)
 Persistence (EF Core, MongoDB, Redis), distributed events (MassTransit/RabbitMQ), observability —
-structured `ILogger` logging (replacing the `Console.Error` write in `RuleEngine`), OpenTelemetry,
+structured `ILogger` logging (the engine reports failures only in its results today), OpenTelemetry,
 event-based `IActionExecutionObserver` — and a management REST API.
 Detail: [old roadmap Phase 4](archive/roadmap-2026-03.md).
 
