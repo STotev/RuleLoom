@@ -144,6 +144,33 @@ Date-only values are arguably calendar dates, not instants.
 - How this interacts with **Timezone support** for schedules, and with scheduler backends that dispatch at local times.
 - Migration: whichever default is chosen changes results for existing rules.
 
+### Path variables and functions (for consideration)
+Raised on 2026-10-06 while reviewing #38 / PR #50. Worth a design pass before more `$` names are added.
+
+**Today** `$current` and `$previous` are the only variables. They're constants on `EvaluationContext`, and the knowledge
+of what is valid lives in three places: `EvaluationContext.Resolve`, `ChangedOperator` (which strips the scope) and the
+parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variable would mean touching all three.
+
+**Ideas to explore**:
+- **One place for variables**: a single resolver/registry that the engine, `changed`, the parser and `RuleValidator`
+  (#39) all consult, instead of hard-coded checks.
+- **A public API to define and register variables**, e.g. `$event` (event metadata), `$rule`, `$tenant`, or
+  application-specific ones, registered alongside operators and actions (and through DI, #5).
+- **Functions**, e.g. `$now()`, `$today()`, `$now(Europe/London)`. Possibly with their own sigil, such as `@now(...)`,
+  to tell functions from variables. They'd have to use the injected `TimeProvider`, so they stay deterministic in
+  tests, and they tie directly into the **time semantics review** above.
+
+**Questions**:
+- Syntax: `$` for both, or `$` for variables and `@` for functions? Is `$current()` a function or a variable?
+- Strings vs structure: parse function calls out of `path` strings (a small expression language), or add a structured
+  JSON node such as `{ "function": "now", "args": ["Europe/London"] }` (a new `ConditionNode` type) that the parser
+  and UIs handle without string parsing?
+- Registration and discovery: how do custom variables and functions declare their arguments and return types, so
+  `RuleValidator` and rule-authoring UIs (Schema System) can check and offer them?
+- Safety: what custom functions may do when end users write rules, and whether results are cached per event.
+- Overlap with **expression support** (e.g. `Price * 1.2 > 100`), which the March analysis also suggested
+  ([analysis §7](archive/business-rules-analysis.md)); functions could be its first step or a separate feature.
+
 ### Schema & validation (old Phase 1.2)
 `FieldSchema` / `EventSchema` / `ISchemaProvider`, schema-based `IRuleValidator`, JSON export of schemas for
 rule-authoring UIs. Detail: [old roadmap §1.2](archive/roadmap-2026-03.md).
