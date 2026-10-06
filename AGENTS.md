@@ -83,7 +83,7 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 | `RuleForge.Samples.Console` | `samples/RuleForge.Samples.Console` | Usage sample |
 
 Namespaces follow folders: `RuleForge.Abstractions.{Action,Condition,Rule,Scheduling,Values}` and
-`RuleForge.{Engine,Evaluators,Operators,Actions,Scheduling}` (there is no `RuleForge.Core`).
+`RuleForge.{Engine,Evaluators,Operators,Actions,Scheduling,Validation}` (there is no `RuleForge.Core`).
 
 Versioning is from git tags via MinVer (`Directory.Build.props`); release-please creates the tags.
 
@@ -116,7 +116,11 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 - **Paths** resolve via `PathResolver` (compiled, cached expressions): `"Price"` = current,
   `"current.Price"` / `"previous.Price"` explicit. Missing properties resolve to `null`.
 - **Actions** are resolved by `Type` through `IActionExecutorFactory` (`DirectActionExecutorFactory`
-  for non-DI use). Built-in action: `log`.
+  for non-DI use), which also lists its `ActionTypes`. Built-in action: `log`.
+- **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
+  `RuleValidator` (`RuleForge.Validation`) checks a rule against the registered operators and action types
+  (unknown names, operand counts, incomplete schedules), returning every error with a JSONPath location.
+  Property paths aren't validated (needs the Schema System).
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
   in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now. UTC only.
   RuleForge computes `ScheduledFor`; dispatching scheduled work is the consumer's responsibility.
