@@ -15,6 +15,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/RuleForge.Tests.Integration/RuleForge.Tests.Integration.csproj" />
+    <Project Path="tests/RuleForge.Extensions.DependencyInjection.Tests/RuleForge.Extensions.DependencyInjection.Tests.csproj" />
     <Project Path="tests/RuleForge.Tests/RuleForge.Tests.csproj" />
   </Folder>
 </Solution>

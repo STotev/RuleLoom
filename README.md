@@ -132,6 +132,22 @@ await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, [rule]);
 
 ---
 
+### With Dependency Injection
+
+```csharp
+services.AddRuleForge(rules => rules
+    .AddAction<SendEmailAction>()          // "send-email"; can inject IEmailService, DbContext, ILogger<T>, ...
+    .AddOperator<ContainsOperator>());     // built-in operators are registered automatically
+
+// In a request or message-handler scope:
+var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
+var result = await engine.ExecuteAsync("UserCreated", user, rules, cancellationToken);
+```
+
+Actions are resolved per scope, so they can use scoped services. To swap a built-in operator for your own, remove it
+first (`RemoveOperator("eq").AddOperator<MyEquals>()`); `RemoveBuiltInOperators()` starts from a fully custom set.
+`RuleValidator` can be resolved the same way to check rules before saving them.
+
 ## 📚 Documentation
 
 - **[Quick Start Guide](docs/guides/quick-start.md)** - Get started (being refreshed for 0.2.0)

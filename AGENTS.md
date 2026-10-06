@@ -77,9 +77,10 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 |---|---|---|
 | `RuleForge.Abstractions` | `src/RuleForge.Abstractions` | Contracts and models. **Must have no external package dependencies.** |
 | `RuleForge` | `src/RuleForge` | Default implementation: engine, evaluator, operators, actions, scheduling |
-| `RuleForge.Extensions.DependencyInjection` | `src/RuleForge.Extensions.DependencyInjection` | DI registration — currently an empty placeholder (issue #5) |
+| `RuleForge.Extensions.DependencyInjection` | `src/RuleForge.Extensions.DependencyInjection` | `services.AddRuleForge(...)`: DI registration of engine, evaluator, actions, operators, validator |
 | `RuleForge.Tests` | `tests/RuleForge.Tests` | xUnit unit tests |
 | `RuleForge.Tests.Integration` | `tests/RuleForge.Tests.Integration` | xUnit end-to-end tests |
+| `RuleForge.Extensions.DependencyInjection.Tests` | `tests/RuleForge.Extensions.DependencyInjection.Tests` | xUnit tests of DI registration (uses the real container) |
 | `RuleForge.Samples.Console` | `samples/RuleForge.Samples.Console` | Usage sample |
 
 Namespaces follow folders: `RuleForge.Abstractions.{Action,Condition,Rule,Scheduling,Values}` and
@@ -121,6 +122,10 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   `IActionExecutorFactory` (`DirectActionExecutorFactory` for non-DI use), which also lists its `ActionNames`. Names
   belong to the registration: `ActionNames.GetDefaultName(type)` gives `[ActionName]` or the class name minus an
   `Action` suffix in kebab-case; `Add(executor, name)` overrides it. Built-in action: `log`.
+- **DI** (`AddRuleForge`): one shared registry per service collection, so it can be called repeatedly. Operators
+  and `IConditionEvaluator` are Singleton (built-ins included; `AddOperator`/`RemoveOperator`/`RemoveBuiltInOperators` apply
+  in call order); actions, `IActionExecutorFactory` (`ServiceProviderActionExecutorFactory`), `RuleEngine` and
+  `RuleValidator` are Scoped. `AddAction<T>(name?)` registers under the default or given name.
 - **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
   `RuleValidator` (`RuleForge.Validation`) checks a rule against the registered operators and actions
   (unknown names, operand counts, incomplete schedules), returning every error with a JSONPath location.
