@@ -1,7 +1,5 @@
 # JSON Rule Parser Documentation
 
-> **Note**: action `schedule` blocks (`mode`, `amount`, `unit`, `referencePath`) are not documented here yet —
-> see [the scheduling spec](../specs/2026-03-28-scheduling-model-abstractions-design.md) until this guide is refreshed in #6.
 
 ## Overview
 
@@ -275,6 +273,24 @@ var urgent = action.TryGetParameter<bool>("urgent", out var flag) && flag;
 
 A missing parameter throws `KeyNotFoundException`, and a value that can't be converted (e.g. `"100"` as `int`) throws
 `InvalidOperationException`. Names match exactly, or ignoring case when that's unambiguous.
+
+## Scheduling Actions
+
+An action with a `schedule` isn't run by the engine: it comes back with status `Scheduled` and a `ScheduledFor` time
+(UTC), and `result.ScheduledActions` lists it with its definition so your scheduler can dispatch it.
+
+```json
+{ "action": "send-email", "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "ViewingAt" } }
+```
+
+| Field | Values |
+|---|---|
+| `mode` | `Immediate` (default, runs now), `Delay` (reference + amount), `Advance` (reference − amount) |
+| `amount` | Whole number; required for `Delay` / `Advance` |
+| `unit` | `Seconds`, `Minutes`, `Hours`, `Days`; required for `Delay` / `Advance` |
+| `referencePath` | Optional path to a `DateTime`, `DateTimeOffset` or ISO 8601 string on the object; without it, the reference is "now" |
+
+Mode and unit names ignore case. A reference that's missing, `null` or not a date makes the action `Failed`.
 
 ## Integration with RuleEngine
 

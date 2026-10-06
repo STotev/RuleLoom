@@ -1,547 +1,178 @@
-# RuleForge Quick Start Guide
+# RuleForge Quick Start
 
-> ⚠️ **Out of date.** This guide predates the action factory, `ActionResult` and scheduling changes
-> (0.2.0) and still uses the old `RuleForge.Core` namespaces. Until it is refreshed in
-> [#6](https://github.com/STotev/RuleForge/issues/6), use the [README](../../README.md) example and the
-> [console sample](../../samples/RuleForge.Samples.Console/Program.cs).
+RuleForge runs **rules** against **events**: when something happens to an object in your app (a property is updated,
+an order is placed), the rules for that event check conditions on the object's current and previous state and run or
+schedule **actions**. Rules can be written in code or as JSON, so end users can author them.
 
-**Version**: v0.1.0-alpha
-**Last Updated**: March 21, 2026
+> Upgrading from an earlier version? See [Upgrading](upgrading.md). The runnable version of this page is the
+> [console sample](../../samples/RuleForge.Samples.Console/).
 
----
+## Install
 
-## 📦 Installation
+RuleForge isn't on NuGet yet. Clone the repository and reference the projects:
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/RuleForge.git
-
-# Build the solution
+git clone https://github.com/STotev/RuleForge.git
 cd RuleForge
 dotnet build
-
-# Run tests
-dotnet test
 ```
 
----
+| Project | Use it for |
+|---|---|
+| `RuleForge.Abstractions` | Contracts and models (no dependencies) |
+| `RuleForge` | The engine, built-in operators, `LogAction`, `RuleValidator` |
+| `RuleForge.Extensions.DependencyInjection` | `services.AddRuleForge(...)` |
 
-## 🚀 Quick Start
-
-### 1. Create a Simple Rule
+## Your first rule
 
 ```csharp
-using RuleForge.Abstractions.Rule;
-using RuleForge.Abstractions.Condition;
 using RuleForge.Abstractions.Action;
+using RuleForge.Abstractions.Condition;
+using RuleForge.Abstractions.Rule;
+using RuleForge.Actions;
+using RuleForge.Engine;
+using RuleForge.Evaluators;
+using RuleForge.Operators;
 
 var rule = new RuleDefinition
 {
-    Name = "High Price Alert",
+    Name = "Price drop",
     EventType = "PropertyUpdated",
-    Priority = 10,
     Condition = new OperatorCondition
     {
-        Operator = "eq",
-        Operands =
-        [
-            new PathOperand { Path = "Price" },
-            new ValueOperand { Value = 100000 }
-        ]
+        Operator = "lt",
+        Operands = [new PathOperand { Path = "$current.Price" }, new PathOperand { Path = "$previous.Price" }]
     },
-    Actions =
-    [
-        new ActionDefinition
-        {
-            Type = "log",
-            Parameters = { ["message"] = "High price detected!" }
-        }
-    ]
-};
-```
-
-### 2. Create Rule Engine
-
-```csharp
-using RuleForge.Core.Engine;
-using RuleForge.Core.Evaluators;
-using RuleForge.Core.Operators;
-using RuleForge.Core.Actions;
-
-var operators = new List<IConditionOperator>
-{
-    new EqualsOperator(),
-    new ChangedOperator(),
-    new AndOperator(),
-    new OrOperator(),
-    new NotOperator()
-};
-
-var actions = new List<IAction>
-{
-    new LogAction()
+    Actions = [new ActionDefinition { Action = "log", Parameters = { ["message"] = "Price dropped!" } }]
 };
 
 var engine = new RuleEngine(
-    new ConditionEvaluator(operators),
-    actions
-);
+    new ConditionEvaluator(BuiltInOperators.Create()),   // eq, changed, and, or, not, gt, gte, lt, lte
+    new DirectActionFactory([new LogAction()]));         // registered as "log"
+
+var previous = new { Price = 470_000m };
+var current = new { Price = 430_000m };
+
+RuleEngineResult result = await engine.ExecuteAsync("PropertyUpdated", current, previous, [rule]);
 ```
 
-### 3. Execute Rules
+The result tells you what happened to every rule for that event:
 
 ```csharp
-var currentData = new { Price = 100000, Status = "Active" };
-var previousData = new { Price = 90000, Status = "Active" };
+foreach (var ruleResult in result.Rules)                       // Matched, NotMatched or Failed (with Error)
+    foreach (var action in ruleResult.ActionResults)           // ExecutedImmediately, Scheduled, Skipped or Failed
+        Console.WriteLine($"{ruleResult.RuleName}: {action.ActionName} {action.Status}");
 
-await engine.ExecuteAsync(
-    eventType: "PropertyUpdated",
-    current: currentData,
-    previous: previousData,
-    rules: new[] { rule }
-);
+if (result.HasFailures) { /* log or alert */ }
 ```
 
----
+Failures are reported in the result, not thrown: one broken rule or action doesn't stop the others.
 
-## 📝 Defining Rules in JSON
-
-### Basic Structure
+## Rules in JSON
 
 ```json
 {
-  "name": "Rule Name",
-  "eventType": "EventName",
-  "priority": 10,
-  "condition": { /* condition tree */ },
-  "actions": [ /* action list */ ]
-}
-```
-
-### Example: Price Change Alert
-
-```json
-{
-  "name": "Price Change Alert",
+  "name": "Price drop",
   "eventType": "PropertyUpdated",
-  "priority": 5,
+  "priority": 10,
   "condition": {
-    "operator": "changed",
+    "operator": "and",
     "operands": [
-      { "path": "Price" }
+      { "operator": "changed", "operands": [{ "path": "Price" }] },
+      { "operator": "lt", "operands": [{ "path": "$current.Price" }, { "path": "$previous.Price" }] }
     ]
   },
   "actions": [
+    { "action": "log", "parameters": { "message": "Price dropped!" } }
+  ]
+}
+```
+
+```csharp
+RuleDefinition rule = RuleJsonParser.Parse(json);              // or ParseMany / ParseAsync
+```
+
+- Paths read the current state (`"Price"`, `"Address.City"`); `$current.`/`$previous.` choose a state explicitly.
+- Values are compared by meaning: `100` matches a `decimal`, `"active"` matches an enum, ISO 8601 strings match dates.
+- Operator names, action names, event types and paths ignore case.
+- Higher `priority` runs first.
+
+Invalid JSON rules throw `RuleParseException` with the location of the problem. The [JSON rule guide](json-rules.md)
+covers the format, paths and comparison rules in detail.
+
+## Actions
+
+Implement `IAction`. Rules refer to it by its class name without the `Action` suffix, in kebab-case:
+
+```csharp
+public sealed class SendEmailAction(IEmailService email) : IAction         // "action": "send-email"
+{
+    public async Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken ct = default)
     {
-      "action": "log",
-      "parameters": {
-        "message": "Price changed!"
-      }
+        var to = action.GetParameter<string>("to");                          // typed, with clear errors
+        await email.SendAsync(to, action.GetParameter<string>("template"), ct);
+        return ActionResult.Success();
     }
-  ]
 }
 ```
 
-### Parse JSON Rule
+Use `[ActionName("notify")]` on the class for a different default, or give a name when registering:
+`new DirectActionFactory().Add(new SendEmailAction(email), "notify")`.
+
+An action can have its own `condition` (evaluated after the rule's) and a `schedule`:
+
+```json
+{ "action": "send-email", "parameters": { "template": "reminder" },
+  "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "ViewingAt" } }
+```
+
+Scheduled actions aren't run: they come back as `Scheduled` with `ScheduledFor`, and `result.ScheduledActions` lists
+them with their definitions so your scheduler can dispatch them.
+
+## Custom operators
 
 ```csharp
-using RuleForge.Abstractions.Rule;
-
-var json = File.ReadAllText("rule.json");
-var rule = RuleJsonParser.Parse(json);
-
-// Or parse multiple rules
-var rulesJson = File.ReadAllText("rules.json");
-var rules = RuleJsonParser.ParseMany(rulesJson);
-```
-
----
-
-## 🔧 Built-in Operators
-
-### Comparison Operators
-
-#### `eq` - Equals
-Checks if two values are equal.
-
-```json
+public sealed class ContainsOperator : IConditionOperator
 {
-  "operator": "eq",
-  "operands": [
-    { "path": "Status" },
-    { "value": "Active" }
-  ]
-}
-```
-
-**Operands**: Exactly 2
-
-#### `changed` - Value Changed
-Checks if a value changed between previous and current state.
-
-```json
-{
-  "operator": "changed",
-  "operands": [
-    { "path": "Price" }
-  ]
-}
-```
-
-**Operands**: Exactly 1 (must be a PathOperand)
-
-### Logical Operators
-
-#### `and` - All Conditions True
-All operands must evaluate to true.
-
-```json
-{
-  "operator": "and",
-  "operands": [
-    { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Active" }] },
-    { "operator": "eq", "operands": [{ "path": "Price" }, { "value": 100000 }] }
-  ]
-}
-```
-
-**Operands**: 1 or more
-
-#### `or` - Any Condition True
-At least one operand must evaluate to true.
-
-```json
-{
-  "operator": "or",
-  "operands": [
-    { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Active" }] },
-    { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Pending" }] }
-  ]
-}
-```
-
-**Operands**: 1 or more
-
-#### `not` - Invert Condition
-Inverts the result of the operand.
-
-```json
-{
-  "operator": "not",
-  "operands": [
-    { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Inactive" }] }
-  ]
-}
-```
-
-**Operands**: Exactly 1
-
----
-
-## 🎯 Condition Operands
-
-### PathOperand
-References a property on the current or previous object.
-
-```json
-{ "path": "PropertyName" }
-{ "path": "User.Email" }
-{ "path": "$current.Price" }
-{ "path": "$previous.Status" }
-```
-
-### ValueOperand
-A literal value (string, number, boolean, null, array, object).
-
-```json
-{ "value": "Active" }
-{ "value": 100000 }
-{ "value": true }
-{ "value": null }
-{ "value": [1, 2, 3] }
-```
-
-### OperatorCondition
-A nested condition using an operator.
-
-```json
-{
-  "operator": "eq",
-  "operands": [...]
-}
-```
-
----
-
-## 🚀 Actions
-
-### LogAction
-
-Logs a message to the console.
-
-```json
-{
-  "action": "log",
-  "parameters": {
-    "message": "Your message here"
-  }
-}
-```
-
-### Conditional Actions
-
-Actions can have their own conditions:
-
-```json
-{
-  "action": "log",
-  "parameters": {
-    "message": "Only if status is error"
-  },
-  "condition": {
-    "operator": "eq",
-    "operands": [
-      { "path": "Status" },
-      { "value": "Error" }
-    ]
-  }
-}
-```
-
----
-
-## 🔌 Creating Custom Operators
-
-```csharp
-using RuleForge.Abstractions;
-using RuleForge.Abstractions.Condition;
-
-public class GreaterThanOperator : IConditionOperator
-{
-    public string Name => "gt";
+    public string Name => "contains";
     public int MinOperands => 2;
     public int MaxOperands => 2;
 
-    public bool Evaluate(
-        EvaluationContext ctx,
-        IReadOnlyList<ConditionNode> operands,
-        IConditionEvaluator evaluator)
-    {
-        var left = evaluator.ResolveValue(ctx, operands[0]);
-        var right = evaluator.ResolveValue(ctx, operands[1]);
-
-        if (left is IComparable leftComparable && right != null)
-        {
-            return leftComparable.CompareTo(right) > 0;
-        }
-
-        return false;
-    }
+    public bool Evaluate(OperatorContext ctx) =>
+        ctx.GetValue(0) is string text && ctx.GetValue(1) is string part && text.Contains(part, StringComparison.Ordinal);
 }
+
+var evaluator = new ConditionEvaluator([.. BuiltInOperators.Create(), new ContainsOperator()]);
 ```
 
-**Register the operator**:
+`ctx.GetValue(i)` reads a value, `ctx.Test(i)` a condition, `ctx.GetPath(i)` a path, and `ctx.AreEqual` /
+`ctx.TryCompare` use the shared comparison rules. Unit-test an operator by building an `OperatorContext` yourself:
+`new OperatorContext(condition, new EvaluationContext(new { Title = "Summer sale" }))`.
+
+## Dependency injection
 
 ```csharp
-var operators = new List<IConditionOperator>
-{
-    new EqualsOperator(),
-    new GreaterThanOperator()  // Your custom operator
-};
+services.AddRuleForge(rules => rules
+    .AddAction<SendEmailAction>()            // resolved per scope, so it can inject scoped services
+    .AddOperator<ContainsOperator>());       // built-in operators are registered automatically
+
+// In a request or message-handler scope:
+var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
 ```
 
----
+`RemoveOperator("name")` and `RemoveBuiltInOperators()` adjust the operator set; `AddAction<T>("name")` registers an
+action under another name.
 
-## 🎬 Creating Custom Actions
+## Validating rules before saving them
 
 ```csharp
-using RuleForge.Abstractions;
-using RuleForge.Abstractions.Action;
-
-public class SendEmailAction : IAction
-{
-
-    public async Task ExecuteAsync(ActionDefinition action, EvaluationContext context)
-    {
-        var to = action.Parameters["to"]?.ToString();
-        var subject = action.Parameters["subject"]?.ToString();
-        var body = action.Parameters["body"]?.ToString();
-
-        // Your email sending logic here
-        await SendEmailAsync(to, subject, body);
-    }
-}
+var validator = new RuleValidator(operators, actionFactory);     // or resolve RuleValidator from DI
+foreach (var error in validator.Validate(rule).Errors)
+    Console.WriteLine($"{error.Path}: {error.Message}");          // e.g. "$.actions[0].action: No action is registered under the name 'send-sms'."
 ```
 
-**Register the action**:
+## Next steps
 
-```csharp
-var actions = new List<IAction>
-{
-    new LogAction(),
-    new SendEmailAction()  // Your custom action
-};
-```
-
-**Use in JSON**:
-
-```json
-{
-  "action": "send-email",
-  "parameters": {
-    "to": "admin@example.com",
-    "subject": "Alert",
-    "body": "Price changed!"
-  }
-}
-```
-
----
-
-## 📊 Priority System
-
-Rules with higher priority values execute first:
-
-```json
-[
-  { "name": "High Priority", "priority": 10 },  // Executes first
-  { "name": "Medium Priority", "priority": 5 },  // Executes second
-  { "name": "Low Priority", "priority": 1 }      // Executes last
-]
-```
-
-Default priority is `0` if not specified.
-
----
-
-## ⚠️ Error Handling
-
-### Missing Properties
-
-Missing properties return `null` instead of throwing:
-
-```csharp
-var data = new { Name = "John" };
-var value = context.Resolve("NonExistent");  // Returns null, doesn't throw
-```
-
-### Rule Execution Errors
-
-If a rule fails, other rules continue to execute:
-
-```csharp
-// Rule 1 fails, but Rules 2 and 3 still execute
-await engine.ExecuteAsync(eventType, data, rules);
-```
-
-### Operator Validation
-
-Invalid operand counts throw descriptive errors:
-
-```csharp
-// This will throw: "Operator 'eq' requires at least 2 operand(s), but got 1"
-var condition = new OperatorCondition
-{
-    Operator = "eq",
-    Operands = [new PathOperand { Path = "Price" }]  // Only 1 operand!
-};
-```
-
----
-
-## 🧪 Testing Your Rules
-
-```csharp
-using Xunit;
-
-public class MyRuleTests
-{
-    [Fact]
-    public async Task Rule_WhenPriceChanges_LogsMessage()
-    {
-        // Arrange
-        var messages = new List<string>();
-        var testAction = new TestLogAction(messages);
-
-        var engine = new RuleEngine(
-            new ConditionEvaluator(operators),
-            new[] { testAction }
-        );
-
-        var rule = RuleJsonParser.Parse(ruleJson);
-
-        // Act
-        await engine.ExecuteAsync("Test", newData, oldData, new[] { rule });
-
-        // Assert
-        Assert.Single(messages);
-        Assert.Equal("Expected message", messages[0]);
-    }
-}
-```
-
----
-
-## 📚 Additional Resources
-
-- [Roadmap](../roadmap.md) - Development roadmap
-- [Phase 1.1 Summary](../archive/phase-1-1-summary.md) - Latest changes
-- [JSON Parser Documentation](json-rules.md) - Detailed JSON format guide
-
----
-
-## 🆘 Common Issues
-
-### Issue: Rule not executing
-
-**Check**:
-1. Does `eventType` match exactly?
-2. Is the condition evaluating to `true`?
-3. Are all required properties present?
-4. Is the operator registered?
-
-### Issue: "Operator not found" error
-
-**Solution**: Register the operator in your operator list:
-
-```csharp
-var operators = new List<IConditionOperator>
-{
-    new YourOperator()  // Add your operator here
-};
-```
-
-### Issue: "Action type not found" error
-
-**Solution**: Register the action in your action list:
-
-```csharp
-var actions = new List<IAction>
-{
-    new YourAction()  // Add your action here
-};
-```
-
----
-
-## 💡 Best Practices
-
-1. **Use descriptive rule names**: Makes debugging easier
-2. **Set appropriate priorities**: Important rules should have higher priority
-3. **Keep conditions simple**: Complex conditions are harder to debug
-4. **Test your rules**: Write unit tests for custom operators and actions
-5. **Validate JSON rules**: Use schema validation before parsing
-6. **Handle missing data**: Don't assume all properties exist
-
----
-
-## 🎉 Next Steps
-
-1. Try creating your first rule
-2. Experiment with different operators
-3. Create custom operators for your domain
-4. Create custom actions for your needs
-5. Read the [Roadmap](../roadmap.md) for upcoming features
-
-**Happy rule building!** 🚀
-
+- [JSON rule guide](json-rules.md): the rule format in depth
+- [Console sample](../../samples/RuleForge.Samples.Console/): runnable examples of everything above
+- [Roadmap](../roadmap.md): what's next

@@ -150,8 +150,10 @@ first (`RemoveOperator("eq").AddOperator<MyEquals>()`); `RemoveBuiltInOperators(
 
 ## 📚 Documentation
 
-- **[Quick Start Guide](docs/guides/quick-start.md)** - Get started (being refreshed for 0.2.0)
+- **[Quick Start Guide](docs/guides/quick-start.md)** - Rules in code and JSON, actions, operators, DI, validation
 - **[JSON Rule Format](docs/guides/json-rules.md)** - JSON format reference
+- **[Upgrading](docs/guides/upgrading.md)** - Breaking changes by version, with before/after examples
+- **[Console Sample](samples/RuleForge.Samples.Console/)** - Runnable examples: basics, scheduling, JSON + validation, DI
 - **[Roadmap](docs/roadmap.md)** - What's done, what's next, and the backlog
 - **[Changelog](CHANGELOG.md)** - Release notes
 
