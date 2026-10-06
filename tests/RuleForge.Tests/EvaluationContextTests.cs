@@ -89,7 +89,7 @@ public class EvaluationContextTests
     }
 
     [Fact]
-    public void Resolve_LegacyPrefix_IsAnOrdinaryPropertyName()
+    public void Resolve_PrefixWithoutDollar_IsAnOrdinaryPropertyName()
     {
         var context = new EvaluationContext(CurrentPerson, PreviousPerson);
 

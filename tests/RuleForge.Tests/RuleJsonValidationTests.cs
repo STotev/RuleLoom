@@ -41,12 +41,9 @@ public class RuleJsonValidationTests
         { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log" }, { "type": "" }] }""", "$.actions[1].type" },
         { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "parameters": [] }] }""", "$.actions[0].parameters" },
         { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "condition": { "path": "Active" } }] }""", "$.actions[0].condition" },
-        // Path variables: only $current and $previous; legacy prefixes rejected with a hint
+        // Path variables: only $current and $previous
         { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$now" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
         { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$cur.Price" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "current.Price" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "changed", "operands": [{ "path": "Previous.Status" }] } }""", "$.condition.operands[0].path" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "schedule": { "mode": "Delay", "amount": 1, "unit": "Hours", "referencePath": "current.DueDate" } }] }""", "$.actions[0].schedule.referencePath" },
         { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "schedule": { "mode": "Delay", "amount": 1, "unit": "Hours", "referencePath": "$due" } }] }""", "$.actions[0].schedule.referencePath" }
     };
 
@@ -61,25 +58,15 @@ public class RuleJsonValidationTests
     }
 
     [Theory]
-    [InlineData("current.Price", "use '$current.Price' instead")]
-    [InlineData("Previous.Order.Status", "use '$previous.Order.Status' instead")]
-    public void Parse_LegacyScopePrefix_SuggestsNewSyntax(string path, string hint)
-    {
-        var json = $$"""{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "{{path}}" }, { "value": 1 }] } }""";
-
-        var ex = Assert.Throws<RuleParseException>(() => RuleJsonParser.Parse(json));
-
-        Assert.Contains(hint, ex.Message);
-    }
-
-    [Theory]
     [InlineData("$current.Price")]
     [InlineData("$previous.Price")]
     [InlineData("$Current.Price")]
     [InlineData("$current")]
     [InlineData("current")]
+    [InlineData("current.Price")]
+    [InlineData("Previous.Order.Status")]
     [InlineData("Currently.Price")]
-    public void Parse_ValidPathVariables_AreAccepted(string path)
+    public void Parse_ValidPaths_AreAccepted(string path)
     {
         var json = $$"""{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "{{path}}" }, { "value": 1 }] } }""";
 

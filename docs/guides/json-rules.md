@@ -222,10 +222,9 @@ A `path` names a property, with `.` for nested properties (`"Address.City"`). Na
 | `"$current.Price"` | the current state (explicit) |
 | `"$previous.Price"` | the previous state (`null` if there is none) |
 
-Other names starting with `$` are reserved and rejected. Rules written before 0.3 used `current.` / `previous.`
-without `$`; the parser rejects those with a hint (`use '$current.Price' instead`), so a property literally named
-`Current` or `Previous` is reached as `$current.Previous.X` in JSON rules for now. `changed` compares current with
-previous whichever way its path is written: `Price`, `$current.Price` and `$previous.Price` are equivalent.
+Other names starting with `$` are reserved and rejected. Without the `$`, `current` and `previous` are ordinary
+property names, so a property called `Previous` is simply `"Previous.X"`. `changed` compares current with previous
+whichever way its path is written: `Price`, `$current.Price` and `$previous.Price` are equivalent.
 
 ## Comparing Values
 

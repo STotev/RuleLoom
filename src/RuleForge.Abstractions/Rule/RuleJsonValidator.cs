@@ -109,13 +109,11 @@ internal static class RuleJsonValidator
     }
 
     /// <summary>
-    /// Only <c>$current</c> and <c>$previous</c> are known variables. The pre-0.3 prefixes <c>current.</c> and
-    /// <c>previous.</c> are rejected with a migration hint (transitional; they'd otherwise silently be property names).
+    /// Only <c>$current</c> and <c>$previous</c> are known variables; other <c>$</c> names are reserved.
     /// </summary>
     private static void ValidatePathVariables(string value, string path)
     {
-        var parts = value.Split('.', 2);
-        var first = parts[0];
+        var first = value.Split('.', 2)[0];
 
         if (first.StartsWith('$') &&
             !first.Equals(EvaluationContext.CurrentVariable, StringComparison.OrdinalIgnoreCase) &&
@@ -124,15 +122,6 @@ internal static class RuleJsonValidator
             throw new RuleParseException(
                 $"Unknown variable '{first}' in path '{value}'. Use {EvaluationContext.CurrentVariable} or " +
                 $"{EvaluationContext.PreviousVariable}.",
-                path);
-        }
-
-        if (parts.Length == 2 &&
-            (first.Equals("current", StringComparison.OrdinalIgnoreCase) ||
-             first.Equals("previous", StringComparison.OrdinalIgnoreCase)))
-        {
-            throw new RuleParseException(
-                $"The '{first}.' prefix is no longer supported; use '${first.ToLowerInvariant()}.{parts[1]}' instead.",
                 path);
         }
     }
