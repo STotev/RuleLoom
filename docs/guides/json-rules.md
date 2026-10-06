@@ -234,6 +234,21 @@ values can't be ordered — a `null`, a number against a non-numeric string, or 
 to `false`, so `gt` and `lte` aren't opposites for such values. Custom operators can call `ValueComparer.AreEqual` / `ValueComparer.TryCompare`
 to follow the same rules.
 
+## Action Parameters
+
+An action's `parameters` are parsed into plain .NET values, the same way as condition values: strings, `int`/`long`/
+`double` numbers, booleans, `null`, lists (`List<object?>`) and objects (`Dictionary<string, object?>`). Actions read
+them with `GetParameter<T>`, which converts with the [comparison rules](#comparing-values):
+
+```csharp
+var amount = action.GetParameter<decimal>("amount");          // JSON 250 → 250m
+var sendAt = action.GetParameter<DateTimeOffset>("sendAt");   // "2026-05-01T09:00:00Z"
+var urgent = action.TryGetParameter<bool>("urgent", out var flag) && flag;
+```
+
+A missing parameter throws `KeyNotFoundException`, and a value that can't be converted (e.g. `"100"` as `int`) throws
+`InvalidOperationException`. Names match exactly, or ignoring case when that's unambiguous.
+
 ## Integration with RuleEngine
 
 ```csharp

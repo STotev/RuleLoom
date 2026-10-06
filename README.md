@@ -249,8 +249,9 @@ public class SendEmailAction : IActionExecutor
         EvaluationContext context,
         CancellationToken cancellationToken = default)
     {
-        var to = action.Parameters["to"]?.ToString();
-        var subject = action.Parameters["subject"]?.ToString();
+        // Typed reads with the shared conversion rules; throws a clear error if missing or unconvertible.
+        var to = action.GetParameter<string>("to");
+        var subject = action.GetParameter<string>("subject");
 
         // Your email logic here
         await SendEmailAsync(to, subject, cancellationToken);

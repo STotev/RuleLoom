@@ -137,7 +137,8 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   `ctx.AreEqual`/`ctx.TryCompare`. Unit-test operators with `new OperatorContext(condition, evaluationContext)`
   (pass an evaluator only when operands are nested operators).
 - **Action**: implement `IActionExecutor` — kebab-case `Type`,
-  `Task<ActionResult> ExecuteAsync(ActionDefinition, EvaluationContext, CancellationToken)`;
+  `Task<ActionResult> ExecuteAsync(ActionDefinition, EvaluationContext, CancellationToken)`; read parameters with
+  `action.GetParameter<T>(name)` / `TryGetParameter<T>` (plain CLR values, converted via `ValueConverter`);
   return `ActionResult.Success()` or `ActionResult.Failed(...)`.
 
 ## Code Style
