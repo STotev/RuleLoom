@@ -7,7 +7,6 @@ using System.Threading;
 
 public sealed class LogAction : IActionExecutor
 {
-    public string Type => "log";
 
     public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
         CancellationToken cancellationToken = default)

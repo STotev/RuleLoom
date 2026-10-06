@@ -21,7 +21,7 @@ public class RuleEngineResultTests
 
     public RuleEngineResultTests()
     {
-        _engine = new RuleEngine(Evaluator(), new DirectActionExecutorFactory([_ok]), new FixedTimeProvider(Now));
+        _engine = new RuleEngine(Evaluator(), Factory(_ok), new FixedTimeProvider(Now));
     }
 
     [Fact]
@@ -90,10 +90,10 @@ public class RuleEngineResultTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ActionResults_AreStampedWithTypeAndIndex()
+    public async Task ExecuteAsync_ActionResults_AreStampedWithNameAndIndex()
     {
-        var spoofing = new RecordingAction("spoofing", ActionResult.Success() with { ActionType = "other", ActionIndex = 99 });
-        var engine = new RuleEngine(Evaluator(), new DirectActionExecutorFactory([_ok, spoofing]));
+        var spoofing = new RecordingAction("spoofing", ActionResult.Success() with { ActionName = "other", ActionIndex = 99 });
+        var engine = new RuleEngine(Evaluator(), Factory(_ok, spoofing));
         var rule = Rule("Identity", Always,
             actions: [Action("ok"), Action("missing"), Action("spoofing"), Action("ok", condition: Never)]);
 
@@ -101,13 +101,13 @@ public class RuleEngineResultTests
 
         Assert.Equal(
             [("ok", 0), ("missing", 1), ("spoofing", 2), ("ok", 3)],
-            result.Rules[0].ActionResults.Select(a => (a.ActionType, a.ActionIndex)));
+            result.Rules[0].ActionResults.Select(a => (a.ActionName, a.ActionIndex)));
     }
 
     [Fact]
     public async Task ExecuteAsync_ExecutorReturnsNull_FailsAction()
     {
-        var engine = new RuleEngine(Evaluator(), new DirectActionExecutorFactory([new RecordingAction("null-result", returnsNull: true)]));
+        var engine = new RuleEngine(Evaluator(), Factory(new RecordingAction("null-result", returnsNull: true)));
 
         var result = await engine.ExecuteAsync("Event", new { }, [Rule("Null", Always, actions: [Action("null-result")])],
             TestContext.Current.CancellationToken);
@@ -210,7 +210,7 @@ public class RuleEngineResultTests
     {
         using var cts = new CancellationTokenSource();
         var cancelling = new RecordingAction("cancel", ActionResult.Success(), onExecute: cts.Cancel);
-        var engine = new RuleEngine(Evaluator(), new DirectActionExecutorFactory([_ok, cancelling]));
+        var engine = new RuleEngine(Evaluator(), Factory(_ok, cancelling));
         var rule = Rule("Cancelled midway", Always, actions: [Action("cancel"), Action("ok")]);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
@@ -238,6 +238,9 @@ public class RuleEngineResultTests
         Assert.Equal(string.Empty, captured.ToString());
     }
 
+    private static DirectActionExecutorFactory Factory(params RecordingAction[] actions) =>
+        actions.Aggregate(new DirectActionExecutorFactory(), (factory, action) => factory.Add(action, action.Name));
+
     private Task<RuleEngineResult> Execute(RuleDefinition[] rules) =>
         _engine.ExecuteAsync("Event", new { }, rules, TestContext.Current.CancellationToken);
 
@@ -259,17 +262,17 @@ public class RuleEngineResultTests
         };
 
     private static ActionDefinition Action(string type, ConditionNode? condition = null, ScheduleMetadata? schedule = null) =>
-        new() { Type = type, Condition = condition, Schedule = schedule };
+        new() { Action = type, Condition = condition, Schedule = schedule };
 
     /// <summary>Counts executions and returns <paramref name="result"/> (default: success), or null when <paramref name="returnsNull"/>.</summary>
     private sealed class RecordingAction(
-        string type,
+        string name,
         ActionResult? result = null,
         Action? onExecute = null,
         bool returnsNull = false) : IActionExecutor
     {
         public int Calls { get; private set; }
-        public string Type => type;
+        public string Name => name;
 
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
             CancellationToken cancellationToken = default)

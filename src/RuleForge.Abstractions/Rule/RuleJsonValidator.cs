@@ -40,7 +40,7 @@ internal static class RuleJsonValidator
             if (action.ValueKind != JsonValueKind.Object)
                 throw new RuleParseException("An action must be a JSON object.", actionPath);
 
-            RequireNonEmptyString(action, "type", actionPath);
+            RequireNonEmptyString(action, "action", actionPath);
 
             if (TryGetProperty(action, "schedule", out var schedule) &&
                 schedule.ValueKind == JsonValueKind.Object &&

@@ -6,7 +6,7 @@ public class ActionDefinitionTests
 {
     private static readonly ActionDefinition Action = new()
     {
-        Type = "send-email",
+        Action = "send-email",
         Parameters =
         {
             ["to"] = "ada@example.com",
@@ -62,7 +62,7 @@ public class ActionDefinitionTests
     [Fact]
     public void GetParameter_NamesDifferingOnlyInCase_ExactWinsAndAmbiguousIsMissing()
     {
-        var action = new ActionDefinition { Type = "t", Parameters = { ["To"] = "upper", ["to"] = "lower" } };
+        var action = new ActionDefinition { Action = "t", Parameters = { ["To"] = "upper", ["to"] = "lower" } };
 
         Assert.Equal("upper", action.GetParameter<string>("To"));
         Assert.Equal("lower", action.GetParameter<string>("to"));

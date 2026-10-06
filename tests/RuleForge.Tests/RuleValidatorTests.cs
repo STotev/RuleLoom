@@ -14,7 +14,7 @@ public class RuleValidatorTests
 {
     private static readonly RuleValidator Validator = new(
         [new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator()],
-        new DirectActionExecutorFactory([new NoOpAction("log"), new NoOpAction("send-email")]));
+        new DirectActionExecutorFactory().Add(new NoOpAction(), "log").Add(new NoOpAction(), "send-email"));
 
     private static readonly OperatorCondition Valid = Op("eq", Path("Price"), Value(1));
 
@@ -72,11 +72,11 @@ public class RuleValidatorTests
     }
 
     [Fact]
-    public void Validate_UnknownActionType_ReportsItsLocation()
+    public void Validate_UnknownAction_ReportsItsLocation()
     {
         var result = Validator.Validate(Rule(Valid, Action("log"), Action("send-sms")));
 
-        AssertSingleError(result, "$.actions[1].type", "No action executor is registered for action type 'send-sms'.");
+        AssertSingleError(result, "$.actions[1].action", "No action executor is registered for action 'send-sms'.");
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class RuleValidatorTests
             [
                 "$.condition.operands[0].operator",
                 "$.condition.operands[0].operands[0].operands",
-                "$.actions[0].type",
+                "$.actions[0].action",
                 "$.actions[1].condition.operator"
             ],
             result.Errors.Select(e => e.Path));
@@ -137,11 +137,11 @@ public class RuleValidatorTests
     }
 
     [Fact]
-    public void DirectActionExecutorFactory_ActionTypes_ListsRegisteredTypes()
+    public void DirectActionExecutorFactory_ActionNames_ListsRegisteredNames()
     {
-        var factory = new DirectActionExecutorFactory([new NoOpAction("log"), new NoOpAction("send-email")]);
+        var factory = new DirectActionExecutorFactory().Add(new NoOpAction(), "log").Add(new NoOpAction(), "send-email");
 
-        Assert.Equal(["log", "send-email"], factory.ActionTypes.Order());
+        Assert.Equal(["log", "send-email"], factory.ActionNames.Order());
     }
 
     private static void AssertSingleError(RuleValidationResult result, string path, string message)
@@ -154,11 +154,10 @@ public class RuleValidatorTests
         new() { Name = "Rule", EventType = "Event", Condition = condition, Actions = [.. actions] };
 
     private static ActionDefinition Action(string type, ConditionNode? condition = null, ScheduleMetadata? schedule = null) =>
-        new() { Type = type, Condition = condition, Schedule = schedule };
+        new() { Action = type, Condition = condition, Schedule = schedule };
 
-    private sealed class NoOpAction(string type) : IActionExecutor
+    private sealed class NoOpAction : IActionExecutor
     {
-        public string Type => type;
 
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
             CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success());
