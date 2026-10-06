@@ -13,7 +13,7 @@ The `RuleJsonParser` is a performant, type-safe JSON parser for converting JSON 
 - **Type-Safe**: Automatically detects and deserializes the correct ConditionNode types
 - **Polymorphic**: Handles `PathOperand`, `ValueOperand`, and `OperatorCondition` transparently
 - **Case-Insensitive**: JSON property names (`EventType` or `eventType`) and the names inside a rule — operator
-  names (`"EQ"`), action types (`"Send-Email"`), event types and property paths (`"price"` finds `Price`) — are
+  names (`"EQ"`), action names (`"Send-Email"`), event types and property paths (`"price"` finds `Price`) — are
   matched ignoring case. An exact-case property match wins if a type has properties differing only in case.
   String *values* still compare case-sensitively.
 - **Streaming Support**: Supports both string and stream-based parsing for large rule sets
@@ -83,7 +83,7 @@ var json = """
   },
   "actions": [
     {
-      "type": "log",
+      "action": "log",
       "parameters": { "message": "Price changed!" }
     }
   ]
@@ -210,7 +210,7 @@ foreach (var error in result.Errors)
     Console.WriteLine($"{error.Path}: {error.Message}");   // e.g. "$.condition.operands[1].operator: Unknown operator 'gt'."
 ```
 
-`RuleValidator` reports every problem at once: unknown operators, too few or too many operands, unknown action types,
+`RuleValidator` reports every problem at once: unknown operators, too few or too many operands, unknown actions,
 and `Delay`/`Advance` schedules without `amount` or `unit`. It doesn't check property paths.
 
 ## Type Inference Rules

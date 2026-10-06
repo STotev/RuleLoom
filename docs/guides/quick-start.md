@@ -133,7 +133,7 @@ await engine.ExecuteAsync(
   },
   "actions": [
     {
-      "type": "log",
+      "action": "log",
       "parameters": {
         "message": "Price changed!"
       }
@@ -281,7 +281,7 @@ Logs a message to the console.
 
 ```json
 {
-  "type": "log",
+  "action": "log",
   "parameters": {
     "message": "Your message here"
   }
@@ -294,7 +294,7 @@ Actions can have their own conditions:
 
 ```json
 {
-  "type": "log",
+  "action": "log",
   "parameters": {
     "message": "Only if status is error"
   },
@@ -360,7 +360,6 @@ using RuleForge.Abstractions.Action;
 
 public class SendEmailAction : IActionExecutor
 {
-    public string Type => "send-email";
 
     public async Task ExecuteAsync(ActionDefinition action, EvaluationContext context)
     {
@@ -388,7 +387,7 @@ var actions = new List<IActionExecutor>
 
 ```json
 {
-  "type": "send-email",
+  "action": "send-email",
   "parameters": {
     "to": "admin@example.com",
     "subject": "Alert",

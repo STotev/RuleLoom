@@ -115,7 +115,7 @@ RuleEngineResult result =
   },
   "actions": [
     {
-      "type": "log",
+      "action": "log",
       "parameters": {
         "message": "High value property updated!"
       }
@@ -239,11 +239,13 @@ Register it alongside the built-ins: `new ConditionEvaluator([new EqualsOperator
 
 ### Custom Action
 
-```csharp
-public class SendEmailAction : IActionExecutor
-{
-    public string Type => "send-email";
+Rules refer to an action by the name it's registered under. By default that's the class name without an `Action`
+suffix, in kebab-case (`SendEmailAction` → `send-email`); `[ActionName("notify")]` on the class changes the default,
+and a name given at registration overrides both.
 
+```csharp
+public class SendEmailAction : IActionExecutor          // "action": "send-email"
+{
     public async Task<ActionResult> ExecuteAsync(
         ActionDefinition action,
         EvaluationContext context,
@@ -258,6 +260,10 @@ public class SendEmailAction : IActionExecutor
         return ActionResult.Success();
     }
 }
+
+var actions = new DirectActionExecutorFactory()
+    .Add(new SendEmailAction())             // registered as "send-email"
+    .Add(new SendEmailAction(), "notify");  // ...and under another name
 ```
 
 ---
@@ -350,8 +356,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
     "operands": [{ "path": "CustomerTier" }, { "value": "VIP" }]
   },
   "actions": [
-    { "type": "send-email", "parameters": { "template": "vip-welcome" } },
-    { "type": "apply-discount", "parameters": { "percentage": 10 } }
+    { "action": "send-email", "parameters": { "template": "vip-welcome" } },
+    { "action": "apply-discount", "parameters": { "percentage": 10 } }
   ]
 }
 ```
@@ -369,7 +375,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
     ]
   },
   "actions": [
-    { "type": "notify-manager", "parameters": { "urgency": "high" } }
+    { "action": "notify-manager", "parameters": { "urgency": "high" } }
   ]
 }
 ```
@@ -387,7 +393,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
     ]
   },
   "actions": [
-    { "type": "create-approval-task", "parameters": { "approver": "manager" } }
+    { "action": "create-approval-task", "parameters": { "approver": "manager" } }
   ]
 }
 ```
