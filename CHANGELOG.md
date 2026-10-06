@@ -4,6 +4,33 @@ All notable changes to this project are documented in this file. It is generated
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/) — do not edit it by hand.
 
+## [0.3.0](https://github.com/STotev/RuleForge/compare/v0.2.1...v0.3.0) (2026-10-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* add RuleValidator for rules against registered operators and actions ([#51](https://github.com/STotev/RuleForge/issues/51))
+* select state with $current and $previous path prefixes ([#50](https://github.com/STotev/RuleForge/issues/50))
+* parse action parameters as CLR values and add GetParameter<T> ([#49](https://github.com/STotev/RuleForge/issues/49))
+* accept only ISO 8601 strings for schedule ReferencePath ([#48](https://github.com/STotev/RuleForge/issues/48))
+* match operator, action, event and property names ignoring case ([#47](https://github.com/STotev/RuleForge/issues/47))
+* replace the operator signature with OperatorContext ([#45](https://github.com/STotev/RuleForge/issues/45))
+* return complete, structured results from RuleEngine ([#44](https://github.com/STotev/RuleForge/issues/44))
+* validate rule JSON structure at parse time ([#43](https://github.com/STotev/RuleForge/issues/43))
+
+### Features
+
+* accept only ISO 8601 strings for schedule ReferencePath ([#48](https://github.com/STotev/RuleForge/issues/48)) ([4ea5fd3](https://github.com/STotev/RuleForge/commit/4ea5fd35b6a00399d61502770f68a2132b26a7f6))
+* add gt, gte, lt and lte operators ([#46](https://github.com/STotev/RuleForge/issues/46)) ([06e8dd7](https://github.com/STotev/RuleForge/commit/06e8dd7c88c455adec345d96c050432a3227caf9))
+* add RuleValidator for rules against registered operators and actions ([#51](https://github.com/STotev/RuleForge/issues/51)) ([60decb7](https://github.com/STotev/RuleForge/commit/60decb7029d52d7f1dd5e6b2111d8bf1323edf79))
+* compare rule values by meaning across CLR types ([#41](https://github.com/STotev/RuleForge/issues/41)) ([b554e73](https://github.com/STotev/RuleForge/commit/b554e73e420824406e3e851588f8e83dc8cc165e))
+* match operator, action, event and property names ignoring case ([#47](https://github.com/STotev/RuleForge/issues/47)) ([ae1f955](https://github.com/STotev/RuleForge/commit/ae1f955e10c89ba78d25c089b3722f2c3ccfaafb))
+* parse action parameters as CLR values and add GetParameter&lt;T&gt; ([#49](https://github.com/STotev/RuleForge/issues/49)) ([2f3af81](https://github.com/STotev/RuleForge/commit/2f3af816c3a3a3ba557ca5dfe078416f33eccc31))
+* replace the operator signature with OperatorContext ([#45](https://github.com/STotev/RuleForge/issues/45)) ([9fa72c3](https://github.com/STotev/RuleForge/commit/9fa72c321e11114b99ab0fbedef392afdc92cd8c))
+* return complete, structured results from RuleEngine ([#44](https://github.com/STotev/RuleForge/issues/44)) ([436fe35](https://github.com/STotev/RuleForge/commit/436fe35c1e2745248c543579c8a26378021dadfc))
+* select state with $current and $previous path prefixes ([#50](https://github.com/STotev/RuleForge/issues/50)) ([72055de](https://github.com/STotev/RuleForge/commit/72055deac909dc07a9630b9f45e3fcac20663e19))
+* validate rule JSON structure at parse time ([#43](https://github.com/STotev/RuleForge/issues/43)) ([cff6252](https://github.com/STotev/RuleForge/commit/cff6252a73669ada49ed1282b927e67fdb864297))
+
 ## [0.2.1](https://github.com/STotev/RuleForge/compare/v0.2.0...v0.2.1) (2026-10-03)
 
 
