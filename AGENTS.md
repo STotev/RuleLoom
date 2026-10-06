@@ -114,7 +114,9 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   segments (exact-case property match wins; ambiguous case-insensitive matches resolve to `null`). Registering
   operators or action types that differ only in case throws. String values stay case-sensitive.
 - **Paths** resolve via `PathResolver` (compiled, cached expressions): `"Price"` = current,
-  `"current.Price"` / `"previous.Price"` explicit. Missing properties resolve to `null`.
+  `"$current.Price"` / `"$previous.Price"` explicit (`EvaluationContext.CurrentVariable`/`PreviousVariable`).
+  Other `$` names are reserved; the parser rejects the old `current.`/`previous.` prefixes with a migration hint.
+  Missing properties resolve to `null`.
 - **Actions** are resolved by `Type` through `IActionExecutorFactory` (`DirectActionExecutorFactory`
   for non-DI use). Built-in action: `log`.
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),

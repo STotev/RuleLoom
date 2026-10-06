@@ -246,8 +246,8 @@ References a property on the current or previous object.
 ```json
 { "path": "PropertyName" }
 { "path": "User.Email" }
-{ "path": "current.Price" }
-{ "path": "previous.Status" }
+{ "path": "$current.Price" }
+{ "path": "$previous.Status" }
 ```
 
 ### ValueOperand
