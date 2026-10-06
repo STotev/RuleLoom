@@ -6,7 +6,8 @@ The single overview of what has been built, what is next, and what is planned bu
 Details live in GitHub issues and in [`specs/`](specs/); this page links to them rather than repeating them.
 
 **Vision**: a library-first rule engine where developers define *what's possible* (operators, actions,
-events, schemas) and end users define *business logic* (JSON rules) — without code changes.
+events, schemas) and end users define *business logic* (JSON rules) — without code changes. How it's meant to be
+deployed and who owns what (core library, optional packages, consumer) is in [`vision.md`](vision.md).
 
 ## How work is planned
 
