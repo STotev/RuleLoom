@@ -1,152 +1,72 @@
 using RuleForge.Abstractions.Rule;
+using RuleForge.Actions;
+using RuleForge.Engine;
+using RuleForge.Evaluators;
+using RuleForge.Operators;
+using RuleForge.Validation;
 
 namespace RuleForge.Samples.Console;
 
 /// <summary>
-/// Example demonstrating the performant RuleJsonParser for parsing JSON rules.
+/// Rules authored as JSON: parsed, validated against the registered operators and actions, then run.
 /// </summary>
-public static class RuleJsonParserExample
+internal static class JsonExample
 {
-    public static void RunExample()
-    {
-        System.Console.WriteLine("=== JSON Rule Parser Example ===\n");
-
-        // Example 1: Simple rule from JSON string
-        var simpleJson = """
-        {
-          "name": "Price change detection",
-          "eventType": "PropertyUpdated",
-          "priority": 1,
-          "condition": {
-            "operator": "changed",
-            "operands": [
-              { "path": "Price" }
-            ]
-          },
-          "actions": [
-            {
-              "action": "log",
-              "parameters": { "message": "Price has changed!" }
-            }
+    private const string Rules = """
+    [
+      {
+        "name": "Listed below estimate",
+        "eventType": "PropertyListed",
+        "priority": 10,
+        "condition": {
+          "operator": "and",
+          "operands": [
+            { "operator": "eq", "operands": [{ "path": "status" }, { "value": "active" }] },
+            { "operator": "lt", "operands": [{ "path": "Price" }, { "path": "EstimatedPrice" }] }
           ]
-        }
-        """;
-
-        try
-        {
-            var rule1 = RuleJsonParser.Parse(simpleJson);
-            System.Console.WriteLine($"✓ Parsed rule: {rule1.Name}");
-            System.Console.WriteLine($"  Event Type: {rule1.EventType}");
-            System.Console.WriteLine($"  Priority: {rule1.Priority}");
-            System.Console.WriteLine($"  Condition Type: {rule1.Condition.GetType().Name}");
-            System.Console.WriteLine($"  Actions: {rule1.Actions.Count}\n");
-        }
-        catch (Exception ex)
-        {
-            System.Console.WriteLine($"✗ Failed to parse rule: {ex.Message}\n");
-        }
-
-        // Example 2: Complex rule with nested conditions
-        var complexJson = """
-        {
-          "name": "High price alert",
-          "eventType": "PropertyUpdated",
-          "priority": 2,
-          "condition": {
-            "operator": "and",
-            "operands": [
-              {
-                "operator": "changed",
-                "operands": [
-                  { "path": "Price" }
-                ]
-              },
-              {
-                "operator": "not",
-                "operands": [
-                  {
-                    "operator": "eq",
-                    "operands": [
-                      { "path": "Price" },
-                      { "value": 1500001 }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          "actions": [
-            {
-              "action": "log",
-              "parameters": { "message": "High price detected!", "severity": "warning" },
-              "condition": {
-                "operator": "or",
-                "operands": [
-                  {
-                    "operator": "eq",
-                    "operands": [
-                      { "path": "Price" },
-                      { "value": 100000 }
-                    ]
-                  },
-                  {
-                    "operator": "eq",
-                    "operands": [
-                      { "path": "Price" },
-                      { "value": 200000 }
-                    ]
-                  }
-                ]
-              }
-            }
-          ]
-        }
-        """;
-
-        try
-        {
-            var rule2 = RuleJsonParser.Parse(complexJson);
-            System.Console.WriteLine($"✓ Parsed complex rule: {rule2.Name}");
-            System.Console.WriteLine($"  Event Type: {rule2.EventType}");
-            System.Console.WriteLine($"  Condition Type: {rule2.Condition.GetType().Name}");
-            System.Console.WriteLine($"  Actions: {rule2.Actions.Count}");
-            System.Console.WriteLine($"  First action condition: {rule2.Actions[0].Condition?.GetType().Name}\n");
-        }
-        catch (Exception ex)
-        {
-            System.Console.WriteLine($"✗ Failed to parse complex rule: {ex.Message}\n");
-        }
-
-        // Example 3: Batch parsing multiple rules
-        var batchJson = """
-        [
-          {
-            "name": "Rule 1",
-            "eventType": "Event1",
-            "condition": { "operator": "changed", "operands": [{ "path": "Field1" }] }
-          },
-          {
-            "name": "Rule 2",
-            "eventType": "Event2",
-            "condition": { "operator": "eq", "operands": [{ "path": "Field2" }, { "value": 42 }] }
-          }
+        },
+        "actions": [
+          { "action": "log", "parameters": { "message": "Bargain listed!" } }
         ]
-        """;
+      },
+      {
+        "name": "Typo in operator",
+        "eventType": "PropertyListed",
+        "condition": { "operator": "greater", "operands": [{ "path": "Price" }, { "value": 1000000 }] },
+        "actions": [{ "action": "send-sms" }]
+      }
+    ]
+    """;
 
-        try
+    public static async Task RunAsync()
+    {
+        var operators = BuiltInOperators.Create();
+        var actions = new DirectActionFactory([new LogAction()]);
+        var validator = new RuleValidator(operators, actions);
+
+        var rules = RuleJsonParser.ParseMany(Rules);
+
+        // Reject invalid rules before running (or saving) them.
+        var valid = new List<RuleDefinition>();
+        foreach (var rule in rules)
         {
-            var rules = RuleJsonParser.ParseMany(batchJson);
-            System.Console.WriteLine($"✓ Parsed {rules.Count} rules from batch");
-            foreach (var rule in rules)
+            var validation = validator.Validate(rule);
+            if (validation.IsValid)
             {
-                System.Console.WriteLine($"  - {rule.Name} ({rule.EventType})");
+                valid.Add(rule);
+                continue;
             }
-            System.Console.WriteLine();
+
+            System.Console.WriteLine($"Rejected '{rule.Name}':");
+            foreach (var error in validation.Errors)
+                System.Console.WriteLine($"  {error.Path}: {error.Message}");
         }
-        catch (Exception ex)
-        {
-            System.Console.WriteLine($"✗ Failed to parse batch: {ex.Message}\n");
-        }
+
+        var engine = new RuleEngine(new ConditionEvaluator(operators), actions);
+        var property = new Property { Address = "2 Oak Road", Price = 390_000m, EstimatedPrice = 420_000m, Status = ListingStatus.Active };
+
+        var result = await engine.ExecuteAsync("PropertyListed", property, valid);
+
+        ResultPrinter.Print("JSON: parse, validate, run", result);
     }
 }
-
