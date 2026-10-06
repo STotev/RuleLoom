@@ -288,9 +288,9 @@ IConditionOperator[] operators =
     new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator(),
     new GreaterThanOperator(), new GreaterThanOrEqualOperator(), new LessThanOperator(), new LessThanOrEqualOperator()
 ];
-IActionExecutor[] actions = [new LogAction()];
+IAction[] actions = [new LogAction()];
 
-var engine = new RuleEngine(new ConditionEvaluator(operators), new DirectActionExecutorFactory(actions));
+var engine = new RuleEngine(new ConditionEvaluator(operators), new DirectActionFactory(actions));
 RuleEngineResult result = await engine.ExecuteAsync(eventType, current, previous, [rule]);
 ```
 

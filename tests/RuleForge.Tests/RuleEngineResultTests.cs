@@ -238,8 +238,8 @@ public class RuleEngineResultTests
         Assert.Equal(string.Empty, captured.ToString());
     }
 
-    private static DirectActionExecutorFactory Factory(params RecordingAction[] actions) =>
-        actions.Aggregate(new DirectActionExecutorFactory(), (factory, action) => factory.Add(action, action.Name));
+    private static DirectActionFactory Factory(params RecordingAction[] actions) =>
+        actions.Aggregate(new DirectActionFactory(), (factory, action) => factory.Add(action, action.Name));
 
     private Task<RuleEngineResult> Execute(RuleDefinition[] rules) =>
         _engine.ExecuteAsync("Event", new { }, rules, TestContext.Current.CancellationToken);
@@ -269,7 +269,7 @@ public class RuleEngineResultTests
         string name,
         ActionResult? result = null,
         Action? onExecute = null,
-        bool returnsNull = false) : IActionExecutor
+        bool returnsNull = false) : IAction
     {
         public int Calls { get; private set; }
         public string Name => name;

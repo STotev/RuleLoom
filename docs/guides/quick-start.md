@@ -77,7 +77,7 @@ var operators = new List<IConditionOperator>
     new NotOperator()
 };
 
-var actions = new List<IActionExecutor>
+var actions = new List<IAction>
 {
     new LogAction()
 };
@@ -358,7 +358,7 @@ var operators = new List<IConditionOperator>
 using RuleForge.Abstractions;
 using RuleForge.Abstractions.Action;
 
-public class SendEmailAction : IActionExecutor
+public class SendEmailAction : IAction
 {
 
     public async Task ExecuteAsync(ActionDefinition action, EvaluationContext context)
@@ -376,7 +376,7 @@ public class SendEmailAction : IActionExecutor
 **Register the action**:
 
 ```csharp
-var actions = new List<IActionExecutor>
+var actions = new List<IAction>
 {
     new LogAction(),
     new SendEmailAction()  // Your custom action
@@ -516,7 +516,7 @@ var operators = new List<IConditionOperator>
 **Solution**: Register the action in your action list:
 
 ```csharp
-var actions = new List<IActionExecutor>
+var actions = new List<IAction>
 {
     new YourAction()  // Add your action here
 };

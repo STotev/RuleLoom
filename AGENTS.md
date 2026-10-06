@@ -119,12 +119,12 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   Other `$` names are reserved (the parser rejects them); `current.`/`previous.` without `$` are plain property names.
   Missing properties resolve to `null`.
 - **Actions** are referenced in rules as `"action": "<name>"` (`ActionDefinition.Action`) and resolved by name through
-  `IActionExecutorFactory` (`DirectActionExecutorFactory` for non-DI use), which also lists its `ActionNames`. Names
+  `IActionFactory` (`DirectActionFactory` for non-DI use), which also lists its `ActionNames`. Names
   belong to the registration: `ActionNames.GetDefaultName(type)` gives `[ActionName]` or the class name minus an
   `Action` suffix in kebab-case; `Add(executor, name)` overrides it. Built-in action: `log`.
 - **DI** (`AddRuleForge`): one shared registry per service collection, so it can be called repeatedly. Operators
   and `IConditionEvaluator` are Singleton (built-ins included; `AddOperator`/`RemoveOperator`/`RemoveBuiltInOperators` apply
-  in call order); actions, `IActionExecutorFactory` (`ServiceProviderActionExecutorFactory`), `RuleEngine` and
+  in call order); actions, `IActionFactory` (`ServiceProviderActionFactory`), `RuleEngine` and
   `RuleValidator` are Scoped. `AddAction<T>(name?)` registers under the default or given name.
 - **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
   `RuleValidator` (`RuleForge.Validation`) checks a rule against the registered operators and actions
@@ -150,7 +150,7 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   `ctx.Test(i)` (condition, lazy; bool paths/values allowed), `ctx.GetPath(i)` (path string); compare with
   `ctx.AreEqual`/`ctx.TryCompare`. Unit-test operators with `new OperatorContext(condition, evaluationContext)`
   (pass an evaluator only when operands are nested operators).
-- **Action**: implement `IActionExecutor` —
+- **Action**: implement `IAction` —
   `Task<ActionResult> ExecuteAsync(ActionDefinition, EvaluationContext, CancellationToken)`; name it by its class
   (`SendEmailAction` → `send-email`) or `[ActionName("...")]`; read parameters with
   `action.GetParameter<T>(name)` / `TryGetParameter<T>` (plain CLR values, converted via `ValueConverter`);

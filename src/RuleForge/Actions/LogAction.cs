@@ -5,7 +5,7 @@ namespace RuleForge.Actions;
 
 using System.Threading;
 
-public sealed class LogAction : IActionExecutor
+public sealed class LogAction : IAction
 {
 
     public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,

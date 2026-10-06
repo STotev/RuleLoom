@@ -23,7 +23,7 @@ public class ActionDefinition
     public ConditionNode? Condition { get; init; }
     
     /// <summary>
-    /// Parameters for the action executor. The structure depends on the action.
+    /// Parameters for the action. The structure depends on the action.
     /// Values are plain CLR values (from JSON: <c>null</c>, <see cref="bool"/>, <see cref="int"/>/<see cref="long"/>/
     /// <see cref="double"/>, <see cref="string"/>, <see cref="List{T}"/> or <see cref="Dictionary{TKey,TValue}"/>).
     /// Read them with <see cref="GetParameter{T}"/> or <see cref="TryGetParameter{T}"/>.

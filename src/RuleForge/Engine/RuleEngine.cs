@@ -9,13 +9,13 @@ namespace RuleForge.Engine;
 
 public sealed class RuleEngine(
     IConditionEvaluator conditionEvaluator,
-    IActionExecutorFactory actionFactory,
+    IActionFactory actionFactory,
     TimeProvider? timeProvider = null)
 {
     private readonly IConditionEvaluator _conditionEvaluator =
         conditionEvaluator ?? throw new ArgumentNullException(nameof(conditionEvaluator));
 
-    private readonly IActionExecutorFactory _actionFactory =
+    private readonly IActionFactory _actionFactory =
         actionFactory ?? throw new ArgumentNullException(nameof(actionFactory));
 
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
@@ -125,20 +125,20 @@ public sealed class RuleEngine(
             }
         }
 
-        if (!_actionFactory.TryGetExecutor(action.Action, out var executor) || executor is null)
+        if (!_actionFactory.TryGetAction(action.Action, out var executor) || executor is null)
         {
-            var ex = new InvalidOperationException($"No action executor is registered for action '{action.Action}'.");
+            var ex = new InvalidOperationException($"No action is registered under the name '{action.Action}'.");
 
             return ActionResult.Failed(ex, $"Action '{action.Action}' is not supported.");
         }
 
         try
         {
-            // Guards against executors that return null despite the non-nullable contract.
+            // Guards against actions that return null despite the non-nullable contract.
             ActionResult? result = await executor.ExecuteAsync(action, context, cancellationToken);
 
             return result ?? ActionResult.Failed(
-                new InvalidOperationException($"The executor for action '{action.Action}' returned no result."),
+                new InvalidOperationException($"Action '{action.Action}' returned no result."),
                 $"Action '{action.Action}' execution failed.");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

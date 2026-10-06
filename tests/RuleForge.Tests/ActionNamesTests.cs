@@ -35,7 +35,7 @@ public class ActionNamesTests
         Assert.ThrowsAny<ArgumentException>(() => new ActionNameAttribute(name));
     }
 
-    private abstract class NoOp : IActionExecutor
+    private abstract class NoOp : IAction
     {
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
             CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success());

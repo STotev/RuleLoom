@@ -146,9 +146,9 @@ var conditions = new List<IConditionOperator>
     new GreaterThanOperator(), new GreaterThanOrEqualOperator(), new LessThanOperator(), new LessThanOrEqualOperator()
 };
 
-var actions = new List<IActionExecutor> { new LogAction() };
+var actions = new List<IAction> { new LogAction() };
 
-var actionFactory = new DirectActionExecutorFactory(actions);
+var actionFactory = new DirectActionFactory(actions);
 var engine = new RuleEngine(new ConditionEvaluator(conditions), actionFactory);
 
 var previousProperty = new Property

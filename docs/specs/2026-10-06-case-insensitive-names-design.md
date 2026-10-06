@@ -50,7 +50,7 @@ only in case.
 
 - `ConditionEvaluatorTests`: operators found in any case; duplicates differing only in case rejected with the
   message above.
-- `DirectActionExecutorFactoryTests`: action types found in any case; duplicates differing only in case rejected.
+- `DirectActionFactoryTests`: action types found in any case; duplicates differing only in case rejected.
 - `RuleEngineTests`: event types match in any case.
 - `PathResolverTests` / `EvaluationContextTests`: segments resolve in any case, nested and scoped; exact case wins
   over a case-insensitive match; ambiguous segments resolve to `null`; indexers are ignored.

@@ -30,7 +30,7 @@ public sealed class RuleForgeBuilder
     /// under several names.
     /// </summary>
     /// <exception cref="ArgumentException">The name is already used by another action (names are case-insensitive).</exception>
-    public RuleForgeBuilder AddAction<TAction>(string? name = null) where TAction : class, IActionExecutor
+    public RuleForgeBuilder AddAction<TAction>(string? name = null) where TAction : class, IAction
     {
         _registry.AddAction(name ?? Abstractions.Action.ActionNames.GetDefaultName(typeof(TAction)), typeof(TAction));
         Services.TryAddScoped<TAction>();

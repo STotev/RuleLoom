@@ -28,7 +28,7 @@ connect to historical docs — they were reused inconsistently between documents
 ## ✅ Done
 
 ### Core foundation
-Abstractions (`ConditionNode`, `IConditionOperator`, `IActionExecutor`), `RuleEngine`, `ConditionEvaluator`,
+Abstractions (`ConditionNode`, `IConditionOperator`, `IAction`), `RuleEngine`, `ConditionEvaluator`,
 `PathResolver` with compiled-expression caching, operators `eq` `changed` `and` `or` `not`, JSON parser,
 `LogAction`.
 
@@ -83,7 +83,7 @@ titles, central package management, issue/PR templates, Claude Code setup (`AGEN
 
 | Issue | Slice | Status |
 |---|---|---|
-| [#5](https://github.com/STotev/RuleForge/issues/5) | DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionExecutorFactory` | In review: [#54](https://github.com/STotev/RuleForge/pull/54) (spec approved) |
+| [#5](https://github.com/STotev/RuleForge/issues/5) | DI extensions: `AddRuleForge()`, `RuleForgeBuilder`, `ServiceProviderActionFactory` | In review: [#54](https://github.com/STotev/RuleForge/pull/54) (spec approved) |
 | [#55](https://github.com/STotev/RuleForge/issues/55) | ✅ Action names by registration (prerequisite for #5) | Merged: [#56](https://github.com/STotev/RuleForge/pull/56) |
 | [#6](https://github.com/STotev/RuleForge/issues/6) | Integration tests, samples, migration guide, doc refresh | Blocked by #5. Includes the **0.3.0 migration guide**, refreshing [`guides/`](guides/) (the quick start is outdated), and wiring up the sample's unused `RuleJsonParserExample` |
 
