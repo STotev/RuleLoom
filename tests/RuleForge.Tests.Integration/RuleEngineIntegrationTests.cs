@@ -643,6 +643,37 @@ public class RuleEngineIntegrationTests
         Assert.Equal(["Within range!"], _logMessages);
     }
 
+    [Fact]
+    public async Task RuleEngine_NamesInAnyCase_MatchRegisteredNames()
+    {
+        // Arrange
+        var json = """
+        {
+          "name": "Shouting rule",
+          "eventType": "LISTINGUPDATED",
+          "condition": {
+            "operator": "AND",
+            "operands": [
+              { "operator": "Gte", "operands": [{ "path": "price" }, { "value": 100 }] },
+              { "operator": "EQ", "operands": [{ "path": "STATUS" }, { "value": "Active" }] }
+            ]
+          },
+          "actions": [
+            { "type": "Test-Log", "parameters": { "message": "Case ignored!" } }
+          ]
+        }
+        """;
+
+        var rule = RuleJsonParser.Parse(json);
+        var listing = new TestListing { Price = 150m, Status = TestListingStatus.Active };
+
+        // Act
+        await _engine.ExecuteAsync("ListingUpdated", listing, [rule], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["Case ignored!"], _logMessages);
+    }
+
     // Helper class for testing
     private class TestLogAction(List<string> messages) : IActionExecutor
     {

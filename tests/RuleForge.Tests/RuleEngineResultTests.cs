@@ -174,6 +174,26 @@ public class RuleEngineResultTests
         Assert.Equal(["This event"], result.Rules.Select(r => r.RuleName));
     }
 
+    [Theory]
+    [InlineData("Event")]
+    [InlineData("event")]
+    [InlineData("EVENT")]
+    public async Task ExecuteAsync_EventTypeInAnyCase_MatchesRules(string eventType)
+    {
+        var result = await _engine.ExecuteAsync(eventType, new { }, [Rule("Fine", Always)], TestContext.Current.CancellationToken);
+
+        Assert.Equal(RuleExecutionStatus.Matched, Assert.Single(result.Rules).Status);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ActionTypeInAnyCase_RunsExecutor()
+    {
+        var result = await Execute([Rule("Shouting", Always, actions: [Action("OK")])]);
+
+        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, Assert.Single(result.Rules[0].ActionResults).Status);
+        Assert.Equal(1, _ok.Calls);
+    }
+
     [Fact]
     public async Task ExecuteAsync_CancelledBeforeStart_ThrowsWithoutRunningActions()
     {
