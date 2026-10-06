@@ -95,7 +95,7 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   → order by Priority descending (higher runs first); cancellation checked before each rule and action
   → per rule (RuleExecutionResult with RuleId, RuleName, Status, Error, ActionResults):
       condition throws → Failed (Error set, no actions)   condition false → NotMatched   true → Matched
-    → per action (ActionResult stamped with ActionType and ActionIndex by the engine):
+    → per action (ActionResult stamped with ActionName and ActionIndex by the engine):
         action condition throws           → Failed (only this action; later actions still run)
         action condition false            → Skipped
         Schedule with Mode != Immediate   → ScheduleCalculator → Scheduled (executor NOT called;
@@ -110,17 +110,19 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 
 - **Conditions** are trees of `ConditionNode`: `OperatorCondition` (operator name + operands),
   `PathOperand`, `ValueOperand`. Built-in operators: `eq`, `changed`, `and`, `or`, `not`, `gt`, `gte`, `lt`, `lte`.
-- **Names ignore case** (`OrdinalIgnoreCase`): operator names, action types, event types and property path
+- **Names ignore case** (`OrdinalIgnoreCase`): operator names, action names, event types and property path
   segments (exact-case property match wins; ambiguous case-insensitive matches resolve to `null`). Registering
-  operators or action types that differ only in case throws. String values stay case-sensitive.
+  operators or action names that differ only in case throws. String values stay case-sensitive.
 - **Paths** resolve via `PathResolver` (compiled, cached expressions): `"Price"` = current,
   `"$current.Price"` / `"$previous.Price"` explicit; operators pick a state the same way (`ctx.Resolve("$previous.Price")`).
   Other `$` names are reserved (the parser rejects them); `current.`/`previous.` without `$` are plain property names.
   Missing properties resolve to `null`.
-- **Actions** are resolved by `Type` through `IActionExecutorFactory` (`DirectActionExecutorFactory`
-  for non-DI use), which also lists its `ActionTypes`. Built-in action: `log`.
+- **Actions** are referenced in rules as `"action": "<name>"` (`ActionDefinition.Action`) and resolved by name through
+  `IActionExecutorFactory` (`DirectActionExecutorFactory` for non-DI use), which also lists its `ActionNames`. Names
+  belong to the registration: `ActionNames.GetDefaultName(type)` gives `[ActionName]` or the class name minus an
+  `Action` suffix in kebab-case; `Add(executor, name)` overrides it. Built-in action: `log`.
 - **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
-  `RuleValidator` (`RuleForge.Validation`) checks a rule against the registered operators and action types
+  `RuleValidator` (`RuleForge.Validation`) checks a rule against the registered operators and actions
   (unknown names, operand counts, incomplete schedules), returning every error with a JSONPath location.
   Property paths aren't validated (needs the Schema System).
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
@@ -143,8 +145,9 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   `ctx.Test(i)` (condition, lazy; bool paths/values allowed), `ctx.GetPath(i)` (path string); compare with
   `ctx.AreEqual`/`ctx.TryCompare`. Unit-test operators with `new OperatorContext(condition, evaluationContext)`
   (pass an evaluator only when operands are nested operators).
-- **Action**: implement `IActionExecutor` — kebab-case `Type`,
-  `Task<ActionResult> ExecuteAsync(ActionDefinition, EvaluationContext, CancellationToken)`; read parameters with
+- **Action**: implement `IActionExecutor` —
+  `Task<ActionResult> ExecuteAsync(ActionDefinition, EvaluationContext, CancellationToken)`; name it by its class
+  (`SendEmailAction` → `send-email`) or `[ActionName("...")]`; read parameters with
   `action.GetParameter<T>(name)` / `TryGetParameter<T>` (plain CLR values, converted via `ValueConverter`);
   return `ActionResult.Success()` or `ActionResult.Failed(...)`.
 

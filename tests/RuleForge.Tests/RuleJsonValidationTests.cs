@@ -37,14 +37,14 @@ public class RuleJsonValidationTests
         // Actions
         { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": {} }""", "$.actions" },
         { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [5] }""", "$.actions[0]" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "parameters": {} }] }""", "$.actions[0].type" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log" }, { "type": "" }] }""", "$.actions[1].type" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "parameters": [] }] }""", "$.actions[0].parameters" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "condition": { "path": "Active" } }] }""", "$.actions[0].condition" },
+        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "parameters": {} }] }""", "$.actions[0].action" },
+        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log" }, { "action": "" }] }""", "$.actions[1].action" },
+        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "parameters": [] }] }""", "$.actions[0].parameters" },
+        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "condition": { "path": "Active" } }] }""", "$.actions[0].condition" },
         // Path variables: only $current and $previous
         { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$now" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
         { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$cur.Price" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "schedule": { "mode": "Delay", "amount": 1, "unit": "Hours", "referencePath": "$due" } }] }""", "$.actions[0].schedule.referencePath" }
+        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "schedule": { "mode": "Delay", "amount": 1, "unit": "Hours", "referencePath": "$due" } }] }""", "$.actions[0].schedule.referencePath" }
     };
 
     [Theory]
@@ -93,7 +93,7 @@ public class RuleJsonValidationTests
     public void Parse_ValidRuleWithOptionalPartsOmittedOrNull_Succeeds()
     {
         var rule = RuleJsonParser.Parse(Expand(
-            """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "type": "log", "condition": null }] }"""));
+            """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "condition": null }] }"""));
 
         Assert.Null(Assert.Single(rule.Actions).Condition);
     }

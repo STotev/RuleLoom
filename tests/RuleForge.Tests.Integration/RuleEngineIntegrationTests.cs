@@ -61,7 +61,7 @@ public class RuleEngineIntegrationTests
             [
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "Price matches!" }
                 }
             ]
@@ -99,7 +99,7 @@ public class RuleEngineIntegrationTests
             [
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "Price changed!" }
                 }
             ]
@@ -134,7 +134,7 @@ public class RuleEngineIntegrationTests
             [
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "Price changed!" }
                 }
             ]
@@ -188,7 +188,7 @@ public class RuleEngineIntegrationTests
             [
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "Both conditions met!" }
                 }
             ]
@@ -242,7 +242,7 @@ public class RuleEngineIntegrationTests
             [
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "At least one condition met!" }
                 }
             ]
@@ -287,7 +287,7 @@ public class RuleEngineIntegrationTests
             [
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "Price is not 200000!" }
                 }
             ]
@@ -323,7 +323,7 @@ public class RuleEngineIntegrationTests
                 [
                     new ActionDefinition
                     {
-                        Type = "test-log",
+                        Action = "test-log",
                         Parameters = { ["message"] = "Low" }
                     }
                 ]
@@ -342,7 +342,7 @@ public class RuleEngineIntegrationTests
                 [
                     new ActionDefinition
                     {
-                        Type = "test-log",
+                        Action = "test-log",
                         Parameters = { ["message"] = "High" }
                     }
                 ]
@@ -361,7 +361,7 @@ public class RuleEngineIntegrationTests
                 [
                     new ActionDefinition
                     {
-                        Type = "test-log",
+                        Action = "test-log",
                         Parameters = { ["message"] = "Medium" }
                     }
                 ]
@@ -396,12 +396,12 @@ public class RuleEngineIntegrationTests
             [
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "Action 1 - Always" }
                 },
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "Action 2 - Conditional" },
                     Condition = new OperatorCondition
                     {
@@ -415,7 +415,7 @@ public class RuleEngineIntegrationTests
                 },
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "Action 3 - Conditional" },
                     Condition = new OperatorCondition
                     {
@@ -466,7 +466,7 @@ public class RuleEngineIntegrationTests
             [
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "User in New York!" }
                 }
             ]
@@ -512,7 +512,7 @@ public class RuleEngineIntegrationTests
             [
                 new ActionDefinition
                 {
-                    Type = "test-log",
+                    Action = "test-log",
                     Parameters = { ["message"] = "Should not execute" }
                 }
             ]
@@ -553,7 +553,7 @@ public class RuleEngineIntegrationTests
           },
           "actions": [
             {
-              "type": "test-log",
+              "action": "test-log",
               "parameters": { "message": "JSON rule executed!" }
             }
           ]
@@ -583,7 +583,7 @@ public class RuleEngineIntegrationTests
           "condition": { "operator": "eq", "operands": [{ "path": "Paid" }, { "value": false }] },
           "actions": [
             {
-              "type": "remind",
+              "action": "reminder",
               "parameters": { "amount": 250, "sendAt": "2026-05-01T09:00:00Z", "recipients": ["ada@example.com"] }
             }
           ]
@@ -621,7 +621,7 @@ public class RuleEngineIntegrationTests
             ]
           },
           "actions": [
-            { "type": "test-log", "parameters": { "message": "Typed values matched!" } }
+            { "action": "test-log", "parameters": { "message": "Typed values matched!" } }
           ]
         }
         """;
@@ -657,7 +657,7 @@ public class RuleEngineIntegrationTests
             ]
           },
           "actions": [
-            { "type": "test-log", "parameters": { "message": "Price dropped!" } }
+            { "action": "test-log", "parameters": { "message": "Price dropped!" } }
           ]
         }
         """;
@@ -689,7 +689,7 @@ public class RuleEngineIntegrationTests
             ]
           },
           "actions": [
-            { "type": "test-log", "parameters": { "message": "Within range!" } }
+            { "action": "test-log", "parameters": { "message": "Within range!" } }
           ]
         }
         """;
@@ -722,7 +722,7 @@ public class RuleEngineIntegrationTests
             ]
           },
           "actions": [
-            { "type": "Test-Log", "parameters": { "message": "Case ignored!" } }
+            { "action": "Test-Log", "parameters": { "message": "Case ignored!" } }
           ]
         }
         """;
@@ -740,7 +740,6 @@ public class RuleEngineIntegrationTests
     // Helper class for testing
     private class TestLogAction(List<string> messages) : IActionExecutor
     {
-        public string Type => "test-log";
 
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
         {
@@ -758,8 +757,6 @@ public class RuleEngineIntegrationTests
         public decimal Amount { get; private set; }
         public DateTimeOffset SendAt { get; private set; }
         public IReadOnlyList<object?> Recipients { get; private set; } = [];
-
-        public string Type => "remind";
 
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
         {

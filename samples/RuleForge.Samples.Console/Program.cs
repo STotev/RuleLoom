@@ -24,7 +24,7 @@ var rule = new RuleDefinition
     [
         new ActionDefinition
         {
-            Type = "log",
+            Action = "log",
             Parameters = { ["message"] = "Price is high!" },
             Condition = new OperatorCondition
             {
@@ -62,7 +62,7 @@ var rule2 = new RuleDefinition
     {
         new ActionDefinition
         {
-            Type = "log",
+            Action = "log",
             Parameters = { ["message"] = "Price has changed!" }
         }
     }
@@ -81,7 +81,7 @@ var json = """
   },
   "actions": [
     {
-      "type": "log",
+      "action": "log",
       "parameters": { "message": "Price is high!" },
       "condition": {
         "operator": "not",
@@ -97,7 +97,7 @@ var json = """
       }
     },
     {
-      "type": "invalid.log",
+      "action": "invalid.log",
       "parameters": { "message": "Price is high!" },
       "condition": {
         "operator": "not",
@@ -113,7 +113,7 @@ var json = """
       }
     },
     {
-      "type": "log",
+      "action": "log",
       "parameters": { "message": "Price is high!" },
       "condition": {
         "operator": "not",
@@ -176,13 +176,13 @@ foreach (var ruleResult in result.Rules)
 
     foreach (var actionResult in ruleResult.ActionResults)
     {
-        Console.WriteLine($"  #{actionResult.ActionIndex} '{actionResult.ActionType}' {actionResult.Status}: {actionResult.Message}");
+        Console.WriteLine($"  #{actionResult.ActionIndex} '{actionResult.ActionName}' {actionResult.Status}: {actionResult.Message}");
     }
 }
 
 foreach (var scheduled in result.ScheduledActions)
 {
-    Console.WriteLine($"Scheduled '{scheduled.Action.Type}' from [{scheduled.RuleName}] for {scheduled.Result.ScheduledFor:O}");
+    Console.WriteLine($"Scheduled '{scheduled.Action.Action}' from [{scheduled.RuleName}] for {scheduled.Result.ScheduledFor:O}");
 }
 
 Console.WriteLine($"Has failures: {result.HasFailures}");

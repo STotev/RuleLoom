@@ -25,7 +25,7 @@ public static class RuleJsonParserExample
           },
           "actions": [
             {
-              "type": "log",
+              "action": "log",
               "parameters": { "message": "Price has changed!" }
             }
           ]
@@ -77,7 +77,7 @@ public static class RuleJsonParserExample
           },
           "actions": [
             {
-              "type": "log",
+              "action": "log",
               "parameters": { "message": "High price detected!", "severity": "warning" },
               "condition": {
                 "operator": "or",
