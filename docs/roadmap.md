@@ -86,15 +86,19 @@ titles, central package management, issue/PR templates, Claude Code setup (`AGEN
 
 ---
 
-## 🎯 Next
+## 🎯 Milestones
 
-PRD #1 and PRD #22 are complete. Before choosing the next PRD:
+Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
+becomes a PRD (or a few issues) when it starts; the next one to plan is **0.5**.
 
-1. **Settle the deployment and ownership questions** in [`vision.md`](vision.md): the operations dashboard,
-   snapshotter, event envelope, schema generator and schema REST API, evaluating rules on JSON state, running scheduled
-   actions later, and whether the library offers a rule source abstraction.
-2. **Reorder this roadmap into milestones** (0.5 → 1.0, post-1.0) based on those decisions, and decide the priority
-   (scheduler integration or Schema System first) and when to first publish to NuGet.
+| Milestone | Contents | Notes |
+|---|---|---|
+| **0.5: JSON state & central-service spike** | Path resolution on `JsonElement`, `JsonNode` and `IDictionary<string, object?>`; a central rules-service sample (ASP.NET Core, JSON events with a tenant ID, scheduled actions handed to a scheduler) | The spike decides the **event envelope** and informs the scheduled-action entry point and cancellation |
+| **0.6: Schema System** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder; `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator` | Detail under [Schema & validation](#schema--validation) below |
+| **0.7: Hosting & producer utilities** | `RuleForge.AspNetCore` with `MapRuleForge` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; event envelope as decided in 0.5 | Optional packages; no rule CRUD |
+| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; deterministic `ScheduledAction` key; cancellation/replacement semantics; scheduled-action entry point; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
+| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleForge/issues/27)), XML docs, guides, NuGet package metadata | Publishing is on hold pending a decision |
+| **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; path variables and functions; more operators | Order to be decided |
 
 ---
 
@@ -109,19 +113,20 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 | Pluggable value comparer (`IValueComparer`) | Deferred from #22; built-in rules are fixed for now | PRD #22 Out of Scope |
 | `StopOnFirstMatch` option | Stop after the first matching rule | [old roadmap §1.1.1](archive/roadmap-2026-03.md) |
 | Separate `EvaluationContext` data from path resolution (`IPathResolver`) | Testability | [analysis §6](archive/business-rules-analysis.md) |
-| Path whitelisting for untrusted rules | Security, when end users author rules | [analysis §13](archive/business-rules-analysis.md) |
+| Path whitelisting for untrusted rules | Security, when end users author rules; comes with schema-based validation in **0.6** | [analysis §13](archive/business-rules-analysis.md) |
 | Rule indexing by event type | Performance | [analysis §9](archive/business-rules-analysis.md) |
 
 ### Scheduling follow-ups (deferred from PRD #1)
 | Item | Notes | Source |
 |---|---|---|
-| Scheduler backends (`IScheduler`; Hangfire, Quartz, background service) | RuleForge currently only computes `ScheduledFor` | PRD #1 Out of Scope |
-| Timezone support | UTC-only today; decide together with the time-semantics review below | PRD #1 Out of Scope |
-| `BlockPastEvents` flag; validation of zero/negative `Amount` | Past dates are currently returned as-is | [PRD #1 plan](archive/action-scheduling-di-plan.md) |
+| Scheduler backends (`IScheduler`; Hangfire, Quartz, background service) | RuleForge currently only computes `ScheduledFor`; integration packages are post-1.0 | PRD #1 Out of Scope |
+| Timezone support | UTC-only today; decide together with the time-semantics review below (**0.8**) | PRD #1 Out of Scope |
+| `BlockPastEvents` flag; validation of zero/negative `Amount` | Past dates are currently returned as-is; **0.8** | [PRD #1 plan](archive/action-scheduling-di-plan.md) |
 | Cron / recurring schedules, business-day calculations | | PRD #1 Out of Scope; old roadmap Phase 4.4 |
 
 ### Time semantics review (needs a proper breakdown)
-Keeping the current behaviour for now, but it needs a dedicated discussion and design before 1.0. Raised on
+Scheduled as the first part of **0.8**. Keeping the current behaviour for now, but it needs a dedicated discussion
+and design before 1.0. Raised on
 2026-10-06 while reviewing #33 / PR #48.
 
 **Today**, every date conversion goes through `ValueConverter` (#30) and assumes UTC when no time zone is known:
@@ -172,9 +177,9 @@ parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variab
 - Overlap with **expression support** (e.g. `Price * 1.2 > 100`), which the March analysis also suggested
   ([analysis §7](archive/business-rules-analysis.md)); functions could be its first step or a separate feature.
 
-### Schema & validation (old Phase 1.2)
-`FieldSchema` / `EventSchema` / `ISchemaProvider`, schema-based `IRuleValidator`, JSON export of schemas for
-rule-authoring UIs. Detail: [old roadmap §1.2](archive/roadmap-2026-03.md).
+### Schema & validation
+Scheduled for **0.6**; the design decisions (code-first, fluent builder, runtime registration, `ISchemaStore`,
+catalogue) are in [`vision.md`](vision.md#decided). Earlier sketch: [old roadmap §1.2](archive/roadmap-2026-03.md).
 
 The schema is intended as the single source for:
 - **UI form generation**: fields, types and labels for rule-authoring UIs.
@@ -187,9 +192,10 @@ The schema is intended as the single source for:
   resolution can't traverse today (it follows declared property types).
 
 ### Event system & configuration (old Phase 1.3)
-`IRuleEventPublisher` + `RuleEvent`, in-process publisher, `IRuleRepository` + in-memory implementation,
-fluent `RuleEngineBuilder`. The builder overlaps with #5's `RuleForgeBuilder` — reconcile before starting.
-Detail: [old roadmap §1.3](archive/roadmap-2026-03.md).
+`RuleEvent` became the **event envelope**, decided in the 0.5 spike. `IRuleRepository` is dropped: rule storage is the
+consumer's, and the library defines no rule source ([`vision.md`](vision.md#decided)). Still open: an in-process
+`IRuleEventPublisher`, and a fluent `RuleEngineBuilder` (overlaps with #5's `RuleForgeBuilder`; reconcile before
+starting). Detail: [old roadmap §1.3](archive/roadmap-2026-03.md).
 
 ### Performance & benchmarks — [#27](https://github.com/STotev/RuleForge/issues/27)
 BenchmarkDotNet suite (path resolution, condition evaluation, JSON parsing, engine end-to-end, allocations),
@@ -209,14 +215,14 @@ A **test-helpers package** for consumers (builders for `OperatorContext`, rules 
 reviewing #34; reconsider once plugin authors exist. Source: [OperatorContext spec](specs/2026-10-05-operator-context-design.md) Q3.
 
 ### Rule management (old Phase 3)
-Rule CRUD, versioning and lifecycle (draft/active/archived); rule simulator and evaluation trace;
-multi-tenancy. Detail: [old roadmap Phase 3](archive/roadmap-2026-03.md).
+Rule CRUD and multi-tenancy are the consumer's ([`vision.md`](vision.md#decided)). Still open for the library:
+rule versioning and lifecycle (draft/active/archived) as data in the rule model, a rule simulator and an evaluation
+trace. Detail: [old roadmap Phase 3](archive/roadmap-2026-03.md).
 
 ### Infrastructure & scale (old Phase 4)
-Persistence (EF Core, MongoDB, Redis), distributed events (MassTransit/RabbitMQ), observability —
-structured `ILogger` logging (the engine reports failures only in its results today), OpenTelemetry,
-event-based `IActionExecutionObserver` — and a management REST API.
-Detail: [old roadmap Phase 4](archive/roadmap-2026-03.md).
+Persistence and distributed events (MassTransit/RabbitMQ) are the consumer's. The execution observer hook is in
+**0.8**, the catalogue REST API in **0.7**, and the operations dashboard is post-1.0. Still open: structured `ILogger`
+logging (the engine reports failures only in its results today). Detail: [old roadmap Phase 4](archive/roadmap-2026-03.md).
 
 ---
 
