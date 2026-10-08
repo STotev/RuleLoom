@@ -12,7 +12,7 @@ public class ChangedOperatorTests
     [InlineData(100, 100, false)]
     public void Evaluate_ValueTypeProperty_DetectsChange(int current, int previous, bool expected)
     {
-        var context = new EvaluationContext(new Listing { Price = current }, new Listing { Price = previous });
+        var context = new EvaluationContext(new Order { Price = current }, new Order { Price = previous });
 
         Assert.Equal(expected, Evaluator().Evaluate(context, Op("changed", Path("Price"))));
     }
@@ -23,8 +23,8 @@ public class ChangedOperatorTests
     public void Evaluate_ReferenceTypeProperty_ComparesByValue(string current, string previous, bool expected)
     {
         var context = new EvaluationContext(
-            new Listing { Status = current },
-            new Listing { Status = new string(previous.ToCharArray()) });
+            new Order { Status = current },
+            new Order { Status = new string(previous.ToCharArray()) });
 
         Assert.Equal(expected, Evaluator().Evaluate(context, Op("changed", Path("Status"))));
     }
@@ -35,8 +35,8 @@ public class ChangedOperatorTests
     public void Evaluate_NestedPath_DetectsChange(string current, string previous, bool expected)
     {
         var context = new EvaluationContext(
-            new Listing { Address = new Address { City = current } },
-            new Listing { Address = new Address { City = previous } });
+            new Order { Address = new Address { City = current } },
+            new Order { Address = new Address { City = previous } });
 
         Assert.Equal(expected, Evaluator().Evaluate(context, Op("changed", Path("Address.City"))));
     }
@@ -44,7 +44,7 @@ public class ChangedOperatorTests
     [Fact]
     public void Evaluate_BothValuesNull_ReturnsFalse()
     {
-        var context = new EvaluationContext(new Listing { Status = null }, new Listing { Status = null });
+        var context = new EvaluationContext(new Order { Status = null }, new Order { Status = null });
 
         Assert.False(Evaluator().Evaluate(context, Op("changed", Path("Status"))));
     }
@@ -52,7 +52,7 @@ public class ChangedOperatorTests
     [Fact]
     public void Evaluate_ValueSetFromNull_ReturnsTrue()
     {
-        var context = new EvaluationContext(new Listing { Status = "Active" }, new Listing { Status = null });
+        var context = new EvaluationContext(new Order { Status = "Active" }, new Order { Status = null });
 
         Assert.True(Evaluator().Evaluate(context, Op("changed", Path("Status"))));
     }
@@ -60,7 +60,7 @@ public class ChangedOperatorTests
     [Fact]
     public void Evaluate_NoPreviousState_TreatsPreviousValueAsNull()
     {
-        var context = new EvaluationContext(new Listing { Status = "Active" });
+        var context = new EvaluationContext(new Order { Status = "Active" });
 
         Assert.True(Evaluator().Evaluate(context, Op("changed", Path("Status"))));
     }
@@ -72,8 +72,8 @@ public class ChangedOperatorTests
     [InlineData("$CURRENT.Price")]
     public void Evaluate_ScopedOrUnscopedPath_ComparesCurrentWithPrevious(string path)
     {
-        var changed = new EvaluationContext(new Listing { Price = 100 }, new Listing { Price = 90 });
-        var unchanged = new EvaluationContext(new Listing { Price = 100 }, new Listing { Price = 100 });
+        var changed = new EvaluationContext(new Order { Price = 100 }, new Order { Price = 90 });
+        var unchanged = new EvaluationContext(new Order { Price = 100 }, new Order { Price = 100 });
 
         Assert.True(Evaluator().Evaluate(changed, Op("changed", Path(path))));
         Assert.False(Evaluator().Evaluate(unchanged, Op("changed", Path(path))));
@@ -82,7 +82,7 @@ public class ChangedOperatorTests
     [Fact]
     public void Evaluate_NonPathOperand_Throws()
     {
-        var context = new EvaluationContext(new Listing(), new Listing());
+        var context = new EvaluationContext(new Order(), new Order());
 
         Assert.Throws<InvalidOperationException>(() => Evaluator().Evaluate(context, Op("changed", Value("Price"))));
     }
@@ -94,12 +94,12 @@ public class ChangedOperatorTests
     {
         var context = new OperatorContext(
             Op("changed", Path("Price")),
-            new EvaluationContext(new Listing { Price = current }, new Listing { Price = previous }));
+            new EvaluationContext(new Order { Price = current }, new Order { Price = previous }));
 
         Assert.Equal(expected, new ChangedOperator().Evaluate(context));
     }
 
-    private sealed class Listing
+    private sealed class Order
     {
         public int Price { get; init; }
         public string? Status { get; init; }

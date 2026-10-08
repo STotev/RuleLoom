@@ -7,7 +7,7 @@ namespace RuleForge.Tests;
 
 public class EqualsOperatorTests
 {
-    private static readonly Product Item = new() { Name = "Lamp", Price = 100, EstimatedPrice = 100, Discount = null };
+    private static readonly Product Item = new() { Name = "Lamp", Price = 100, ListPrice = 100, Discount = null };
 
     [Theory]
     [InlineData(100, true)]
@@ -30,7 +30,7 @@ public class EqualsOperatorTests
     [Fact]
     public void Evaluate_TwoPaths_ComparesBothResolvedValues()
     {
-        var result = Evaluator().Evaluate(new EvaluationContext(Item), Op("eq", Path("Price"), Path("EstimatedPrice")));
+        var result = Evaluator().Evaluate(new EvaluationContext(Item), Op("eq", Path("Price"), Path("ListPrice")));
 
         Assert.True(result);
     }
@@ -113,7 +113,7 @@ public class EqualsOperatorTests
     [InlineData("Draft", false)]
     public void Evaluate_EnumPropertyAgainstNameOrNumber_Matches(object value, bool expected)
     {
-        var context = new EvaluationContext(new { Status = ListingStatus.Active });
+        var context = new EvaluationContext(new { Status = ProductStatus.Active });
 
         Assert.Equal(expected, Evaluator().Evaluate(context, Op("eq", Path("Status"), Value(value))));
     }
@@ -125,9 +125,9 @@ public class EqualsOperatorTests
     [InlineData("05/01/2026 12:00", false)]
     public void Evaluate_DatePropertyAgainstIsoString_ComparesInstants(string value, bool expected)
     {
-        var context = new EvaluationContext(new { ListedAt = new DateTime(2026, 5, 1, 12, 0, 0, DateTimeKind.Utc) });
+        var context = new EvaluationContext(new { PublishedAt = new DateTime(2026, 5, 1, 12, 0, 0, DateTimeKind.Utc) });
 
-        Assert.Equal(expected, Evaluator().Evaluate(context, Op("eq", Path("ListedAt"), Value(value))));
+        Assert.Equal(expected, Evaluator().Evaluate(context, Op("eq", Path("PublishedAt"), Value(value))));
     }
 
     [Theory]
@@ -140,7 +140,7 @@ public class EqualsOperatorTests
         Assert.Equal(expected, new EqualsOperator().Evaluate(context));
     }
 
-    private enum ListingStatus
+    private enum ProductStatus
     {
         Draft,
         Active
@@ -150,7 +150,7 @@ public class EqualsOperatorTests
     {
         public string Name { get; init; } = string.Empty;
         public int Price { get; init; }
-        public int EstimatedPrice { get; init; }
+        public int ListPrice { get; init; }
         public int? Discount { get; init; }
     }
 }

@@ -30,7 +30,7 @@ public class RuleEngineIntegrationTests
         var rule = new RuleDefinition
         {
             Name = "Price Equals Test",
-            EventType = "PropertyUpdated",
+            EventType = "ProductUpdated",
             Priority = 1,
             Condition = new OperatorCondition
             {
@@ -51,10 +51,10 @@ public class RuleEngineIntegrationTests
             ]
         };
 
-        var property = new { Price = 100000 };
+        var product = new { Price = 100000 };
 
         // Act
-        var result = (await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken)).Rules;
+        var result = (await _engine.ExecuteAsync("ProductUpdated", product, [rule], TestContext.Current.CancellationToken)).Rules;
 
         // Assert
         Assert.Single(_logMessages);
@@ -72,7 +72,7 @@ public class RuleEngineIntegrationTests
         var rule = new RuleDefinition
         {
             Name = "Price Changed Test",
-            EventType = "PropertyUpdated",
+            EventType = "ProductUpdated",
             Priority = 1,
             Condition = new OperatorCondition
             {
@@ -93,7 +93,7 @@ public class RuleEngineIntegrationTests
         var current = new { Price = 150000 };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", current, previous, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", current, previous, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -107,7 +107,7 @@ public class RuleEngineIntegrationTests
         var rule = new RuleDefinition
         {
             Name = "Price Changed Test",
-            EventType = "PropertyUpdated",
+            EventType = "ProductUpdated",
             Priority = 1,
             Condition = new OperatorCondition
             {
@@ -128,7 +128,7 @@ public class RuleEngineIntegrationTests
         var current = new { Price = 100000 };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", current, previous, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", current, previous, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(_logMessages);
@@ -141,7 +141,7 @@ public class RuleEngineIntegrationTests
         var rule = new RuleDefinition
         {
             Name = "Price And Status Test",
-            EventType = "PropertyUpdated",
+            EventType = "ProductUpdated",
             Priority = 1,
             Condition = new OperatorCondition
             {
@@ -178,10 +178,10 @@ public class RuleEngineIntegrationTests
             ]
         };
 
-        var property = new { Price = 100000, Status = "Active" };
+        var product = new { Price = 100000, Status = "Active" };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", product, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -195,7 +195,7 @@ public class RuleEngineIntegrationTests
         var rule = new RuleDefinition
         {
             Name = "Price Or Status Test",
-            EventType = "PropertyUpdated",
+            EventType = "ProductUpdated",
             Priority = 1,
             Condition = new OperatorCondition
             {
@@ -232,10 +232,10 @@ public class RuleEngineIntegrationTests
             ]
         };
 
-        var property = new { Price = 100000, Status = "Active" };
+        var product = new { Price = 100000, Status = "Active" };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", product, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -249,7 +249,7 @@ public class RuleEngineIntegrationTests
         var rule = new RuleDefinition
         {
             Name = "Not Test",
-            EventType = "PropertyUpdated",
+            EventType = "ProductUpdated",
             Priority = 1,
             Condition = new OperatorCondition
             {
@@ -277,10 +277,10 @@ public class RuleEngineIntegrationTests
             ]
         };
 
-        var property = new { Price = 100000 };
+        var product = new { Price = 100000 };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", product, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -369,7 +369,7 @@ public class RuleEngineIntegrationTests
         var rule = new RuleDefinition
         {
             Name = "Conditional Action Test",
-            EventType = "PropertyUpdated",
+            EventType = "ProductUpdated",
             Priority = 1,
             Condition = new OperatorCondition
             {
@@ -414,10 +414,10 @@ public class RuleEngineIntegrationTests
             ]
         };
 
-        var property = new { Status = "Active" };
+        var product = new { Status = "Active" };
 
         // Act
-        var result = (await _engine.ExecuteAsync("PropertyUpdated", property, [rule], TestContext.Current.CancellationToken)).Rules;
+        var result = (await _engine.ExecuteAsync("ProductUpdated", product, [rule], TestContext.Current.CancellationToken)).Rules;
 
         // Assert
         Assert.Equal(2, _logMessages.Count);
@@ -517,7 +517,7 @@ public class RuleEngineIntegrationTests
         var json = """
         {
           "name": "JSON Rule Test",
-          "eventType": "PropertyUpdated",
+          "eventType": "ProductUpdated",
           "priority": 5,
           "condition": {
             "operator": "and",
@@ -549,7 +549,7 @@ public class RuleEngineIntegrationTests
         var current = new { Price = 150000, Status = "Active" };
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", current, previous, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", current, previous, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(_logMessages);
@@ -595,13 +595,13 @@ public class RuleEngineIntegrationTests
         var json = """
         {
           "name": "Typed values",
-          "eventType": "ListingUpdated",
+          "eventType": "ProductUpdated",
           "condition": {
             "operator": "and",
             "operands": [
               { "operator": "eq", "operands": [{ "path": "Price" }, { "value": 100 }] },
               { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "active" }] },
-              { "operator": "eq", "operands": [{ "path": "ListedAt" }, { "value": "2026-05-01T14:00:00+02:00" }] }
+              { "operator": "eq", "operands": [{ "path": "PublishedAt" }, { "value": "2026-05-01T14:00:00+02:00" }] }
             ]
           },
           "actions": [
@@ -611,15 +611,15 @@ public class RuleEngineIntegrationTests
         """;
 
         var rule = RuleJsonParser.Parse(json);
-        var listing = new TestListing
+        var product = new TestProduct
         {
             Price = 100.00m,
-            Status = TestListingStatus.Active,
-            ListedAt = new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero)
+            Status = TestProductStatus.Active,
+            PublishedAt = new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero)
         };
 
         // Act
-        await _engine.ExecuteAsync("ListingUpdated", listing, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", product, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["Typed values matched!"], _logMessages);
@@ -707,7 +707,7 @@ public class RuleEngineIntegrationTests
         var json = """
         {
           "name": "Price dropped",
-          "eventType": "PropertyUpdated",
+          "eventType": "ProductUpdated",
           "condition": {
             "operator": "and",
             "operands": [
@@ -724,8 +724,8 @@ public class RuleEngineIntegrationTests
         var rule = RuleJsonParser.Parse(json);
 
         // Act
-        await _engine.ExecuteAsync("PropertyUpdated", new { Price = 90 }, new { Price = 100 }, [rule], TestContext.Current.CancellationToken);
-        await _engine.ExecuteAsync("PropertyUpdated", new { Price = 110 }, new { Price = 100 }, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", new { Price = 90 }, new { Price = 100 }, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", new { Price = 110 }, new { Price = 100 }, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["Price dropped!"], _logMessages);
@@ -738,13 +738,13 @@ public class RuleEngineIntegrationTests
         var json = """
         {
           "name": "Affordable and recent",
-          "eventType": "ListingUpdated",
+          "eventType": "ProductUpdated",
           "condition": {
             "operator": "and",
             "operands": [
               { "operator": "gte", "operands": [{ "path": "Price" }, { "value": 100 }] },
               { "operator": "lt", "operands": [{ "path": "Price" }, { "value": 250.5 }] },
-              { "operator": "gt", "operands": [{ "path": "ListedAt" }, { "value": "2026-04-30" }] }
+              { "operator": "gt", "operands": [{ "path": "PublishedAt" }, { "value": "2026-04-30" }] }
             ]
           },
           "actions": [
@@ -754,12 +754,12 @@ public class RuleEngineIntegrationTests
         """;
 
         var rule = RuleJsonParser.Parse(json);
-        var inRange = new TestListing { Price = 100m, ListedAt = new DateTimeOffset(2026, 5, 1, 9, 0, 0, TimeSpan.Zero) };
-        var tooExpensive = new TestListing { Price = 250.5m, ListedAt = inRange.ListedAt };
+        var inRange = new TestProduct { Price = 100m, PublishedAt = new DateTimeOffset(2026, 5, 1, 9, 0, 0, TimeSpan.Zero) };
+        var tooExpensive = new TestProduct { Price = 250.5m, PublishedAt = inRange.PublishedAt };
 
         // Act
-        await _engine.ExecuteAsync("ListingUpdated", inRange, [rule], TestContext.Current.CancellationToken);
-        await _engine.ExecuteAsync("ListingUpdated", tooExpensive, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", inRange, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", tooExpensive, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["Within range!"], _logMessages);
@@ -772,7 +772,7 @@ public class RuleEngineIntegrationTests
         var json = """
         {
           "name": "Shouting rule",
-          "eventType": "LISTINGUPDATED",
+          "eventType": "PRODUCTUPDATED",
           "condition": {
             "operator": "AND",
             "operands": [
@@ -787,10 +787,10 @@ public class RuleEngineIntegrationTests
         """;
 
         var rule = RuleJsonParser.Parse(json);
-        var listing = new TestListing { Price = 150m, Status = TestListingStatus.Active };
+        var product = new TestProduct { Price = 150m, Status = TestProductStatus.Active };
 
         // Act
-        await _engine.ExecuteAsync("ListingUpdated", listing, [rule], TestContext.Current.CancellationToken);
+        await _engine.ExecuteAsync("ProductUpdated", product, [rule], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["Case ignored!"], _logMessages);
@@ -845,14 +845,14 @@ public class RuleEngineIntegrationTests
         public string ZipCode { get; set; } = string.Empty;
     }
 
-    private class TestListing
+    private class TestProduct
     {
         public decimal Price { get; set; }
-        public TestListingStatus Status { get; set; }
-        public DateTimeOffset ListedAt { get; set; }
+        public TestProductStatus Status { get; set; }
+        public DateTimeOffset PublishedAt { get; set; }
     }
 
-    private enum TestListingStatus
+    private enum TestProductStatus
     {
         Draft,
         Active

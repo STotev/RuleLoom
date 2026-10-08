@@ -14,7 +14,7 @@ public class RuleJsonParserTests
             """
             {
               "name": "Test Rule",
-              "eventType": "PropertyUpdated",
+              "eventType": "OrderUpdated",
               "priority": 1,
               "condition": { "operator": "changed", "operands": [{ "path": "Price" }] },
               "actions": []
@@ -25,7 +25,7 @@ public class RuleJsonParserTests
 
         Assert.NotNull(rule);
         Assert.Equal("Test Rule", rule.Name);
-        Assert.Equal("PropertyUpdated", rule.EventType);
+        Assert.Equal("OrderUpdated", rule.EventType);
         Assert.Equal(1, rule.Priority);
         var condition = Assert.IsType<OperatorCondition>(rule.Condition);
         Assert.Equal("Price", Assert.IsType<PathOperand>(Assert.Single(condition.Operands)).Path);
