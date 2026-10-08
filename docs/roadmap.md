@@ -100,6 +100,15 @@ becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66.
 | **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleForge/issues/27)), XML docs, guides, NuGet package metadata | Publishing is on hold pending a decision |
 | **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; path variables and functions; more operators | Order to be decided |
 
+### 0.5 — PRD [#66](https://github.com/STotev/RuleForge/issues/66)
+
+| Issue | Slice | Type | PR | Spec |
+|---|---|---|---|---|
+| [#68](https://github.com/STotev/RuleForge/issues/68) | Resolve paths on JSON state (`JsonElement`, `JsonNode`) | AFK | — | [json-state-paths](specs/2026-10-09-json-state-paths-design.md) |
+| [#69](https://github.com/STotev/RuleForge/issues/69) | ISO date strings compared as instants; `changed` via `ValueComparer` | AFK | — | — |
+| [#70](https://github.com/STotev/RuleForge/issues/70) | Central rules-service sample (spike) | HITL | — | — |
+| [#71](https://github.com/STotev/RuleForge/issues/71) | Spike findings and event envelope decision | HITL | — | — |
+
 ---
 
 ## 📋 Backlog — not yet scheduled
@@ -188,8 +197,8 @@ The schema is intended as the single source for:
 - **Path cache**: pre-warm or bound the shared accessor cache (#15) to schema paths, possibly as a DI registration
   option. Today the cache grows with every distinct (type, path), which is fine while rules are developer-authored.
 - **Typed JSON values**: produce real dates and numbers at parse time; #22's ISO-string coercion becomes a fallback.
-- **Declared-type limits**: describe payloads whose properties are declared as `object` or an interface, which path
-  resolution can't traverse today (it follows declared property types).
+- **Declared-type limits**: describe payloads whose properties are declared as `object` or an interface. Path
+  resolution follows their runtime values since #68, but a schema still can't know their fields from the declared type.
 
 ### Event system & configuration (old Phase 1.3)
 `RuleEvent` became the **event envelope**, decided in the 0.5 spike. `IRuleRepository` is dropped: rule storage is the

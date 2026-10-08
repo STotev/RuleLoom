@@ -65,3 +65,13 @@ state: `eq`, `gt`/`lt` on numbers, `$previous` comparisons, an action condition,
   `JsonDocument` alive). #69 adds how ISO date strings compare.
 - `AGENTS.md`: the paths note mentions JSON state and the runtime hand-off.
 - `docs/roadmap.md`: the 0.5 slice table (#68–#71).
+
+## Deviations
+
+- **`JsonValue` never wraps an object or array.** System.Text.Json rejects `JsonValue.Create` for object and array
+  elements, so the walker only descends through `JsonObject`; a `JsonValue` is always a leaf. The planned test for
+  "a `JsonValue` wrapping an object element" was dropped; parsed `JsonNode` roots cover element-backed values.
+- **Property lookup is instance-only.** Property matching used `Type.GetProperty(name)`, which also finds static
+  properties and throws on hidden members (`new`); the old per-path `try/catch` turned both into `null`. With prefix
+  accessors that catch no longer wraps the whole build, so lookup now considers public instance properties only, and
+  two exact-name matches (a hidden member) count as ambiguous → `null`. Same results as before.
