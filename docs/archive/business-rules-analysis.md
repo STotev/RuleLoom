@@ -315,7 +315,7 @@ public async Task RuleEngine_CompleteFlow_ExecutesCorrectly()
     var rules = RuleJsonParser.ParseMany("""
         [{
             "name": "Price Change Alert",
-            "eventType": "PropertyUpdated",
+            "eventType": "ProductUpdated",
             "priority": 1,
             "condition": {
                 "operator": "changed",
@@ -329,11 +329,11 @@ public async Task RuleEngine_CompleteFlow_ExecutesCorrectly()
     """);
 
     var engine = CreateRuleEngine();
-    var oldState = new Property { Price = 100 };
-    var newState = new Property { Price = 200 };
+    var oldState = new Product { Price = 100 };
+    var newState = new Product { Price = 200 };
 
     // Act
-    await engine.ExecuteAsync("PropertyUpdated", newState, oldState, rules);
+    await engine.ExecuteAsync("ProductUpdated", newState, oldState, rules);
 
     // Assert
     // Verify log action was called
@@ -444,7 +444,7 @@ await Task.WhenAll(rule.Actions
 ```csharp
 var rule = RuleBuilder.Create()
     .Named("High Price Alert")
-    .ForEvent("PropertyUpdated")
+    .ForEvent("ProductUpdated")
     .WithPriority(1)
     .When(c => c.Path("Price").Changed())
     .Execute(a => a.Log("Price changed!"))

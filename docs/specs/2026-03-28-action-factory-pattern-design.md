@@ -218,7 +218,7 @@ new RuleEngine(conditionEvaluator, new DirectActionExecutorFactory(actions))
 - Add result assertions to existing tests. At minimum:
 
 ```csharp
-var result = await _engine.ExecuteAsync("PropertyUpdated", property, [rule]);
+var result = await _engine.ExecuteAsync("ProductUpdated", product, [rule]);
 
 Assert.Single(result.ActionResults);
 Assert.Equal(ActionExecutionStatus.ExecutedImmediately, result.ActionResults[0].Result.Status);
