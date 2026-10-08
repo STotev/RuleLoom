@@ -52,7 +52,7 @@ For schemas the reference is Swagger / Swashbuckle: schemas generated at runtime
 
 | Topic | Decision | Why |
 |---|---|---|
-| **Rule storage** | The consumer's responsibility. The engine takes the rules to run as input (`ExecuteAsync(eventType, current, previous, rules)`) | Storage needs differ per system. Example: the maintainer's own system has firms (tenants); rules are stored per tenant and every event carries a tenant ID. Not every integration has tenants, so the library shouldn't assume a storage or tenancy model |
+| **Rule storage** | The consumer's responsibility. The engine takes the rules to run as input (`ExecuteAsync(eventType, current, previous, rules)`) | Storage needs differ per system. Example: in a multi-tenant SaaS system, rules are stored per customer organisation and every event carries a tenant ID. Not every integration has tenants, so the library shouldn't assume a storage or tenancy model |
 | **Multi-tenancy** | The consumer's responsibility (which rules apply to which tenant, and how tenant IDs travel with events) | Same reason |
 | **Rule source abstraction** | None. Rules stay an `ExecuteAsync` parameter; an interface is added only if a library feature must load rules itself | Consumers load rules fresh per event anyway (so newly added rules apply on the next trigger). An `IRuleSource` would move the same query into a class and push tenancy into ambient DI, for no gain; procedural callers keep the plain call |
 | **Scheduling dispatch** | The engine computes *when* (`ScheduledFor`) and returns `ScheduledActions` with their definitions; running them later is up to the consumer's scheduler (Hangfire, Quartz, …). Integration packages would help but aren't required | Consumers already run schedulers; RuleForge shouldn't force one |
@@ -92,7 +92,7 @@ Decided so far:
 - **State:** the consumer chooses — pass the event-time JSON snapshot or reload fresh state; the entry point just
   takes current/previous.
 - **Cancel key:** `ScheduledAction` gets a deterministic key (rule ID + action index + an optional key path from the
-  event, e.g. `ViewingId`), so consumers can upsert or cancel jobs in Hangfire/Quartz.
+  event, e.g. `InvoiceId`), so consumers can upsert or cancel jobs in Hangfire/Quartz.
 
 Leaning, to confirm in the spike:
 - **Entry point:** an engine method such as `ExecuteScheduledAsync(scheduledAction, current, previous?, rule?)` that
