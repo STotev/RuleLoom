@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using RuleForge.Abstractions;
 using RuleForge.Abstractions.Action;
 using RuleForge.Abstractions.Condition;
@@ -795,6 +797,101 @@ public class RuleEngineIntegrationTests
         // Assert
         Assert.Equal(["Case ignored!"], _logMessages);
     }
+
+    public static TheoryData<string> JsonStateKinds() => ["JsonElement", "JsonNode"];
+
+    [Theory]
+    [MemberData(nameof(JsonStateKinds))]
+    public async Task RuleEngine_JsonState_EvaluatesConditionsWithPreviousState(string kind)
+    {
+        // Arrange
+        var json = """
+        {
+          "name": "VIP order shipped",
+          "eventType": "OrderUpdated",
+          "condition": {
+            "operator": "and",
+            "operands": [
+              { "operator": "changed", "operands": [{ "path": "Status" }] },
+              { "operator": "eq", "operands": [{ "path": "status" }, { "value": "Shipped" }] },
+              { "operator": "eq", "operands": [{ "path": "$previous.Status" }, { "value": "Placed" }] },
+              { "operator": "gte", "operands": [{ "path": "Total" }, { "value": 89.9 }] },
+              { "operator": "lt", "operands": [{ "path": "Lines" }, { "value": 10 }] },
+              { "path": "Customer.Verified" }
+            ]
+          },
+          "actions": [
+            { "action": "test-log", "parameters": { "message": "Shipped" } },
+            {
+              "action": "test-log",
+              "parameters": { "message": "VIP" },
+              "condition": { "operator": "eq", "operands": [{ "path": "Customer.Tier" }, { "value": "VIP" }] }
+            },
+            {
+              "action": "test-log",
+              "parameters": { "message": "Basic" },
+              "condition": { "operator": "eq", "operands": [{ "path": "Customer.Tier" }, { "value": "Basic" }] }
+            }
+          ]
+        }
+        """;
+
+        var current = ParseState(kind, """
+            { "Status": "Shipped", "Total": 89.90, "Lines": 2, "Customer": { "Tier": "VIP", "Verified": true } }
+            """);
+        var previous = ParseState(kind, """
+            { "Status": "Placed", "Total": 89.90, "Lines": 2, "Customer": { "Tier": "VIP", "Verified": true } }
+            """);
+
+        // Act
+        var result = await _engine.ExecuteAsync(
+            "OrderUpdated", current, previous, [RuleJsonParser.Parse(json)], TestContext.Current.CancellationToken);
+
+        // Assert
+        var rule = Assert.Single(result.Rules);
+        Assert.Equal(RuleExecutionStatus.Matched, rule.Status);
+        Assert.Equal(
+            [ActionExecutionStatus.ExecutedImmediately, ActionExecutionStatus.ExecutedImmediately, ActionExecutionStatus.Skipped],
+            rule.ActionResults.Select(a => a.Status));
+        Assert.Equal(["Shipped", "VIP"], _logMessages);
+    }
+
+    [Theory]
+    [MemberData(nameof(JsonStateKinds))]
+    public async Task RuleEngine_JsonStateWithIsoDate_SchedulesFromReferencePath(string kind)
+    {
+        // Arrange
+        var json = """
+        {
+          "name": "Invoice issued",
+          "eventType": "InvoiceIssued",
+          "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Open" }] },
+          "actions": [
+            {
+              "action": "test-log",
+              "parameters": { "message": "Payment due soon" },
+              "schedule": { "mode": "Advance", "amount": 2, "unit": "Days", "referencePath": "DueAt" }
+            }
+          ]
+        }
+        """;
+
+        var invoice = ParseState(kind, """{ "Status": "Open", "DueAt": "2026-10-24T11:00:00+02:00" }""");
+
+        // Act
+        var result = await _engine.ExecuteAsync("InvoiceIssued", invoice, [RuleJsonParser.Parse(json)], TestContext.Current.CancellationToken);
+
+        // Assert
+        var scheduled = Assert.Single(result.ScheduledActions);
+        Assert.Equal(new DateTimeOffset(2026, 10, 22, 9, 0, 0, TimeSpan.Zero), scheduled.Result.ScheduledFor);
+        Assert.Empty(_logMessages);
+    }
+
+    private static object ParseState(string kind, string json) => kind switch
+    {
+        "JsonElement" => JsonSerializer.Deserialize<object>(json)!,
+        _ => JsonNode.Parse(json)!
+    };
 
     // Helper class for testing
     private class TestLogAction(List<string> messages) : IAction

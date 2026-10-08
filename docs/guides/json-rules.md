@@ -236,6 +236,44 @@ Other names starting with `$` are reserved and rejected. Without the `$`, `curre
 property names, so a property called `Previous` is simply `"Previous.X"`. `changed` compares current with previous
 whichever way its path is written: `Price`, `$current.Price` and `$previous.Price` are equivalent.
 
+Paths follow the **runtime** value: a property declared as `object`, an interface or a base type is read through
+whatever it holds, including JSON.
+
+## Rules on JSON State
+
+The state doesn't have to be a .NET class. Rules run on JSON as System.Text.Json gives it to you without a class:
+a `JsonElement` (from `JsonDocument`, `JsonSerializer.Deserialize<object>`, or an ASP.NET Core body bound to
+`object`/`JsonElement`) or a `JsonNode` (`JsonNode.Parse`, `JsonObject`). JSON can also sit inside a .NET object,
+e.g. an envelope with a `JsonElement Payload` or `object Payload` property (`"Payload.Customer.Name"`).
+
+```csharp
+using var document = JsonDocument.Parse(requestBody);
+var result = await engine.ExecuteAsync("OrderUpdated", document.RootElement, previousElement, rules);
+```
+
+**Keys** match like property names: an exact-case key wins; otherwise a single case-insensitive match is used. If
+several keys match ignoring case (`"price"` and `"Price"` for `PRICE`), or the same key appears twice, the path
+resolves to `null`.
+
+**Values** are turned into plain .NET values, so every operator, action parameter and schedule works as usual:
+
+| JSON | Resolves to |
+|---|---|
+| String | `string` (dates stay strings; ISO 8601 strings still work as a schedule `referencePath`) |
+| `true` / `false` | `bool` (usable directly as a condition) |
+| Integral number (`42`) | `long` |
+| Other number (`19.99`, `1.0`, `1e2`) | `decimal` (exact), or `double` beyond `decimal`'s range; `null` beyond `double`'s |
+| `null`, missing key | `null` |
+| Object, array | the JSON itself (`JsonElement` or `JsonNode`) |
+
+A `JsonValue` created from a .NET value (`JsonValue.Create(19.99m)`) returns that value unchanged.
+
+**Limits:**
+- Arrays can't be indexed (`Lines.0` and `Lines[0]` resolve to `null`).
+- JSON has no enum or date types: `"Shipped"` compares as a string (case-sensitive), not as an enum.
+- Keep the `JsonDocument` alive until `ExecuteAsync` returns. A `JsonElement` from a disposed document throws
+  `ObjectDisposedException` instead of resolving to `null`.
+
 ## Comparing Values
 
 JSON values are parsed as `int`, `long`, `double`, `string`, `bool` or `null`, while domain properties are often
