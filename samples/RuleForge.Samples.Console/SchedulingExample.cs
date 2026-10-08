@@ -19,28 +19,28 @@ internal static class SchedulingExample
     {
         var rule = new RuleDefinition
         {
-            Name = "Viewing booked",
-            EventType = "ViewingBooked",
+            Name = "Invoice issued",
+            EventType = "InvoiceIssued",
             Condition = new OperatorCondition
             {
                 Operator = "eq",
-                Operands = [new PathOperand { Path = "Status" }, new ValueOperand { Value = "Active" }]
+                Operands = [new PathOperand { Path = "Status" }, new ValueOperand { Value = "Open" }]
             },
             Actions =
             [
-                new ActionDefinition { Action = "log", Parameters = { ["message"] = "Viewing confirmed." } },
+                new ActionDefinition { Action = "log", Parameters = { ["message"] = "Invoice sent." } },
                 new ActionDefinition
                 {
-                    // 2 hours before the viewing.
+                    // 2 days before the due date.
                     Action = "log",
-                    Parameters = { ["message"] = "Reminder: viewing soon." },
-                    Schedule = new ScheduleMetadata { Mode = ScheduleMode.Advance, Amount = 2, Unit = ScheduleUnit.Hours, ReferencePath = "ViewingAt" }
+                    Parameters = { ["message"] = "Reminder: payment due soon." },
+                    Schedule = new ScheduleMetadata { Mode = ScheduleMode.Advance, Amount = 2, Unit = ScheduleUnit.Days, ReferencePath = "DueAt" }
                 },
                 new ActionDefinition
                 {
                     // 1 day after the event.
                     Action = "log",
-                    Parameters = { ["message"] = "Ask for feedback." },
+                    Parameters = { ["message"] = "Confirm the invoice was received." },
                     Schedule = new ScheduleMetadata { Mode = ScheduleMode.Delay, Amount = 1, Unit = ScheduleUnit.Days }
                 }
             ]
@@ -50,15 +50,15 @@ internal static class SchedulingExample
             new ConditionEvaluator(BuiltInOperators.Create()),
             new DirectActionFactory([new LogAction()]));
 
-        var property = new Property
+        var invoice = new Invoice
         {
-            Address = "1 Elm Street",
-            Price = 430_000m,
-            Status = ListingStatus.Active,
-            ViewingAt = new DateTimeOffset(2026, 10, 10, 15, 0, 0, TimeSpan.Zero)
+            Number = "INV-2031",
+            Amount = 1_250m,
+            Status = InvoiceStatus.Open,
+            DueAt = new DateTimeOffset(2026, 10, 24, 9, 0, 0, TimeSpan.Zero)
         };
 
-        var result = await engine.ExecuteAsync("ViewingBooked", property, [rule]);
+        var result = await engine.ExecuteAsync("InvoiceIssued", invoice, [rule]);
 
         ResultPrinter.Print("Scheduling: Delay and Advance", result);
 
