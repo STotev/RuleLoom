@@ -71,7 +71,7 @@ The `RuleJsonParser` is a performant, type-safe JSON parser for converting JSON 
 var json = """
 {
   "name": "High Price Alert",
-  "eventType": "PropertyUpdated",
+  "eventType": "ProductUpdated",
   "priority": 1,
   "condition": {
     "operator": "changed",
@@ -98,7 +98,7 @@ Console.WriteLine($"Rule: {rule.Name}");
 var json = """
 {
   "name": "Complex Rule",
-  "eventType": "PropertyUpdated",
+  "eventType": "ProductUpdated",
   "condition": {
     "operator": "and",
     "operands": [
@@ -280,7 +280,7 @@ An action with a `schedule` isn't run by the engine: it comes back with status `
 (UTC), and `result.ScheduledActions` lists it with its definition so your scheduler can dispatch it.
 
 ```json
-{ "action": "send-email", "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "ViewingAt" } }
+{ "action": "send-email", "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "DueAt" } }
 ```
 
 | Field | Values |

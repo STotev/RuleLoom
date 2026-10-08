@@ -37,7 +37,7 @@ using RuleForge.Operators;
 var rule = new RuleDefinition
 {
     Name = "Price drop",
-    EventType = "PropertyUpdated",
+    EventType = "ProductUpdated",
     Condition = new OperatorCondition
     {
         Operator = "lt",
@@ -50,10 +50,10 @@ var engine = new RuleEngine(
     new ConditionEvaluator(BuiltInOperators.Create()),   // eq, changed, and, or, not, gt, gte, lt, lte
     new DirectActionFactory([new LogAction()]));         // registered as "log"
 
-var previous = new { Price = 470_000m };
-var current = new { Price = 430_000m };
+var previous = new { Price = 120m };
+var current = new { Price = 99m };
 
-RuleEngineResult result = await engine.ExecuteAsync("PropertyUpdated", current, previous, [rule]);
+RuleEngineResult result = await engine.ExecuteAsync("ProductUpdated", current, previous, [rule]);
 ```
 
 The result tells you what happened to every rule for that event:
@@ -73,7 +73,7 @@ Failures are reported in the result, not thrown: one broken rule or action doesn
 ```json
 {
   "name": "Price drop",
-  "eventType": "PropertyUpdated",
+  "eventType": "ProductUpdated",
   "priority": 10,
   "condition": {
     "operator": "and",
@@ -122,8 +122,8 @@ Use `[ActionName("notify")]` on the class for a different default, or give a nam
 An action can have its own `condition` (evaluated after the rule's) and a `schedule`:
 
 ```json
-{ "action": "send-email", "parameters": { "template": "reminder" },
-  "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "ViewingAt" } }
+{ "action": "send-email", "parameters": { "template": "payment-reminder" },
+  "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "DueAt" } }
 ```
 
 Scheduled actions aren't run: they come back as `Scheduled` with `ScheduledFor`, and `result.ScheduledActions` lists

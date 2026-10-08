@@ -20,7 +20,7 @@ public class RuleDefinition
     public required string Name { get; init; }
     
     /// <summary>
-    /// The event type this rule responds to (e.g., "PropertyUpdated", "OrderCreated").
+    /// The event type this rule responds to (e.g., "OrderCreated", "PaymentReceived").
     /// Only rules matching the event type will be evaluated.
     /// </summary>
     public required string EventType { get; init; }

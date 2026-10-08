@@ -55,7 +55,7 @@ using RuleForge.Operators;
 var rule = new RuleDefinition
 {
     Name = "Price Change Alert",
-    EventType = "PropertyUpdated",
+    EventType = "ProductUpdated",
     Priority = 10,
     Condition = new OperatorCondition
     {
@@ -83,7 +83,7 @@ var previousData = new { Price = 100000 };
 var currentData = new { Price = 150000 };
 
 RuleEngineResult result =
-    await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, [rule]);
+    await engine.ExecuteAsync("ProductUpdated", currentData, previousData, [rule]);
 // Output: "Price changed!"
 // result.Rules[0].Status == RuleExecutionStatus.Matched
 // result.Rules[0].ActionResults[0].Status == ActionExecutionStatus.ExecutedImmediately
@@ -94,8 +94,8 @@ RuleEngineResult result =
 
 ```json
 {
-  "name": "High Value Property",
-  "eventType": "PropertyUpdated",
+  "name": "High Value Product",
+  "eventType": "ProductUpdated",
   "priority": 5,
   "condition": {
     "operator": "and",
@@ -117,7 +117,7 @@ RuleEngineResult result =
     {
       "action": "log",
       "parameters": {
-        "message": "High value property updated!"
+        "message": "High value product updated!"
       }
     }
   ]
@@ -127,7 +127,7 @@ RuleEngineResult result =
 ```csharp
 var json = File.ReadAllText("rule.json");
 var rule = RuleJsonParser.Parse(json);
-await engine.ExecuteAsync("PropertyUpdated", currentData, previousData, [rule]);
+await engine.ExecuteAsync("ProductUpdated", currentData, previousData, [rule]);
 ```
 
 ---
@@ -380,16 +380,16 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 }
 ```
 
-### Real Estate
+### Car Marketplace
 ```json
 {
-  "name": "High Value Property Alert",
-  "eventType": "PropertyUpdated",
+  "name": "Premium Car Ad",
+  "eventType": "CarAdUpdated",
   "condition": {
     "operator": "and",
     "operands": [
       { "operator": "changed", "operands": [{ "path": "Price" }] },
-      { "operator": "gt", "operands": [{ "path": "Price" }, { "value": 1000000 }] }
+      { "operator": "gt", "operands": [{ "path": "Price" }, { "value": 100000 }] }
     ]
   },
   "actions": [

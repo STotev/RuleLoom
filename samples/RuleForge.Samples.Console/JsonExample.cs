@@ -15,24 +15,24 @@ internal static class JsonExample
     private const string Rules = """
     [
       {
-        "name": "Listed below estimate",
-        "eventType": "PropertyListed",
+        "name": "Below market value",
+        "eventType": "CarAdPublished",
         "priority": 10,
         "condition": {
           "operator": "and",
           "operands": [
             { "operator": "eq", "operands": [{ "path": "status" }, { "value": "active" }] },
-            { "operator": "lt", "operands": [{ "path": "Price" }, { "path": "EstimatedPrice" }] }
+            { "operator": "lt", "operands": [{ "path": "Price" }, { "path": "MarketValue" }] }
           ]
         },
         "actions": [
-          { "action": "log", "parameters": { "message": "Bargain listed!" } }
+          { "action": "log", "parameters": { "message": "Bargain published!" } }
         ]
       },
       {
         "name": "Typo in operator",
-        "eventType": "PropertyListed",
-        "condition": { "operator": "greater", "operands": [{ "path": "Price" }, { "value": 1000000 }] },
+        "eventType": "CarAdPublished",
+        "condition": { "operator": "greater", "operands": [{ "path": "Price" }, { "value": 50000 }] },
         "actions": [{ "action": "send-sms" }]
       }
     ]
@@ -63,9 +63,9 @@ internal static class JsonExample
         }
 
         var engine = new RuleEngine(new ConditionEvaluator(operators), actions);
-        var property = new Property { Address = "2 Oak Road", Price = 390_000m, EstimatedPrice = 420_000m, Status = ListingStatus.Active };
+        var ad = new CarAd { Title = "2020 Ford Focus", Price = 13_900m, MarketValue = 15_200m, Status = AdStatus.Active };
 
-        var result = await engine.ExecuteAsync("PropertyListed", property, valid);
+        var result = await engine.ExecuteAsync("CarAdPublished", ad, valid);
 
         ResultPrinter.Print("JSON: parse, validate, run", result);
     }

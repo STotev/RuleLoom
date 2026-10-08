@@ -471,9 +471,9 @@ public class InMemoryRuleRepository : IRuleRepository
 ```csharp
 var builder = new RuleEngineBuilder()
     // Register events with schemas
-    .AddEvent("PropertyUpdated", schema => schema
-        .WithDisplayName("Property Updated")
-        .WithField("Price", FieldType.Number, "Property Price")
+    .AddEvent("ProductUpdated", schema => schema
+        .WithDisplayName("Product Updated")
+        .WithField("Price", FieldType.Number, "Product Price")
         .WithField("Status", FieldType.String, "Status"))
 
     // Register operators
@@ -542,7 +542,7 @@ var publisher = builder.BuildPublisher();
 
 **Sample projects**:
 - [ ] `samples/RuleForge.Samples.ECommerce/` - Order processing rules
-- [ ] `samples/RuleForge.Samples.RealEstate/` - Property management rules
+- [ ] `samples/RuleForge.Samples.Ecommerce/` - Order and payment rules
 - [ ] `samples/RuleForge.Samples.MultiTenant/` - Multi-tenant scenario
 
 ---
@@ -583,7 +583,7 @@ services.AddRuleForge(options =>
 **Type-safe, fluent rule construction**:
 ```csharp
 var rule = RuleBuilder
-    .For("PropertyUpdated")
+    .For("ProductUpdated")
     .Named("High Value Alert")
     .WithPriority(10)
     .When(c => c.Path("Price").GreaterThan(1000000))

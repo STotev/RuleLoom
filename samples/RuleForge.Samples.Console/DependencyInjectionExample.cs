@@ -13,17 +13,17 @@ internal static class DependencyInjectionExample
 {
     private const string Rule = """
     {
-      "name": "Sold",
-      "eventType": "PropertyUpdated",
+      "name": "Shipped",
+      "eventType": "OrderUpdated",
       "condition": {
         "operator": "and",
         "operands": [
           { "operator": "changed", "operands": [{ "path": "Status" }] },
-          { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Sold" }] }
+          { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Shipped" }] }
         ]
       },
       "actions": [
-        { "action": "notify-agent", "parameters": { "template": "congratulations" } }
+        { "action": "notify-customer", "parameters": { "template": "order-shipped" } }
       ]
     }
     """;
@@ -32,16 +32,16 @@ internal static class DependencyInjectionExample
     {
         var services = new ServiceCollection()
             .AddSingleton<IMailer, ConsoleMailer>()
-            .AddRuleForge(rules => rules.AddAction<NotifyAgentAction>());
+            .AddRuleForge(rules => rules.AddAction<NotifyCustomerAction>());
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
 
         var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
-        var previous = new Property { Address = "3 Pine Lane", Price = 510_000m, Status = ListingStatus.Active };
-        var current = previous with { Status = ListingStatus.Sold };
+        var previous = new Order { Number = "SO-1042", CustomerEmail = "ada@example.com", Total = 89.90m, Status = OrderStatus.Placed };
+        var current = previous with { Status = OrderStatus.Shipped };
 
-        var result = await engine.ExecuteAsync("PropertyUpdated", current, previous, [RuleJsonParser.Parse(Rule)]);
+        var result = await engine.ExecuteAsync("OrderUpdated", current, previous, [RuleJsonParser.Parse(Rule)]);
 
         ResultPrinter.Print("Dependency injection: AddRuleForge", result);
     }
@@ -58,14 +58,14 @@ internal sealed class ConsoleMailer : IMailer
 }
 
 /// <summary>
-/// Registered as "notify-agent" by convention (class name without the Action suffix, in kebab-case).
+/// Registered as "notify-customer" by convention (class name without the Action suffix, in kebab-case).
 /// </summary>
-internal sealed class NotifyAgentAction(IMailer mailer) : IAction
+internal sealed class NotifyCustomerAction(IMailer mailer) : IAction
 {
     public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
     {
-        var property = (Property)context.Current!;
-        mailer.Send($"agent+{property.Address.Replace(' ', '-').ToLowerInvariant()}@example.com", action.GetParameter<string>("template"));
+        var order = (Order)context.Current!;
+        mailer.Send(order.CustomerEmail, action.GetParameter<string>("template"));
 
         return Task.FromResult(ActionResult.Success());
     }

@@ -18,7 +18,7 @@ internal static class BasicExample
         var rule = new RuleDefinition
         {
             Name = "Price drop",
-            EventType = "PropertyUpdated",
+            EventType = "CarAdUpdated",
             // The price changed and is now below the previous price.
             Condition = new OperatorCondition
             {
@@ -40,11 +40,11 @@ internal static class BasicExample
                 {
                     Action = "log",
                     Parameters = { ["message"] = "Big drop — flag for review." },
-                    // Only when the new price is more than 10% below the estimate.
+                    // Only when the new price is more than 10% below the market value.
                     Condition = new OperatorCondition
                     {
                         Operator = "lt",
-                        Operands = [new PathOperand { Path = "Price" }, new ValueOperand { Value = 405_000 }]
+                        Operands = [new PathOperand { Path = "Price" }, new ValueOperand { Value = 20_250 }]
                     }
                 }
             ]
@@ -54,10 +54,10 @@ internal static class BasicExample
             new ConditionEvaluator(BuiltInOperators.Create()),
             new DirectActionFactory([new LogAction()]));
 
-        var previous = new Property { Address = "1 Elm Street", Price = 470_000m, EstimatedPrice = 450_000m, Status = ListingStatus.Active };
-        var current = previous with { Price = 430_000m };
+        var previous = new CarAd { Title = "2019 Volvo V60", Price = 23_500m, MarketValue = 22_500m, Status = AdStatus.Active };
+        var current = previous with { Price = 21_500m };
 
-        var result = await engine.ExecuteAsync("PropertyUpdated", current, previous, [rule]);
+        var result = await engine.ExecuteAsync("CarAdUpdated", current, previous, [rule]);
 
         ResultPrinter.Print("Basic: a rule in code", result);
     }
