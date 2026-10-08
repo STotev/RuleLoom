@@ -89,11 +89,11 @@ titles, central package management, issue/PR templates, Claude Code setup (`AGEN
 ## 🎯 Milestones
 
 Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
-becomes a PRD (or a few issues) when it starts; the next one to plan is **0.5**.
+becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66.
 
 | Milestone | Contents | Notes |
 |---|---|---|
-| **0.5: JSON state & central-service spike** | Path resolution on `JsonElement`, `JsonNode` and `IDictionary<string, object?>`; a central rules-service sample (ASP.NET Core, JSON events with a tenant ID, scheduled actions handed to a scheduler) | The spike decides the **event envelope** and informs the scheduled-action entry point and cancellation |
+| **0.5: JSON state & central-service spike** ([PRD #66](https://github.com/STotev/RuleForge/issues/66)) | Path resolution on `JsonElement` and `JsonNode`; ISO date strings compared as instants; `changed` via `ValueComparer`; a central rules-service sample (ASP.NET Core, JSON events with a tenant ID, scheduled actions handed to a scheduler) | The spike decides the **event envelope** and informs the scheduled-action entry point and cancellation |
 | **0.6: Schema System** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder; `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator` | Detail under [Schema & validation](#schema--validation) below |
 | **0.7: Hosting & producer utilities** | `RuleForge.AspNetCore` with `MapRuleForge` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; event envelope as decided in 0.5 | Optional packages; no rule CRUD |
 | **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; deterministic `ScheduledAction` key; cancellation/replacement semantics; scheduled-action entry point; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
