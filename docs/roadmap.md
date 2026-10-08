@@ -94,11 +94,11 @@ becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66.
 | Milestone | Contents | Notes |
 |---|---|---|
 | **0.5: JSON state & central-service spike** ([PRD #66](https://github.com/STotev/RuleForge/issues/66)) | Path resolution on `JsonElement` and `JsonNode`; ISO date strings compared as instants; `changed` via `ValueComparer`; a central rules-service sample (ASP.NET Core, JSON events with a tenant ID, scheduled actions handed to a scheduler) | The spike decides the **event envelope** and informs the scheduled-action entry point and cancellation |
-| **0.6: Schema System** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder; `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator` | Detail under [Schema & validation](#schema--validation) below |
+| **0.6: Schema System & fluent rule builder** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder; `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator`; **fluent rule builder** that produces `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the expression → path translation with the schema builder | Detail under [Schema & validation](#schema--validation) below |
 | **0.7: Hosting & producer utilities** | `RuleForge.AspNetCore` with `MapRuleForge` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; event envelope as decided in 0.5 | Optional packages; no rule CRUD |
 | **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; deterministic `ScheduledAction` key; cancellation/replacement semantics; scheduled-action entry point; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
-| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleForge/issues/27)), XML docs, guides, NuGet package metadata | Publishing is on hold pending a decision |
-| **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; path variables and functions; more operators | Order to be decided |
+| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleForge/issues/27)), XML docs, guides, NuGet package metadata, first NuGet publish | Release is cleared; publishing waits for this milestone |
+| **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
 
 ### 0.5 — PRD [#66](https://github.com/STotev/RuleForge/issues/66)
 
@@ -216,7 +216,7 @@ NuGet package metadata and publishing workflow (packages are now `RuleForge.Abst
 scenario samples. Detail: [old roadmap §1.4](archive/roadmap-2026-03.md), [PRD #1 plan Phase 3](archive/action-scheduling-di-plan.md).
 
 ### Developer experience (old Phase 2)
-Fluent rule builder API; more operators — comparison (`between` `in`; `gt` `gte` `lt` `lte` are in #22), string
+Fluent rule builder API (scheduled for **0.6**; post-1.0 typed rule consumers build on it); more operators — comparison (`between` `in`; `gt` `gte` `lt` `lte` are in #22), string
 (`contains` `startsWith` `endsWith` `matches`), collection (`any` `all` `count`), date. DI moved to #5.
 Detail: [old roadmap Phase 2](archive/roadmap-2026-03.md).
 
