@@ -104,7 +104,7 @@ becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66.
 
 | Issue | Slice | Type | PR | Spec |
 |---|---|---|---|---|
-| [#68](https://github.com/STotev/RuleForge/issues/68) | Resolve paths on JSON state (`JsonElement`, `JsonNode`) | AFK | — | [json-state-paths](specs/2026-10-09-json-state-paths-design.md) |
+| [#68](https://github.com/STotev/RuleForge/issues/68) | Resolve paths on JSON state (`JsonElement`, `JsonNode`) | AFK | [#72](https://github.com/STotev/RuleForge/pull/72) | [json-state-paths](specs/2026-10-09-json-state-paths-design.md) |
 | [#69](https://github.com/STotev/RuleForge/issues/69) | ISO date strings compared as instants; `changed` via `ValueComparer` | AFK | — | — |
 | [#70](https://github.com/STotev/RuleForge/issues/70) | Central rules-service sample (spike) | HITL | — | — |
 | [#71](https://github.com/STotev/RuleForge/issues/71) | Spike findings and event envelope decision | HITL | — | — |
