@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using RuleForge.Abstractions;
 using RuleForge.Operators;
 using RuleForge.Abstractions.Condition;
@@ -85,6 +87,30 @@ public class ChangedOperatorTests
         var context = new EvaluationContext(new Order(), new Order());
 
         Assert.Throws<InvalidOperationException>(() => Evaluator().Evaluate(context, Op("changed", Value("Price"))));
+    }
+
+    [Fact]
+    public void Evaluate_SameValueOfDifferentTypeOrFormat_ReturnsFalse()
+    {
+        var number = new EvaluationContext(new { Total = 100L }, new { Total = 100.0m });
+        var instant = new EvaluationContext(new { DueAt = "2026-05-01T14:00:00+02:00" }, new { DueAt = "2026-05-01T12:00:00Z" });
+
+        Assert.False(Evaluator().Evaluate(number, Op("changed", Path("Total"))));
+        Assert.False(Evaluator().Evaluate(instant, Op("changed", Path("DueAt"))));
+    }
+
+    [Theory]
+    [InlineData("""{ "Customer": { "Name": "Ada", "Tier": "VIP" } }""", false)]
+    [InlineData("""{ "Customer": { "Tier": "VIP", "Name": "Ada" } }""", false)]
+    [InlineData("""{ "Customer": { "Name": "Ada", "Tier": "Basic" } }""", true)]
+    public void Evaluate_JsonObjectPath_ComparesContent(string current, bool expected)
+    {
+        var previous = """{ "Customer": { "Name": "Ada", "Tier": "VIP" } }""";
+        var elements = new EvaluationContext(JsonDocument.Parse(current).RootElement, JsonDocument.Parse(previous).RootElement);
+        var nodes = new EvaluationContext(JsonNode.Parse(current), JsonNode.Parse(previous));
+
+        Assert.Equal(expected, Evaluator().Evaluate(elements, Op("changed", Path("Customer"))));
+        Assert.Equal(expected, Evaluator().Evaluate(nodes, Op("changed", Path("Customer"))));
     }
 
     [Theory]

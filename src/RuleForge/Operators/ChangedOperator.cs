@@ -1,4 +1,5 @@
 using RuleForge.Abstractions.Condition;
+using RuleForge.Abstractions.Values;
 
 namespace RuleForge.Operators;
 
@@ -12,7 +13,7 @@ public class ChangedOperator : IConditionOperator
     {
         var property = WithoutScope(context.GetPath(0));
 
-        return !Equals(context.Resolve($"$current.{property}"), context.Resolve($"$previous.{property}"));
+        return !ValueComparer.AreEqual(context.Resolve($"$current.{property}"), context.Resolve($"$previous.{property}"));
     }
 
     // The operand may already name a state ("$current.Price"); changed always compares both, so keep the property.

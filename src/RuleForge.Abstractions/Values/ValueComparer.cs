@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+
 namespace RuleForge.Abstractions.Values;
 
 /// <summary>
@@ -11,7 +14,10 @@ namespace RuleForge.Abstractions.Values;
 /// <item>Enums match by name (case-insensitive) or underlying number; different enum types never match.</item>
 /// <item><see cref="DateTime"/>/<see cref="DateTimeOffset"/> compare as UTC instants (<c>Unspecified</c> is UTC);
 /// a string on the other side must be strict ISO 8601.</item>
-/// <item>Strings compare ordinally (case-sensitive).</item>
+/// <item>Two strict ISO 8601 strings compare as UTC instants; an ISO date string against any other string can't be
+/// compared (not equal, not ordered). Other strings compare ordinally (case-sensitive).</item>
+/// <item>JSON objects and arrays (<see cref="JsonElement"/>, <see cref="JsonNode"/>) are equal when their content is
+/// (same JSON model on both sides) and are never ordered.</item>
 /// <item><c>null</c> equals only <c>null</c> and is never ordered.</item>
 /// <item>Otherwise equality uses <see cref="object.Equals(object?)"/>, and ordering uses
 /// <see cref="IComparable"/> when both values have the same type.</item>
@@ -26,6 +32,9 @@ public static class ValueComparer
     {
         if (left is null || right is null)
             return left is null && right is null;
+
+        if (left is JsonElement or JsonNode || right is JsonElement or JsonNode)
+            return JsonEquals(left, right);
 
         var comparison = Compare(left, right);
         if (comparison is not null)
@@ -51,7 +60,8 @@ public static class ValueComparer
 
         var comparison = Compare(left, right);
 
-        if (comparison is null && left.GetType() == right.GetType() && left is IComparable comparable)
+        // Strings are fully handled by Compare (a date against other text is deliberately incomparable).
+        if (comparison is null && left is not string && left.GetType() == right.GetType() && left is IComparable comparable)
             comparison = Math.Sign(comparable.CompareTo(right));
 
         if (comparison is null)
@@ -73,10 +83,38 @@ public static class ValueComparer
             return CompareDates(left, right);
 
         if (left is string leftText && right is string rightText)
-            return Math.Sign(string.CompareOrdinal(leftText, rightText));
+            return CompareStrings(leftText, rightText);
 
         return null;
     }
+
+    private static int? CompareStrings(string left, string right)
+    {
+        var leftIsDate = TryParseIsoDate(left, out var leftInstant);
+        var rightIsDate = TryParseIsoDate(right, out var rightInstant);
+
+        if (leftIsDate && rightIsDate)
+            return leftInstant.UtcTicks.CompareTo(rightInstant.UtcTicks);
+
+        // A date against arbitrary text can't be compared; two ordinary strings compare ordinally.
+        return leftIsDate || rightIsDate ? null : Math.Sign(string.CompareOrdinal(left, right));
+    }
+
+    private static bool TryParseIsoDate(string text, out DateTimeOffset instant)
+    {
+        instant = default;
+
+        // Cheap shape check (yyyy-...) so ordinary strings skip the parse.
+        return text.Length >= 10 && char.IsAsciiDigit(text[0]) && text[4] == '-' &&
+               ValueConverter.TryConvertToDateTimeOffset(text, out instant);
+    }
+
+    private static bool JsonEquals(object left, object right) => (left, right) switch
+    {
+        (JsonElement leftElement, JsonElement rightElement) => JsonElement.DeepEquals(leftElement, rightElement),
+        (JsonNode leftNode, JsonNode rightNode) => JsonNode.DeepEquals(leftNode, rightNode),
+        _ => false
+    };
 
     private static int? CompareNumbers(object left, object right)
     {

@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using RuleForge.Abstractions.Values;
 
 namespace RuleForge.Tests;
@@ -51,7 +53,13 @@ public class ValueComparerTests
         // Strings
         { "Bob", "Bob", true },
         { "Bob", "bob", false },
-        { "2026-01-01", "2026-01-01T00:00:00Z", false },
+        // ISO 8601 strings on both sides compare as instants; a date against other text never matches
+        { "2026-01-01", "2026-01-01T00:00:00Z", true },
+        { "2026-05-01T14:00:00+02:00", "2026-05-01T12:00:00Z", true },
+        { "2026-05-01T12:00:00", "2026-05-01T12:00:00Z", true },
+        { "2026-05-01T12:00:00Z", "2026-05-01T12:00:01Z", false },
+        { "2026-05-01", "May 1st", false },
+        { "2026-13-45", "2026-13-45", true },
         // Nulls
         { null, null, true },
         { null, 0, false },
@@ -84,6 +92,9 @@ public class ValueComparerTests
         { NoonUtc, new DateTimeOffset(NoonUtc).AddHours(-1), 1 },
         { "apple", "banana", -1 },
         { "B", "a", -1 },
+        { "2026-05-01T14:00:00+02:00", "2026-05-01T12:30:00Z", -1 },
+        { "2026-05-02", "2026-05-01T23:59:59Z", 1 },
+        { "2026-13-45", "2026-12-99", 1 },
         { TimeSpan.FromHours(2), TimeSpan.FromHours(1), 1 },
         { false, true, -1 }
     };
@@ -111,7 +122,11 @@ public class ValueComparerTests
         { Status.Active, OtherStatus.Active },
         { Status.Active, "Unknown" },
         { TimeSpan.Zero, 0 },
-        { new object(), new object() }
+        { new object(), new object() },
+        { "2026-05-01", "May 1st" },
+        { "2026-13-45", "2026-12-01" },
+        { "2026-05-01T12:00:00Z", "abc" },
+        { JsonDocument.Parse("{}").RootElement, JsonDocument.Parse("{}").RootElement }
     };
 
     [Theory]
@@ -149,5 +164,22 @@ public class ValueComparerTests
         None = 0,
         Read = 1,
         Write = 2
+    }
+
+    [Theory]
+    [InlineData("""{ "a": 1, "b": [1, 2] }""", """{ "b": [1, 2], "a": 1 }""", true)]
+    [InlineData("""{ "a": 1 }""", """{ "a": 2 }""", false)]
+    [InlineData("""[1, 2]""", """[2, 1]""", false)]
+    public void AreEqual_JsonContent_ComparesDeeply(string left, string right, bool expected)
+    {
+        Assert.Equal(expected, ValueComparer.AreEqual(JsonDocument.Parse(left).RootElement, JsonDocument.Parse(right).RootElement));
+        Assert.Equal(expected, ValueComparer.AreEqual(JsonNode.Parse(left), JsonNode.Parse(right)));
+    }
+
+    [Fact]
+    public void AreEqual_JsonElementAgainstJsonNode_IsFalse()
+    {
+        Assert.False(ValueComparer.AreEqual(JsonDocument.Parse("{}").RootElement, JsonNode.Parse("{}")));
+        Assert.False(ValueComparer.AreEqual(JsonDocument.Parse("{}").RootElement, "{}"));
     }
 }
