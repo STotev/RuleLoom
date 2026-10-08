@@ -108,6 +108,34 @@ re-checks may be unnecessary ("scheduled means committed").
 Also: past times, retries and duplicates; the **time semantics review** (time zones, `Unspecified` dates); and a
 "dispatching scheduled actions" guide showing the Hangfire/Quartz pattern.
 
+### Named instances (e.g. per tenant)
+Raised 2026-10-08, after Quartz.NET's
+[scheduler per tenant](https://github.com/quartznet/quartznet/blob/main/docs/documentation/quartz-4.x/multi-tenancy.md#scheduler-per-tenant):
+`AddQuartz(name, …)` builds a fully separate scheduler per name, resolved as keyed services. Not sure yet whether
+it's useful; kept here to evaluate.
+
+The RuleForge equivalent would be **named configurations**, with tenancy still the consumer's (the library doesn't
+know what a tenant is; a name could equally be a region or a product line):
+
+```csharp
+foreach (var tenant in tenants)
+    services.AddRuleForge(tenant, rules => rules.AddAction<SendEmailAction>());
+
+var engine = provider.GetRequiredKeyedService<RuleEngine>(tenantId);
+```
+
+- **What would differ per instance:** the registered operators and actions (so the catalogue, authoring UI and
+  `RuleValidator` only offer what that tenant has), action implementations or settings (e.g. each tenant's SMTP),
+  the `ISchemaStore`, the `TimeProvider` or a default time zone (ties into the time semantics review), and later the
+  execution history.
+- **Today's alternative** (Quartz's "group per tenant"): one shared engine, with the tenant ID in the event's
+  metadata (see the event envelope).
+- **Costs:** `AddRuleForge` keeps one shared registry per service collection today, so it would need keyed
+  registrations; the catalogue endpoints would need to know the instance (e.g. `MapRuleForge("/{tenant}/ruleforge")`);
+  adding instances at runtime (Quartz's `ISchedulerRuntime`) is a further step.
+- **When to decide:** after the central-service spike (0.5), before the catalogue and endpoints (0.6–0.7) settle
+  their shape.
+
 ### Also on the roadmap backlog
 Time semantics review, path variables and functions, more operators, benchmarks (#27), NuGet packaging — see the
 [roadmap](roadmap.md#-backlog--not-yet-scheduled).
