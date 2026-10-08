@@ -166,7 +166,8 @@ await rules.PublishAsync(current: order, previous: before, ct);   // runs the co
   typed consumers and dispatch can share it. Dispatch could also add the caller's JSON rules for the same event.
 - **Centralised engines:** transport adapters (e.g. a MassTransit integration) could carry the same events between
   services when the engine runs in a central service.
-- Replaces the backlog's "Fluent rule builder API".
+- **Builds on the fluent rule builder** (0.6), which already produces `RuleDefinition` in code; consumers add
+  grouping by event type, typed inline actions and dispatch.
 
 ### Validating incoming events against schemas
 Like MassTransit skipping messages of unknown types: once schemas are registered (0.6), a central service could reject
