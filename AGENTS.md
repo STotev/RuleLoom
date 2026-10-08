@@ -139,7 +139,8 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   RuleForge computes `ScheduledFor`; dispatching scheduled work is the consumer's responsibility.
 - **Value comparison**: `ValueComparer` (`AreEqual`, `TryCompare`) and `ValueConverter` (`TryConvert`) in
   `RuleForge.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
-  types, enums by name or number, dates as UTC instants incl. strict ISO 8601 strings, ordinal strings). Operators
+  types, enums by name or number, dates as UTC instants incl. strict ISO 8601 strings (two ISO strings compare as instants; ISO vs other text is
+  incomparable), other strings ordinal, JSON objects/arrays by content via `DeepEquals`; `changed` uses `AreEqual` too). Operators
   and other features must use them rather than `object.Equals` or ad-hoc parsing.
 - **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is
   validated before deserialization (`RuleJsonValidator`); invalid rules throw `RuleParseException` (a `JsonException`)
