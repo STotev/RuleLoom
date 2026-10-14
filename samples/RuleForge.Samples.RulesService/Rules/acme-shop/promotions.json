@@ -1,0 +1,20 @@
+[
+  {
+    "id": "big-basket",
+    "name": "Big basket",
+    "eventType": "OrderPlaced",
+    "condition": { "operator": "gte", "operands": [{ "path": "ItemCount" }, { "value": 5 }] },
+    "actions": [
+      { "action": "log", "parameters": { "message": "Big basket: offer free shipping on the next order" } }
+    ]
+  },
+  {
+    "id": "shipped-sms",
+    "name": "Shipped SMS (invalid: no send-sms action is registered)",
+    "eventType": "OrderUpdated",
+    "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Shipped" }] },
+    "actions": [
+      { "action": "send-sms", "parameters": { "to": "Customer.Phone" } }
+    ]
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "ad-published",
+    "name": "Ad published",
+    "eventType": "AdPublished",
+    "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Published" }] },
+    "actions": [
+      { "action": "log", "parameters": { "message": "New ad published" } },
+      {
+        "action": "send-email",
+        "parameters": { "to": "Seller.Email", "subject": "How is your ad doing? Consider a price review" },
+        "schedule": { "mode": "Delay", "amount": 30, "unit": "Seconds" }
+      }
+    ]
+  },
+  {
+    "id": "price-drop",
+    "name": "Price drop",
+    "eventType": "AdUpdated",
+    "condition": { "operator": "lt", "operands": [{ "path": "Price" }, { "path": "$previous.Price" }] },
+    "actions": [
+      { "action": "send-email", "parameters": { "to": "Seller.Email", "subject": "Your new price is live" } },
+      {
+        "action": "log",
+        "parameters": { "message": "Bargain: list in the under-10k section" },
+        "condition": { "operator": "lt", "operands": [{ "path": "Price" }, { "value": 10000 }] }
+      }
+    ]
+  }
+]
