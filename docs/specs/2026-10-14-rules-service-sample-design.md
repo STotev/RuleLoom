@@ -33,16 +33,19 @@ be settled on paper. This sample uses the library *as intended* and records what
 **`acme-shop`**
 - `OrderPlaced`: VIP order (`Total gte 500`) → `send-email` to the customer.
 - `OrderUpdated`: `changed Status` → `send-email` with the new status.
-- `OrderPlaced`: payment reminder, `send-email` scheduled `Advance` 1 minute before `DueAt` (`ReferencePath`).
-- An invalid rule file (unknown action) to show the reporting.
+- `OrderPlaced`: payment reminder, `send-email` scheduled `Advance` 1 minute before `PaymentDueAt` (`ReferencePath`).
+- `OrderPlaced`: big basket (`ItemCount gte 5`) → `log`.
+- An invalid rule (unknown action `send-sms`) next to the big-basket rule, to show per-rule reporting.
 
 **`wheels-market`**
-- `AdPublished`: `log` the new ad; expiry reminder `send-email` scheduled with a short `Delay`.
-- `AdUpdated`: price drop (`Price lt $previous.Price`) → `send-email` to watchers.
+- `AdPublished`: `log` the new ad; reminder `send-email` to the seller scheduled with a 30-second `Delay`.
+- `AdUpdated`: price drop (`Price lt $previous.Price`) → `send-email` to the seller, plus `log` when `Price lt 10000`
+  (action condition).
 
 ## `.http` file
 
-Requests: VIP `OrderPlaced` with `DueAt` = `{{$datetime iso8601 2 m}}` (reminder fires about a minute later),
+Written for Rider's HTTP client. Requests: VIP `OrderPlaced` with `PaymentDueAt` two minutes ahead (set by a
+pre-request script; the reminder fires about a minute later),
 `OrderUpdated` with a status change and `previous`, an unchanged update, `AdPublished`, an `AdUpdated` price drop, and
 an unknown tenant (404).
 
@@ -55,9 +58,49 @@ an unknown tenant (404).
 
 Collected while building; #71 turns them into the final findings and the envelope decision.
 
-Expected (to confirm or reject while building):
-- No library entry point for running a scheduled action later: the job repeats what the engine does (factory lookup,
-  context, error handling).
-- Action conditions aren't re-checked at due time, and the state is the snapshot from the scheduling event.
-- Job keys need `ruleId` (optional in rules) and an entity ID that lives outside the library.
-- Nothing is persisted: with a persistent job store, `ScheduledAction` and the state would have to be serialized.
+**What worked**
+- JSON state needed nothing extra: `JsonElement`s from model binding go straight to `ExecuteAsync`. `changed`,
+  `$previous.Price`, action conditions and an ISO `referencePath` all work on it, and `640.5` vs `640.50` is no change.
+- `RuleValidator` caught a registration mistake precisely (`$.actions[0].action: No action is registered under the
+  name 'log'`), and per-rule skipping kept the tenant's other rules running.
+- The engine's inputs (`eventType`, `current`, `previous`, rules) were enough for evaluation. Tenant and entity ID were
+  only needed around the engine: to pick the rules and to key scheduled jobs.
+
+**Scheduling (input for 0.8)**
+- No entry point for running a scheduled action later: `RunScheduledActionJob` repeats what the engine does for an
+  immediate action (look up the executor by name, run it, turn exceptions into a failed result).
+- An action run later reports `ExecutedImmediately`, the status name the engine uses for actions run without a schedule.
+- Conditions aren't re-checked at due time, and the action sees the state of the event that scheduled it.
+- Keys: a stable key needs `ruleId`, but `RuleDefinition.Id` defaults to a new GUID on every parse, and rules are
+  re-read for every event, so a rule without an `id` gets a new key each time (the sample's rules all set one). The
+  entity ID comes from the wire format, outside the library.
+- Replacing a pending action in Quartz needs the key on the trigger as well as the job: with a random trigger key the
+  old trigger stays attached and the action runs twice (found by sending the same event twice).
+- The job data holds `ScheduledAction` and the state as objects, which only works with the in-memory store; a
+  persistent store needs both serialized (and `ActionDefinition` includes its condition).
+
+**Envelope and idempotency (input for #71)**
+- Sending the same event twice runs its immediate actions twice (two VIP emails). Deduplicating needs an event ID,
+  which the minimal wire format doesn't have; whether that's the library's concern is part of the envelope decision.
+
+**API friction**
+- `log` is built in but `AddRuleForge` doesn't register it (by design, see the DI spec); with it missing, every rule
+  using it was skipped while the service answered 200. Validating a tenant's rules when they change (or at startup)
+  would surface that earlier; the sample only validates per event.
+- `RuleJsonParser.ParseMany` needs a JSON array, and one shape error rejects the whole file; only `RuleValidator`
+  errors are per rule.
+- Action parameters are static values: `send-email`'s `to` is a path by the action's own convention, and the subject
+  can't include values from the state (no templating). Parameter kinds (value vs path) are a Schema System question.
+- Due times relative to now need a client-side script in the `.http` file (Rider pre-request script).
+- Quartz 4 moved hosting into the `Quartz` package (`Quartz.Extensions.Hosting` is empty) and changed `IJob.Execute`
+  to `ValueTask Execute(context, cancellationToken)`; worth knowing for a future scheduler integration package.
+
+## Deviations
+
+- **Actions:** `AddRuleForge` doesn't register the built-in `log`, so the sample adds `AddAction<LogAction>()`.
+- **Job keys:** the trigger gets the same key as the job, so `ScheduleJobOptions.Replacing` replaces the pending
+  action instead of adding a second trigger.
+- **Rules:** `acme-shop` also has a "Big basket" `log` rule, in the same file as the invalid rule, to show per-rule
+  skipping. "Price drop" emails the seller and adds a `log` action with an action condition (`Price lt 10000`) instead
+  of emailing watchers. The payment reminder's reference is `PaymentDueAt`.
+- **Package:** Quartz **4.3.0** (the `Quartz` package; 4.4 and 4.5 were days old).
