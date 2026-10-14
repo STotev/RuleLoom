@@ -3,7 +3,7 @@
 RuleForge is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.4 → 0.5](#04--05): rule ids are required; ISO date strings and `changed` compare by meaning; rules on JSON state
+- [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
 - [0.3 → 0.4](#03--04): actions are named by registration, `IAction`, dependency injection
 - [0.2 → 0.3](#02--03): API hardening (results, operators, validation, paths, parameters)
 - [0.1 → 0.2](#01--02): action results, action factory, scheduling, the RuleForge rename
@@ -25,6 +25,23 @@ identity each time it was loaded. JSON rules without an `id` (or with an empty o
 What to change: give every rule a stable `id`, for example its key in your rule store. Results
 (`RuleExecutionResult.RuleId`) and scheduled actions (`ScheduledAction.RuleId`) carry it, so it can identify the rule
 in your logs and job keys.
+
+### `LogAction` is now `ConsoleLogAction` (`console-log`)
+
+The built-in action that writes `message` to the console is renamed to say what it does; it's meant for development
+and testing. Its default name follows: `console-log` instead of `log`. It's still not registered by `AddRuleForge`.
+
+```csharp
+// 0.4
+services.AddRuleForge(rules => rules.AddAction<LogAction>());            // "log"
+
+// 0.5
+services.AddRuleForge(rules => rules.AddAction<ConsoleLogAction>());     // "console-log"
+services.AddRuleForge(rules => rules.AddAction<ConsoleLogAction>("log")); // or keep the old name
+```
+
+What to change: rename the type, and either change `"action": "log"` to `"console-log"` in your rules or register it
+under `"log"` as above (`new DirectActionFactory().Add(new ConsoleLogAction(), "log")` without DI).
 
 ### Two ISO 8601 strings compare as dates
 

@@ -29,18 +29,18 @@ internal static class SchedulingExample
             },
             Actions =
             [
-                new ActionDefinition { Action = "log", Parameters = { ["message"] = "Invoice sent." } },
+                new ActionDefinition { Action = "console-log", Parameters = { ["message"] = "Invoice sent." } },
                 new ActionDefinition
                 {
                     // 2 days before the due date.
-                    Action = "log",
+                    Action = "console-log",
                     Parameters = { ["message"] = "Reminder: payment due soon." },
                     Schedule = new ScheduleMetadata { Mode = ScheduleMode.Advance, Amount = 2, Unit = ScheduleUnit.Days, ReferencePath = "DueAt" }
                 },
                 new ActionDefinition
                 {
                     // 1 day after the event.
-                    Action = "log",
+                    Action = "console-log",
                     Parameters = { ["message"] = "Confirm the invoice was received." },
                     Schedule = new ScheduleMetadata { Mode = ScheduleMode.Delay, Amount = 1, Unit = ScheduleUnit.Days }
                 }
@@ -49,7 +49,7 @@ internal static class SchedulingExample
 
         var engine = new RuleEngine(
             new ConditionEvaluator(BuiltInOperators.Create()),
-            new DirectActionFactory([new LogAction()]));
+            new DirectActionFactory([new ConsoleLogAction()]));
 
         var invoice = new Invoice
         {

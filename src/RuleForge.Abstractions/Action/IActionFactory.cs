@@ -8,7 +8,7 @@ public interface IActionFactory
     /// <summary>
     /// Tries to get the action registered under <paramref name="name"/> (matched ignoring case).
     /// </summary>
-    /// <param name="name">The action name (e.g. "log").</param>
+    /// <param name="name">The action name (e.g. "send-email").</param>
     /// <param name="action">The resolved action when found.</param>
     /// <returns><c>true</c> when an action is found; otherwise <c>false</c>.</returns>
     bool TryGetAction(string name, out IAction? action);

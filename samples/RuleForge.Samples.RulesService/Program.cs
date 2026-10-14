@@ -8,7 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddRuleForge(rules => rules
         .AddAction<SendEmailAction>()
-        .AddAction<LogAction>()) // "log" is built in but not registered by default
+        .AddAction<ConsoleLogAction>()) // built in, for development; not registered by default
     .AddScoped<TenantRuleStore>()
     .AddSingleton<ActionScheduler>()
     .AddQuartz()

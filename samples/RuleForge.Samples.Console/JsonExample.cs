@@ -27,7 +27,7 @@ internal static class JsonExample
           ]
         },
         "actions": [
-          { "action": "log", "parameters": { "message": "Bargain published!" } }
+          { "action": "console-log", "parameters": { "message": "Bargain published!" } }
         ]
       },
       {
@@ -43,7 +43,7 @@ internal static class JsonExample
     public static async Task RunAsync()
     {
         var operators = BuiltInOperators.Create();
-        var actions = new DirectActionFactory([new LogAction()]);
+        var actions = new DirectActionFactory([new ConsoleLogAction()]);
         var validator = new RuleValidator(operators, actions);
 
         var rules = RuleJsonParser.ParseMany(Rules);

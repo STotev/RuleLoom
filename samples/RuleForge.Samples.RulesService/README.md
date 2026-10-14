@@ -49,17 +49,17 @@ the jobs handed to Quartz. An unknown tenant gets a 404.
 |---|---|---|---|
 | `acme-shop` | `OrderPlaced` | VIP order (`Total gte 500`) | Email the customer |
 | | `OrderPlaced` | Payment reminder (`Status eq AwaitingPayment`) | Email scheduled 1 minute before `PaymentDueAt` |
-| | `OrderPlaced` | Big basket (`ItemCount gte 5`) | `log` |
+| | `OrderPlaced` | Big basket (`ItemCount gte 5`) | `console-log` |
 | | `OrderUpdated` | Order status changed (`changed Status`) | Email the customer |
 | | `OrderUpdated` | Shipped SMS | **Invalid**: no `send-sms` action is registered |
-| `wheels-market` | `AdPublished` | Ad published (`Status eq Published`) | `log`; email the seller after 30 seconds |
-| | `AdUpdated` | Price drop (`Price lt $previous.Price`) | Email the seller; `log` if the price is under 10,000 (action condition) |
+| `wheels-market` | `AdPublished` | Ad published (`Status eq Published`) | `console-log`; email the seller after 30 seconds |
+| | `AdUpdated` | Price drop (`Price lt $previous.Price`) | Email the seller; `console-log` if the price is under 10,000 (action condition) |
 
 ## How it fits together
 
 | File | Role |
 |---|---|
-| `Program.cs` | Registers RuleForge (`AddRuleForge` with `send-email` and `log`) and Quartz; maps `POST /events` |
+| `Program.cs` | Registers RuleForge (`AddRuleForge` with `send-email` and `console-log`) and Quartz; maps `POST /events` |
 | `TenantRuleStore.cs` | Reads, parses and validates a tenant's rule files |
 | `ActionScheduler.cs` | One Quartz job per scheduled action, keyed `{tenant}/{entity}/{rule}/{action index}`; the same event sent again replaces the pending job |
 | `RunScheduledActionJob.cs` | Runs the action when due, with the state of the event that scheduled it (conditions aren't checked again) |

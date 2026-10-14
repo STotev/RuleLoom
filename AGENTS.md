@@ -124,7 +124,7 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 - **Actions** are referenced in rules as `"action": "<name>"` (`ActionDefinition.Action`) and resolved by name through
   `IActionFactory` (`DirectActionFactory` for non-DI use), which also lists its `ActionNames`. Names
   belong to the registration: `ActionNames.GetDefaultName(type)` gives `[ActionName]` or the class name minus an
-  `Action` suffix in kebab-case; `Add(executor, name)` overrides it. Built-in action: `log`.
+  `Action` suffix in kebab-case; `Add(executor, name)` overrides it. Built-in action: `console-log` (`ConsoleLogAction`, for development; not registered by `AddRuleForge`).
 - **DI** (`AddRuleForge`): one shared registry per service collection, so it can be called repeatedly. Operators
   and `IConditionEvaluator` are Singleton (built-ins included; `AddOperator`/`RemoveOperator`/`RemoveBuiltInOperators` apply
   in call order); actions, `IActionFactory` (`ServiceProviderActionFactory`), `RuleEngine` and

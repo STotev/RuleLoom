@@ -109,7 +109,7 @@ becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66.
 | [#70](https://github.com/STotev/RuleForge/issues/70) | Central rules-service sample (spike) | HITL | [#76](https://github.com/STotev/RuleForge/pull/76) | [rules-service-sample](specs/2026-10-14-rules-service-sample-design.md) |
 | [#71](https://github.com/STotev/RuleForge/issues/71) | Spike findings and event envelope decision | HITL | — | — |
 | [#77](https://github.com/STotev/RuleForge/issues/77) | Require a rule id (spike follow-up) | AFK | [#79](https://github.com/STotev/RuleForge/pull/79) | [required-rule-id](specs/2026-10-14-required-rule-id-design.md) |
-| [#78](https://github.com/STotev/RuleForge/issues/78) | Rename `LogAction` to `ConsoleLogAction` (spike follow-up) | AFK | — | — |
+| [#78](https://github.com/STotev/RuleForge/issues/78) | Rename `LogAction` to `ConsoleLogAction` (spike follow-up) | AFK | [#80](https://github.com/STotev/RuleForge/pull/80) | [console-log-action](specs/2026-10-15-console-log-action-design.md) |
 
 ---
 

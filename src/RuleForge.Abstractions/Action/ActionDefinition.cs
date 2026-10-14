@@ -11,7 +11,7 @@ namespace RuleForge.Abstractions.Action;
 public class ActionDefinition
 {
     /// <summary>
-    /// The name of the action to execute (e.g., "log", "send-email"), as registered with the action factory.
+    /// The name of the action to execute (e.g., "console-log", "send-email"), as registered with the action factory.
     /// In rule JSON: <c>"action": "send-email"</c>.
     /// </summary>
     public string Action { get; init; } = null!;

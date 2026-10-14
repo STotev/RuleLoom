@@ -5,7 +5,7 @@
     "eventType": "AdPublished",
     "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Published" }] },
     "actions": [
-      { "action": "log", "parameters": { "message": "New ad published" } },
+      { "action": "console-log", "parameters": { "message": "New ad published" } },
       {
         "action": "send-email",
         "parameters": { "to": "Seller.Email", "subject": "How is your ad doing? Consider a price review" },
@@ -21,7 +21,7 @@
     "actions": [
       { "action": "send-email", "parameters": { "to": "Seller.Email", "subject": "Your new price is live" } },
       {
-        "action": "log",
+        "action": "console-log",
         "parameters": { "message": "Bargain: list in the under-10k section" },
         "condition": { "operator": "lt", "operands": [{ "path": "Price" }, { "value": 10000 }] }
       }
