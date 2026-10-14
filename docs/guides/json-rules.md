@@ -23,6 +23,7 @@ The `RuleJsonParser` is a performant, type-safe JSON parser for converting JSON 
 
 ```json
 {
+  "id": "rule-id",
   "name": "Rule Name",
   "eventType": "EventName",
   "priority": 1,
@@ -30,6 +31,9 @@ The `RuleJsonParser` is a performant, type-safe JSON parser for converting JSON 
   "actions": [ ... ]
 }
 ```
+
+`id`, `name`, `eventType` and `condition` are required. The `id` identifies the rule in results and scheduled
+actions, so keep it stable across loads (e.g. the rule's key in your store).
 
 ### Condition Types
 
@@ -70,6 +74,7 @@ The `RuleJsonParser` is a performant, type-safe JSON parser for converting JSON 
 ```csharp
 var json = """
 {
+  "id": "high-price-alert",
   "name": "High Price Alert",
   "eventType": "ProductUpdated",
   "priority": 1,
@@ -97,6 +102,7 @@ Console.WriteLine($"Rule: {rule.Name}");
 ```csharp
 var json = """
 {
+  "id": "complex-rule",
   "name": "Complex Rule",
   "eventType": "ProductUpdated",
   "condition": {
@@ -139,8 +145,8 @@ var rule = await RuleJsonParser.ParseAsync(stream);
 ```csharp
 var json = """
 [
-  { "name": "Rule 1", "eventType": "Event1", "condition": { "operator": "changed", "operands": [{ "path": "Field1" }] } },
-  { "name": "Rule 2", "eventType": "Event2", "condition": { "operator": "changed", "operands": [{ "path": "Field2" }] } }
+  { "id": "rule-1", "name": "Rule 1", "eventType": "Event1", "condition": { "operator": "changed", "operands": [{ "path": "Field1" }] } },
+  { "id": "rule-2", "name": "Rule 2", "eventType": "Event2", "condition": { "operator": "changed", "operands": [{ "path": "Field2" }] } }
 ]
 """;
 
@@ -190,7 +196,7 @@ catch (JsonException ex)
 ```
 
 A rule is rejected when:
-- `name` or `eventType` is missing, empty or not a string, or `condition` is missing
+- `id`, `name` or `eventType` is missing, empty or not a string, or `condition` is missing
 - the root condition (or an action's condition) is not an operator — wrap paths and values in one, e.g.
   `{ "operator": "eq", "operands": [{ "path": "Active" }, { "value": true }] }`
 - a condition node doesn't have exactly one of `operator`, `path` or `value` (an empty `{}` is not allowed; use
@@ -370,6 +376,7 @@ The parser doesn't validate operator names or operand counts; `RuleValidator` do
 // This will parse successfully but fail at runtime if "custom_op" isn't registered
 var json = """
 {
+  "id": "custom-op-rule",
   "name": "Custom Op Rule",
   "eventType": "Event",
   "condition": { "operator": "custom_op", "operands": [] },

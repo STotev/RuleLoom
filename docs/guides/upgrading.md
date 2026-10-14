@@ -3,7 +3,7 @@
 RuleForge is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.4 → 0.5](#04--05): ISO date strings and `changed` compare by meaning; rules on JSON state
+- [0.4 → 0.5](#04--05): rule ids are required; ISO date strings and `changed` compare by meaning; rules on JSON state
 - [0.3 → 0.4](#03--04): actions are named by registration, `IAction`, dependency injection
 - [0.2 → 0.3](#02--03): API hardening (results, operators, validation, paths, parameters)
 - [0.1 → 0.2](#01--02): action results, action factory, scheduling, the RuleForge rename
@@ -11,6 +11,20 @@ first, with what to change. Each version's GitHub release notes link the pull re
 ---
 
 ## 0.4 → 0.5
+
+### Rules need an `id`
+
+A rule's `id` is required: it used to default to a new GUID on every parse, so a rule without one got a different
+identity each time it was loaded. JSON rules without an `id` (or with an empty or non-string one) now throw
+`RuleParseException` at `$.id`, and `new RuleDefinition { ... }` without `Id` doesn't compile.
+
+```json
+{ "id": "vip-order", "name": "VIP order", "eventType": "OrderPlaced", "condition": { ... } }
+```
+
+What to change: give every rule a stable `id`, for example its key in your rule store. Results
+(`RuleExecutionResult.RuleId`) and scheduled actions (`ScheduledAction.RuleId`) carry it, so it can identify the rule
+in your logs and job keys.
 
 ### Two ISO 8601 strings compare as dates
 

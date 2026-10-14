@@ -54,6 +54,7 @@ using RuleForge.Operators;
 // Define a rule
 var rule = new RuleDefinition
 {
+    Id = "price-change-alert",
     Name = "Price Change Alert",
     EventType = "ProductUpdated",
     Priority = 10,
@@ -94,6 +95,7 @@ RuleEngineResult result =
 
 ```json
 {
+  "id": "high-value-product",
   "name": "High Value Product",
   "eventType": "ProductUpdated",
   "priority": 5,
@@ -369,6 +371,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ### E-Commerce
 ```json
 {
+  "id": "vip-customer-welcome",
   "name": "VIP Customer Welcome",
   "eventType": "OrderCreated",
   "condition": {
@@ -385,6 +388,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ### Car Marketplace
 ```json
 {
+  "id": "premium-car-ad",
   "name": "Premium Car Ad",
   "eventType": "CarAdUpdated",
   "condition": {
@@ -403,6 +407,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ### Workflow Automation
 ```json
 {
+  "id": "approval-required",
   "name": "Approval Required",
   "eventType": "DocumentUpdated",
   "condition": {

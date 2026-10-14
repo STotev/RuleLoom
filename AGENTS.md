@@ -144,7 +144,7 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
   and other features must use them rather than `object.Equals` or ad-hoc parsing.
 - **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is
   validated before deserialization (`RuleJsonValidator`); invalid rules throw `RuleParseException` (a `JsonException`)
-  whose `Path` is the JSONPath of the problem. `Name`, `EventType` and `Condition` are required, and every condition
+  whose `Path` is the JSONPath of the problem. `Id`, `Name`, `EventType` and `Condition` are required, and every condition
   root (rule or action) must be an operator.
 
 ### Extension points

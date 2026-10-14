@@ -20,6 +20,7 @@ file, a database key), so the author or the store must supply it.
 |---|---|---|
 | `RuleDefinition.Id` | `required string Id`, no default | Like `Name`, `EventType` and `Condition`; the compiler enforces it for rules in code |
 | JSON | `id` is required and must be a non-empty string, checked with the other required properties; errors are a `RuleParseException` at `$.id` (`$[n].id` in `ParseMany`) | Same check and message as `name`/`eventType` (`'id' is required.`, `'id' must be a non-empty string.`) |
+| `RuleValidator` | Reports an empty or whitespace `Id` at `$.id`, like `Name` and `EventType` | Rules built in code can still set `Id = ""` |
 | Numeric IDs (`"id": 42`) | Rejected (must be a string) | `Id` is a string; a store with numeric keys writes them as strings. Keeps one representation |
 | Uniqueness | Not checked | Rules come from the consumer's store, which owns uniqueness; the engine doesn't depend on it |
 
@@ -34,6 +35,7 @@ Migration: give each rule a stable `id`, for example its key in your rule store.
 
 - `RuleJsonValidationTests`: missing, `null`, empty, whitespace and numeric `id` → `RuleParseException` with the
   path, for `Parse` and `ParseMany` (`$[1].id`).
+- `RuleValidatorTests`: empty `Id` reported at `$.id`.
 - `RuleJsonParserTests`: `id` is read (case-insensitive property name, as for other properties).
 - Existing tests and samples set ids.
 
