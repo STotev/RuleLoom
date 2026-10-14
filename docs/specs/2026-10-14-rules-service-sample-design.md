@@ -54,49 +54,107 @@ an unknown tenant (404).
 - Sample `README.md`: how to run it, the wire format, the tenants and rules, what to watch in the console.
 - Links from the root README and `docs/README.md`; roadmap updated.
 
-## Findings (draft)
+## Findings
 
-Collected while building; #71 turns them into the final findings and the envelope decision.
+Collected while building the sample, then decided with the maintainer in
+[#71](https://github.com/STotev/RuleForge/issues/71) (2026-10-15). Each finding ends with its decision or follow-up.
 
-**What worked**
+### What worked
+
 - JSON state needed nothing extra: `JsonElement`s from model binding go straight to `ExecuteAsync`. `changed`,
   `$previous.Price`, action conditions and an ISO `referencePath` all work on it, and `640.5` vs `640.50` is no change.
 - `RuleValidator` caught a registration mistake precisely (`$.actions[0].action: No action is registered under the
   name 'log'`), and per-rule skipping kept the tenant's other rules running.
 - The engine's inputs (`eventType`, `current`, `previous`, rules) were enough for evaluation. Tenant and entity ID were
-  only needed around the engine: to pick the rules and to key scheduled jobs.
+  needed around the engine (to pick the rules and to key scheduled jobs), and an action that depends on the tenant
+  (e.g. a per-tenant mail server) would need them too, but `EvaluationContext` only carries the state.
 
-**Scheduling (input for 0.8)**
+### Event envelope
+
+- Sending the same event twice runs its immediate actions twice (two VIP emails). Deduplicating needs an event ID,
+  which the sample's minimal wire format didn't have.
+- Tenant and entity ID had no place in the library, so the sample carried them beside the engine, including into the
+  scheduled job's data.
+
+**Decision:** RuleForge owns an envelope **contract**, `RuleEvent`, not a transport (recorded in
+[`vision.md`](../vision.md#decided)):
+
+```csharp
+public sealed record RuleEvent(string EventType, object Current, object? Previous = null)
+{
+    public string? EventId { get; init; }     // the producer's message ID; deduplication stays with the consumer or transport
+    public string? Subject { get; init; }     // what the event is about, e.g. "order-1001" (as in CloudEvents)
+    public string? Source { get; init; }
+    public DateTimeOffset? OccurredAt { get; init; }
+    public IReadOnlyDictionary<string, object?> Metadata { get; init; } // consumer-defined, e.g. tenantId
+}
+```
+
+- `ExecuteAsync(RuleEvent, rules)` is added; the existing `ExecuteAsync(eventType, current, previous, rules)` overloads
+  stay as shorthands for an event without metadata.
+- Actions and custom operators read it from `EvaluationContext.Event`; rules reach it with **`$event.` paths**
+  (`$event.Metadata.region` in conditions, `$event.OccurredAt` as a `referencePath`).
+- The library defines its JSON shape (for producers and the 0.7 registration client) but never sends it.
+- Deduplication by `EventId` is the consumer's or the transport's (e.g. an inbox); RuleForge passes the ID through.
+- Built in **0.7**, as planned.
+
+### Running scheduled actions later
+
 - No entry point for running a scheduled action later: `RunScheduledActionJob` repeats what the engine does for an
-  immediate action (look up the executor by name, run it, turn exceptions into a failed result).
+  immediate action (look up the executor by name, run it, turn exceptions into a failed result). Quartz can only
+  schedule job classes; Hangfire can schedule a method call, but serializes it and needs a concrete type, while rules
+  name actions. Either way, a thin job is the consumer's; the duplication is what hurts.
 - An action run later reports `ExecutedImmediately`, the status name the engine uses for actions run without a schedule.
 - Conditions aren't re-checked at due time, and the action sees the state of the event that scheduled it.
-- Keys: a stable key needs `ruleId`, but `RuleDefinition.Id` defaults to a new GUID on every parse, and rules are
-  re-read for every event, so a rule without an `id` gets a new key each time (the sample's rules all set one). The
-  entity ID comes from the wire format, outside the library. Follow-up: [#77](https://github.com/STotev/RuleForge/issues/77)
-  makes `id` required (identity comes from where the rule is stored).
+
+**Decision (0.8):** an engine entry point, `ExecuteScheduledAsync(scheduledAction, ruleEvent, cancellationToken)`, that
+looks up the action and applies the same failure rules as `ExecuteAsync`, with a status that doesn't claim
+"immediately". A Quartz or Hangfire job then becomes one call. Re-checking conditions is decided with cancellation.
+
+### Keys and cancellation
+
+- A stable key needs the rule's identity, but `RuleDefinition.Id` defaulted to a new GUID on every parse, and rules
+  are re-read for every event. **Fixed in [#77](https://github.com/STotev/RuleForge/issues/77):** `id` is required;
+  identity comes from where the rule is stored.
+- The entity part of the key came from the sample's wire format, outside the library.
 - Replacing a pending action in Quartz needs the key on the trigger as well as the job: with a random trigger key the
   old trigger stays attached and the action runs twice (found by sending the same event twice).
+- Replacing works by key, but nothing tells the consumer that a pending action is no longer wanted (e.g. the order was
+  paid before the reminder).
 - The job data holds `ScheduledAction` and the state as objects, which only works with the in-memory store; a
   persistent store needs both serialized (and `ActionDefinition` includes its condition).
 
-**Envelope and idempotency (input for #71)**
-- Sending the same event twice runs its immediate actions twice (two VIP emails). Deduplicating needs an event ID,
-  which the minimal wire format doesn't have; whether that's the library's concern is part of the envelope decision.
+**Decisions (0.8):** `ScheduledAction.Key` = `{ruleId}:{actionIndex}:{subject}`, with the subject from
+`RuleEvent.Subject`, so a later event about the same entity can upsert or cancel the job. Cancellation (reporting keys
+that are no longer wanted) remains the main open question for the scheduling PRD. Serializable scheduled actions and a
+"dispatching scheduled actions" guide (including the trigger-key pitfall) are 0.8 items.
 
-**API friction**
-- `log` is built in but `AddRuleForge` doesn't register it (by design, see the DI spec); with it missing, every rule
-  using it was skipped while the service answered 200. Validating a tenant's rules when they change (or at startup)
-  would surface that earlier; the sample only validates per event. Follow-up:
-  [#78](https://github.com/STotev/RuleForge/issues/78) renames it to `ConsoleLogAction` (`console-log`) so its
-  development-only purpose is clear; it stays opt-in so it doesn't appear in action lists offered to users.
-- `RuleJsonParser.ParseMany` needs a JSON array, and one shape error rejects the whole file; only `RuleValidator`
-  errors are per rule.
+### Schema needs (0.6)
+
 - Action parameters are static values: `send-email`'s `to` is a path by the action's own convention, and the subject
-  can't include values from the state (no templating). Parameter kinds (value vs path) are a Schema System question.
+  can't include values from the state (no templating). The parameter descriptions planned for 0.6 should say whether a
+  parameter is a value or a path, so `RuleValidator` and authoring UIs can treat it accordingly.
+- Events arrive unchecked: a missing or mistyped field just resolves to `null`. Validating incoming events against
+  their schema is already in the vision (*Under consideration*).
+- Schemas could describe `$event.Metadata` keys once `RuleEvent` exists.
+
+### API friction
+
+- `log` is built in but `AddRuleForge` doesn't register it (by design, see the DI spec); with it missing, every rule
+  using it was skipped while the service answered 200. **Fixed in [#78](https://github.com/STotev/RuleForge/issues/78):**
+  renamed to `ConsoleLogAction` (`console-log`) so its development-only purpose is clear; it stays opt-in so it doesn't
+  appear in action lists offered to users. Validating rules when they're saved, not only per event, would surface such
+  mistakes earlier; worth a line in the guides.
+- `RuleJsonParser.ParseMany` needs a JSON array, and one shape error rejects the whole file; only `RuleValidator`
+  errors are per rule. Backlog: [#81](https://github.com/STotev/RuleForge/issues/81).
 - Due times relative to now need a client-side script in the `.http` file (Rider pre-request script).
 - Quartz 4 moved hosting into the `Quartz` package (`Quartz.Extensions.Hosting` is empty) and changed `IJob.Execute`
   to `ValueTask Execute(context, cancellationToken)`; worth knowing for a future scheduler integration package.
+
+### Named instances
+
+Not needed by the spike: the tenant travelled beside the engine ("group per tenant" in Quartz terms) without friction,
+and will travel in `RuleEvent.Metadata`. They stay *under consideration* in the vision.
 
 ## Deviations
 

@@ -89,14 +89,15 @@ titles, central package management, issue/PR templates, Claude Code setup (`AGEN
 ## 🎯 Milestones
 
 Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
-becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66.
+becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66. The 0.5 spike's
+[findings](specs/2026-10-14-rules-service-sample-design.md#findings) shaped 0.6–0.8 below.
 
 | Milestone | Contents | Notes |
 |---|---|---|
-| **0.5: JSON state & central-service spike** ([PRD #66](https://github.com/STotev/RuleForge/issues/66)) | Path resolution on `JsonElement` and `JsonNode`; ISO date strings compared as instants; `changed` via `ValueComparer`; a central rules-service sample (ASP.NET Core, JSON events with a tenant ID, scheduled actions handed to a scheduler) | The spike decides the **event envelope** and informs the scheduled-action entry point and cancellation |
-| **0.6: Schema System & fluent rule builder** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder; `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator`; **fluent rule builder** that produces `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the expression → path translation with the schema builder | Detail under [Schema & validation](#schema--validation) below |
-| **0.7: Hosting & producer utilities** | `RuleForge.AspNetCore` with `MapRuleForge` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; event envelope as decided in 0.5 | Optional packages; no rule CRUD |
-| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; deterministic `ScheduledAction` key; cancellation/replacement semantics; scheduled-action entry point; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
+| **0.5: JSON state & central-service spike** ([PRD #66](https://github.com/STotev/RuleForge/issues/66)) | Path resolution on `JsonElement` and `JsonNode`; ISO date strings compared as instants; `changed` via `ValueComparer`; a central rules-service sample (ASP.NET Core, JSON events with a tenant ID, scheduled actions handed to a scheduler) | The spike decided the **event envelope** (`RuleEvent`) and confirmed the scheduled-action entry point and key; follow-ups #77, #78 |
+| **0.6: Schema System & fluent rule builder** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder (including whether a parameter is a value or a path, found in the 0.5 spike); `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator`; **fluent rule builder** that produces `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the expression → path translation with the schema builder | Detail under [Schema & validation](#schema--validation) below |
+| **0.7: Hosting & producer utilities** | `RuleForge.AspNetCore` with `MapRuleForge` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, JSON shape) | Optional packages; no rule CRUD |
+| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
 | **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleForge/issues/27)), XML docs, guides, NuGet package metadata, first NuGet publish | Release is cleared; publishing waits for this milestone |
 | **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
 
@@ -107,7 +108,7 @@ becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66.
 | [#68](https://github.com/STotev/RuleForge/issues/68) | Resolve paths on JSON state (`JsonElement`, `JsonNode`) | AFK | [#72](https://github.com/STotev/RuleForge/pull/72) | [json-state-paths](specs/2026-10-09-json-state-paths-design.md) |
 | [#69](https://github.com/STotev/RuleForge/issues/69) | ISO date strings compared as instants; `changed` via `ValueComparer` | AFK | [#75](https://github.com/STotev/RuleForge/pull/75) | [json-value-comparison](specs/2026-10-09-json-value-comparison-design.md) |
 | [#70](https://github.com/STotev/RuleForge/issues/70) | Central rules-service sample (spike) | HITL | [#76](https://github.com/STotev/RuleForge/pull/76) | [rules-service-sample](specs/2026-10-14-rules-service-sample-design.md) |
-| [#71](https://github.com/STotev/RuleForge/issues/71) | Spike findings and event envelope decision | HITL | — | — |
+| [#71](https://github.com/STotev/RuleForge/issues/71) | Spike findings and event envelope decision | HITL | — | [rules-service-sample § Findings](specs/2026-10-14-rules-service-sample-design.md#findings) |
 | [#77](https://github.com/STotev/RuleForge/issues/77) | Require a rule id (spike follow-up) | AFK | [#79](https://github.com/STotev/RuleForge/pull/79) | [required-rule-id](specs/2026-10-14-required-rule-id-design.md) |
 | [#78](https://github.com/STotev/RuleForge/issues/78) | Rename `LogAction` to `ConsoleLogAction` (spike follow-up) | AFK | [#80](https://github.com/STotev/RuleForge/pull/80) | [console-log-action](specs/2026-10-15-console-log-action-design.md) |
 
@@ -126,6 +127,7 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 | Separate `EvaluationContext` data from path resolution (`IPathResolver`) | Testability | [analysis §6](archive/business-rules-analysis.md) |
 | Path whitelisting for untrusted rules | Security, when end users author rules; comes with schema-based validation in **0.6** | [analysis §13](archive/business-rules-analysis.md) |
 | Rule indexing by event type | Performance | [analysis §9](archive/business-rules-analysis.md) |
+| Parse rule arrays rule by rule ([#81](https://github.com/STotev/RuleForge/issues/81)) | One malformed rule rejects the whole `ParseMany` array today | 0.5 spike findings |
 
 ### Scheduling follow-ups (deferred from PRD #1)
 | Item | Notes | Source |

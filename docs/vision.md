@@ -1,6 +1,7 @@
 # RuleForge Vision
 
-**Status:** Living document — started 2026-10-07; deployment and ownership questions discussed 2026-10-07. Add to
+**Status:** Living document — started 2026-10-07; deployment and ownership questions discussed 2026-10-07; event
+envelope decided after the central-service spike 2026-10-15. Add to
 it as ideas come up; decisions move from *Under consideration* to *Decided* once discussed. The
 [roadmap](roadmap.md) orders the work; this page explains what RuleForge is meant to be and who owns what.
 
@@ -67,46 +68,32 @@ For schemas the reference is Swagger / Swashbuckle: schemas generated at runtime
 | **Catalogue and REST API** | Core gets a transport-free **catalogue** (event schemas, operators with operand counts, actions with parameters, validate a rule) and DTOs. An optional ASP.NET Core package maps it: `app.MapRuleForge("/ruleforge")` → `GET schemas`, `GET operators`, `GET actions`, `POST rules/validate`, `POST schemas` (registration), returning the route group so the consumer adds auth and versioning. **No rule CRUD** | The authoring UI needs discovery and validation; rule storage is the consumer's, so the UI saves through the consumer's API, which calls RuleForge to validate |
 | **State snapshotter** | Starts as a small **explicit API** that captures previous and current state (as JSON, optionally through the schema DTO mapping). EF Core change-tracking integration is a later optional package if there's demand | Explicit capture works anywhere; JSON snapshots need no classes on the receiving side |
 | **Execution history** | Near term: a small core **observer hook** (or OpenTelemetry activities/metrics; to choose in its PRD) so consumers can record results wherever they like. The **operations dashboard** and an execution store with optional implementations come later, Hangfire-style | Consumers already get `RuleEngineResult`; a hook covers recording without committing the library to storage yet |
+| **Event envelope** | A `RuleEvent` contract in Abstractions: `EventType`, `Current`, `Previous`, plus optional `EventId`, `Subject`, `Source`, `OccurredAt` and consumer-defined `Metadata` (e.g. a tenant ID). `ExecuteAsync(RuleEvent, rules)` is added beside the existing overloads; actions read it from `EvaluationContext.Event`, and rules reach it with `$event.` paths (`$event.Metadata.region`, `$event.OccurredAt`). The library defines the contract and its JSON shape, never the transport; deduplication by `EventId` stays with the consumer or transport. Planned for 0.7 | Decided after the central-service spike (#70, findings in its [spec](specs/2026-10-14-rules-service-sample-design.md#findings)): tenant and entity ID had no place in the library, actions couldn't see them, and duplicate events re-ran actions without an ID to deduplicate on. `Subject` also gives scheduled-action keys their entity part |
 
 ## Under consideration
 
 Ideas the maintainer wants kept in the loop. None are scheduled; each needs discussion (and probably a PRD) first.
 
-### Central rules-service sample (spike)
-A minimal ASP.NET Core host that receives events as JSON (with a tenant ID), runs rules, and hands scheduled actions
-to a scheduler — built by trying the library as intended. It settles the questions below that can't be decided on
-paper: the event envelope, the scheduled-action entry point, and cancellation.
-
-### Event envelope contract
-A shared shape for events travelling to a central service: event type, current, previous, source service,
-correlation ID, timestamp, schema version — and consumer-defined metadata such as a tenant ID. **To decide in the
-spike**, by trying both:
-- a `RuleEvent` record in Abstractions with an `ExecuteAsync(RuleEvent, rules)` overload, metadata exposed to actions
-  (and perhaps to paths, e.g. `$event.TenantId`);
-- or only an optional metadata parameter on `ExecuteAsync`, with the wire envelope left to the consumer.
-
-Either way the library owns at most the *contract* and its serialization, not the transport.
-
 ### Running scheduled actions later
-Decided so far:
+Decided so far (the last two confirmed by the central-service spike, 2026-10-15):
 - **State:** the consumer chooses — pass the event-time JSON snapshot or reload fresh state; the entry point just
-  takes current/previous.
-- **Cancel key:** `ScheduledAction` gets a deterministic key (rule ID + action index + an optional key path from the
-  event, e.g. `InvoiceId`), so consumers can upsert or cancel jobs in Hangfire/Quartz.
-
-Leaning, to confirm in the spike:
-- **Entry point:** an engine method such as `ExecuteScheduledAsync(scheduledAction, current, previous?, rule?)` that
-  resolves the action and applies the same failure rules as `ExecuteAsync`.
-- **Re-checking conditions** at run time (only when the consumer passes the rule) — depends on cancellation below.
+  takes the event.
+- **Entry point:** `ExecuteScheduledAsync(scheduledAction, ruleEvent)` resolves the action and applies the same failure
+  rules as `ExecuteAsync`, with a status that doesn't claim "immediately". The spike's Quartz job had to repeat the
+  engine's lookup and error handling.
+- **Key:** `ScheduledAction.Key` = `{ruleId}:{actionIndex}:{subject}`, with the subject from `RuleEvent.Subject`
+  (rule ids are required since #77), so consumers can upsert or cancel jobs in Hangfire/Quartz. Schedulers may need the
+  key on more than the job (Quartz triggers), which the dispatching guide should show.
 
 Open — **the main question for the scheduling PRD:** how later events cancel or replace pending actions. One model:
 when the same event fires again for the same key, a still-matching rule returns the action again with the same key
 (the consumer upserts the job), and a rule that no longer matches reports the key as **no longer wanted** (the
 consumer cancels it). Today a `NotMatched` rule reports no scheduled actions at all. If this works, run-time
-re-checks may be unnecessary ("scheduled means committed").
+re-checks of conditions may be unnecessary ("scheduled means committed").
 
-Also: past times, retries and duplicates; the **time semantics review** (time zones, `Unspecified` dates); and a
-"dispatching scheduled actions" guide showing the Hangfire/Quartz pattern.
+Also: past times, retries and duplicates; serializable scheduled actions for persistent job stores; the **time
+semantics review** (time zones, `Unspecified` dates); and a "dispatching scheduled actions" guide showing the
+Hangfire/Quartz pattern.
 
 ### Named instances (e.g. per tenant)
 Raised 2026-10-08, after Quartz.NET's
@@ -129,12 +116,12 @@ var engine = provider.GetRequiredKeyedService<RuleEngine>(tenantId);
   the `ISchemaStore`, the `TimeProvider` or a default time zone (ties into the time semantics review), and later the
   execution history.
 - **Today's alternative** (Quartz's "group per tenant"): one shared engine, with the tenant ID in the event's
-  metadata (see the event envelope).
+  metadata (`RuleEvent.Metadata`). The central-service spike worked this way without friction, so it showed no need
+  for named instances yet.
 - **Costs:** `AddRuleForge` keeps one shared registry per service collection today, so it would need keyed
   registrations; the catalogue endpoints would need to know the instance (e.g. `MapRuleForge("/{tenant}/ruleforge")`);
   adding instances at runtime (Quartz's `ISchedulerRuntime`) is a further step.
-- **When to decide:** after the central-service spike (0.5), before the catalogue and endpoints (0.6–0.7) settle
-  their shape.
+- **When to decide:** before the catalogue and endpoints (0.6–0.7) settle their shape.
 
 ### Typed rule consumers and dispatch (in-process, post-1.0)
 Raised 2026-10-09, inspired by MassTransit consumers and FluentValidation. For a domain service using the engine
@@ -172,7 +159,8 @@ await rules.PublishAsync(current: order, previous: before, ct);   // runs the co
 ### Validating incoming events against schemas
 Like MassTransit skipping messages of unknown types: once schemas are registered (0.6), a central service could reject
 or skip events whose type has no schema, or whose payload doesn't fit it, instead of running rules that see `null`.
-Optional strictness on top of untyped JSON support. To consider in the 0.6 design and the spike findings (#71).
+Optional strictness on top of untyped JSON support. To consider in the 0.6 design; the central-service spike confirmed
+the gap (a missing or mistyped field just resolves to `null`).
 
 ### Also on the roadmap backlog
 Time semantics review, path variables and functions, more operators, benchmarks (#27), NuGet packaging — see the
