@@ -73,7 +73,8 @@ Collected while building; #71 turns them into the final findings and the envelop
 - Conditions aren't re-checked at due time, and the action sees the state of the event that scheduled it.
 - Keys: a stable key needs `ruleId`, but `RuleDefinition.Id` defaults to a new GUID on every parse, and rules are
   re-read for every event, so a rule without an `id` gets a new key each time (the sample's rules all set one). The
-  entity ID comes from the wire format, outside the library.
+  entity ID comes from the wire format, outside the library. Follow-up: [#77](https://github.com/STotev/RuleForge/issues/77)
+  makes `id` required (identity comes from where the rule is stored).
 - Replacing a pending action in Quartz needs the key on the trigger as well as the job: with a random trigger key the
   old trigger stays attached and the action runs twice (found by sending the same event twice).
 - The job data holds `ScheduledAction` and the state as objects, which only works with the in-memory store; a
@@ -86,7 +87,9 @@ Collected while building; #71 turns them into the final findings and the envelop
 **API friction**
 - `log` is built in but `AddRuleForge` doesn't register it (by design, see the DI spec); with it missing, every rule
   using it was skipped while the service answered 200. Validating a tenant's rules when they change (or at startup)
-  would surface that earlier; the sample only validates per event.
+  would surface that earlier; the sample only validates per event. Follow-up:
+  [#78](https://github.com/STotev/RuleForge/issues/78) renames it to `ConsoleLogAction` (`console-log`) so its
+  development-only purpose is clear; it stays opt-in so it doesn't appear in action lists offered to users.
 - `RuleJsonParser.ParseMany` needs a JSON array, and one shape error rejects the whole file; only `RuleValidator`
   errors are per rule.
 - Action parameters are static values: `send-email`'s `to` is a path by the action's own convention, and the subject

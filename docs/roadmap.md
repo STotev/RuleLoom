@@ -108,6 +108,8 @@ becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66.
 | [#69](https://github.com/STotev/RuleForge/issues/69) | ISO date strings compared as instants; `changed` via `ValueComparer` | AFK | [#75](https://github.com/STotev/RuleForge/pull/75) | [json-value-comparison](specs/2026-10-09-json-value-comparison-design.md) |
 | [#70](https://github.com/STotev/RuleForge/issues/70) | Central rules-service sample (spike) | HITL | [#76](https://github.com/STotev/RuleForge/pull/76) | [rules-service-sample](specs/2026-10-14-rules-service-sample-design.md) |
 | [#71](https://github.com/STotev/RuleForge/issues/71) | Spike findings and event envelope decision | HITL | — | — |
+| [#77](https://github.com/STotev/RuleForge/issues/77) | Require a rule id (spike follow-up) | AFK | — | — |
+| [#78](https://github.com/STotev/RuleForge/issues/78) | Rename `LogAction` to `ConsoleLogAction` (spike follow-up) | AFK | — | — |
 
 ---
 
