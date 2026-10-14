@@ -101,11 +101,11 @@ public class RuleValidatorTests
     }
 
     [Fact]
-    public void Validate_EmptyNameAndEventType_AreReported()
+    public void Validate_EmptyIdNameAndEventType_AreReported()
     {
-        var rule = new RuleDefinition { Name = " ", EventType = "", Condition = Valid };
+        var rule = new RuleDefinition { Id = "", Name = " ", EventType = "", Condition = Valid };
 
-        Assert.Equal(["$.name", "$.eventType"], Validator.Validate(rule).Errors.Select(e => e.Path));
+        Assert.Equal(["$.id", "$.name", "$.eventType"], Validator.Validate(rule).Errors.Select(e => e.Path));
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class RuleValidatorTests
     }
 
     private static RuleDefinition Rule(ConditionNode condition, params ActionDefinition[] actions) =>
-        new() { Name = "Rule", EventType = "Event", Condition = condition, Actions = [.. actions] };
+        new() { Id = "rule", Name = "Rule", EventType = "Event", Condition = condition, Actions = [.. actions] };
 
     private static ActionDefinition Action(string type, ConditionNode? condition = null, ScheduleMetadata? schedule = null) =>
         new() { Action = type, Condition = condition, Schedule = schedule };

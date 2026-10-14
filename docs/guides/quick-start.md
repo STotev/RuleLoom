@@ -36,6 +36,7 @@ using RuleForge.Operators;
 
 var rule = new RuleDefinition
 {
+    Id = "price-drop",
     Name = "Price drop",
     EventType = "ProductUpdated",
     Condition = new OperatorCondition
@@ -72,6 +73,7 @@ Failures are reported in the result, not thrown: one broken rule or action doesn
 
 ```json
 {
+  "id": "price-drop",
   "name": "Price drop",
   "eventType": "ProductUpdated",
   "priority": 10,

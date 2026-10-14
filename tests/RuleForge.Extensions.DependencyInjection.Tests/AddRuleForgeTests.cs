@@ -13,6 +13,7 @@ public class AddRuleForgeTests
 {
     private const string Json = """
     {
+      "id": "welcome",
       "name": "Welcome",
       "eventType": "UserCreated",
       "condition": { "operator": "eq", "operands": [{ "path": "Tier" }, { "value": "vip" }] },

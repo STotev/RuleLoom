@@ -31,6 +31,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var rule = new RuleDefinition
         {
+            Id = "price-equals-test",
             Name = "Price Equals Test",
             EventType = "ProductUpdated",
             Priority = 1,
@@ -73,6 +74,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var rule = new RuleDefinition
         {
+            Id = "price-changed-test",
             Name = "Price Changed Test",
             EventType = "ProductUpdated",
             Priority = 1,
@@ -108,6 +110,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var rule = new RuleDefinition
         {
+            Id = "price-changed-test",
             Name = "Price Changed Test",
             EventType = "ProductUpdated",
             Priority = 1,
@@ -142,6 +145,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var rule = new RuleDefinition
         {
+            Id = "price-and-status-test",
             Name = "Price And Status Test",
             EventType = "ProductUpdated",
             Priority = 1,
@@ -196,6 +200,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var rule = new RuleDefinition
         {
+            Id = "price-or-status-test",
             Name = "Price Or Status Test",
             EventType = "ProductUpdated",
             Priority = 1,
@@ -250,6 +255,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var rule = new RuleDefinition
         {
+            Id = "not-test",
             Name = "Not Test",
             EventType = "ProductUpdated",
             Priority = 1,
@@ -297,6 +303,7 @@ public class RuleEngineIntegrationTests
         {
             new RuleDefinition
             {
+                Id = "low-priority",
                 Name = "Low Priority",
                 EventType = "Test",
                 Priority = 1,
@@ -316,6 +323,7 @@ public class RuleEngineIntegrationTests
             },
             new RuleDefinition
             {
+                Id = "high-priority",
                 Name = "High Priority",
                 EventType = "Test",
                 Priority = 10,
@@ -335,6 +343,7 @@ public class RuleEngineIntegrationTests
             },
             new RuleDefinition
             {
+                Id = "medium-priority",
                 Name = "Medium Priority",
                 EventType = "Test",
                 Priority = 5,
@@ -370,6 +379,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var rule = new RuleDefinition
         {
+            Id = "conditional-action-test",
             Name = "Conditional Action Test",
             EventType = "ProductUpdated",
             Priority = 1,
@@ -436,6 +446,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var rule = new RuleDefinition
         {
+            Id = "nested-property-test",
             Name = "Nested Property Test",
             EventType = "UserUpdated",
             Priority = 1,
@@ -482,6 +493,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var rule = new RuleDefinition
         {
+            Id = "missing-property-test",
             Name = "Missing Property Test",
             EventType = "Test",
             Priority = 1,
@@ -518,6 +530,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var json = """
         {
+          "id": "json-rule-test",
           "name": "JSON Rule Test",
           "eventType": "ProductUpdated",
           "priority": 5,
@@ -564,6 +577,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var json = """
         {
+          "id": "invoice-reminder",
           "name": "Invoice reminder",
           "eventType": "InvoiceDue",
           "condition": { "operator": "eq", "operands": [{ "path": "Paid" }, { "value": false }] },
@@ -596,6 +610,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var json = """
         {
+          "id": "typed-values",
           "name": "Typed values",
           "eventType": "ProductUpdated",
           "condition": {
@@ -633,6 +648,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var json = """
         {
+          "id": "order-placed",
           "name": "Order placed",
           "eventType": "OrderPlaced",
           "condition": { "operator": "gt", "operands": [{ "path": "Total" }, { "value": 0 }] },
@@ -674,6 +690,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var json = """
         {
+          "id": "sync-customer",
           "name": "Sync customer",
           "eventType": "CustomerUpdated",
           "condition": { "operator": "changed", "operands": [{ "path": "Email" }] },
@@ -708,6 +725,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var json = """
         {
+          "id": "price-dropped",
           "name": "Price dropped",
           "eventType": "ProductUpdated",
           "condition": {
@@ -739,6 +757,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var json = """
         {
+          "id": "affordable-and-recent",
           "name": "Affordable and recent",
           "eventType": "ProductUpdated",
           "condition": {
@@ -773,6 +792,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var json = """
         {
+          "id": "shouting-rule",
           "name": "Shouting rule",
           "eventType": "PRODUCTUPDATED",
           "condition": {
@@ -807,6 +827,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var json = """
         {
+          "id": "vip-order-shipped",
           "name": "VIP order shipped",
           "eventType": "OrderUpdated",
           "condition": {
@@ -863,6 +884,7 @@ public class RuleEngineIntegrationTests
         // Arrange
         var json = """
         {
+          "id": "invoice-issued",
           "name": "Invoice issued",
           "eventType": "InvoiceIssued",
           "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Open" }] },
@@ -894,6 +916,7 @@ public class RuleEngineIntegrationTests
         // Arrange: a date range in UTC against a date with a +02:00 offset, and an object that didn't change
         var json = """
         {
+          "id": "delivered-in-may-address-unchanged",
           "name": "Delivered in May, address unchanged",
           "eventType": "OrderUpdated",
           "condition": {

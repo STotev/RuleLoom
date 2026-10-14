@@ -10,9 +10,10 @@ namespace RuleForge.Abstractions.Rule;
 public class RuleDefinition
 {
     /// <summary>
-    /// Unique identifier for this rule. Generated automatically if not provided.
+    /// Identifier of this rule, stable across loads (e.g. its key in your rule store). Used to identify the rule in
+    /// results and scheduled actions.
     /// </summary>
-    public string Id { get; init; } = Guid.NewGuid().ToString();
+    public required string Id { get; init; }
     
     /// <summary>
     /// Human-readable name for the rule.

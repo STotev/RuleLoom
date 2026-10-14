@@ -17,6 +17,7 @@ internal static class BasicExample
     {
         var rule = new RuleDefinition
         {
+            Id = "price-drop",
             Name = "Price drop",
             EventType = "CarAdUpdated",
             // The price changed and is now below the previous price.

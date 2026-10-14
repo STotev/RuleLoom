@@ -13,6 +13,7 @@ internal static class DependencyInjectionExample
 {
     private const string Rule = """
     {
+      "id": "shipped",
       "name": "Shipped",
       "eventType": "OrderUpdated",
       "condition": {

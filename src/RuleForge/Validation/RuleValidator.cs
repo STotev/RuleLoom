@@ -42,6 +42,9 @@ public sealed class RuleValidator
 
         var errors = new List<RuleValidationError>();
 
+        if (string.IsNullOrWhiteSpace(rule.Id))
+            errors.Add(new("$.id", "'id' must be a non-empty string."));
+
         if (string.IsNullOrWhiteSpace(rule.Name))
             errors.Add(new("$.name", "'name' must be a non-empty string."));
 
