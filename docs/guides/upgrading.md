@@ -3,9 +3,46 @@
 RuleForge is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
+- [0.4 → 0.5](#04--05): ISO date strings and `changed` compare by meaning; rules on JSON state
 - [0.3 → 0.4](#03--04): actions are named by registration, `IAction`, dependency injection
 - [0.2 → 0.3](#02--03): API hardening (results, operators, validation, paths, parameters)
 - [0.1 → 0.2](#01--02): action results, action factory, scheduling, the RuleForge rename
+
+---
+
+## 0.4 → 0.5
+
+### Two ISO 8601 strings compare as dates
+
+When **both** values are strict ISO 8601 strings (typical for JSON state, where dates are strings), `eq`, `gt`, `gte`,
+`lt` and `lte` compare them as instants instead of as text:
+
+| Comparison | 0.4 | 0.5 |
+|---|---|---|
+| `"2026-05-01T14:00:00+02:00"` eq `"2026-05-01T12:00:00Z"` | false | **true** |
+| `"2026-01-01"` eq `"2026-01-01T00:00:00Z"` | false | **true** (date-only means UTC midnight) |
+| `"2026-06-01T01:30:00+02:00"` lt `"2026-06-01"` | false (text order) | **true** (23:30Z on 31 May) |
+| `"2026-05-01"` lt `"May 1st"` | true (text order) | **false**: a date against other text can't be ordered |
+
+What to check: rules that compare string properties holding dates. If you relied on text order, compare against a
+`DateTime`/`DateTimeOffset` property or an ISO value instead.
+
+### `changed` compares by meaning
+
+`changed` now uses the same equality as `eq`, so it no longer fires when only the type or format differs:
+
+- `100` → `100.0` (e.g. `long` vs `decimal`), or `"2026-05-01T14:00:00+02:00"` → `"2026-05-01T12:00:00Z"`: not a change.
+- JSON objects and arrays (paths ending at an object, since rules can run on JSON state) compare by content,
+  ignoring property order.
+- Other objects are compared with `Equals`, as before.
+
+What to check: rules using `changed` on properties whose type differs between current and previous state.
+
+### New: rules on JSON state (not breaking)
+
+Rules can run on a `JsonElement` or `JsonNode` instead of a .NET class, and paths follow the runtime value of
+properties declared as `object` or an interface (they used to resolve to `null`). See
+[Rules on JSON State](json-rules.md#rules-on-json-state).
 
 ---
 

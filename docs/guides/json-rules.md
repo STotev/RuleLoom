@@ -259,7 +259,7 @@ resolves to `null`.
 
 | JSON | Resolves to |
 |---|---|
-| String | `string` (dates stay strings; ISO 8601 strings still work as a schedule `referencePath`) |
+| String | `string`; ISO 8601 date strings compare as dates (see [Comparing Values](#comparing-values)) and work as a schedule `referencePath` |
 | `true` / `false` | `bool` (usable directly as a condition) |
 | Integral number (`42`) | `long` |
 | Other number (`19.99`, `1.0`, `1e2`) | `decimal` (exact), or `double` beyond `decimal`'s range; `null` beyond `double`'s |
@@ -270,7 +270,8 @@ A `JsonValue` created from a .NET value (`JsonValue.Create(19.99m)`) returns tha
 
 **Limits:**
 - Arrays can't be indexed (`Lines.0` and `Lines[0]` resolve to `null`).
-- JSON has no enum or date types: `"Shipped"` compares as a string (case-sensitive), not as an enum.
+- JSON has no enum type: `"Shipped"` compares as a string (case-sensitive), not as an enum. Dates work through ISO 8601
+  strings.
 - Keep the `JsonDocument` alive until `ExecuteAsync` returns. A `JsonElement` from a disposed document throws
   `ObjectDisposedException` instead of resolving to `null`.
 
@@ -286,10 +287,14 @@ so a value matches when it means the same thing:
 | Enum | String | Same name, ignoring case: `"active"` matches `Status.Active`; `[Flags]` combinations like `"Read, Write"` work |
 | Enum | Number | Same underlying value: `1` matches `Status.Active` (= 1) |
 | `DateTime` / `DateTimeOffset` | String | Same instant, given as **ISO 8601**: `"2026-05-01T12:00:00Z"`, `"2026-05-01T14:00:00+02:00"`; no offset means UTC; `"2026-05-01"` means UTC midnight |
+| `string` (ISO 8601 date) | ISO 8601 string | Same instant: `"2026-05-01T14:00:00+02:00"` matches `"2026-05-01T12:00:00Z"`; `"2026-05-01"` matches `"2026-05-01T00:00:00Z"`. Typical for JSON state |
+| `string` (ISO 8601 date) | Other string | Never matches, and can't be ordered |
 | `string` | String | Exactly equal (case-sensitive) |
+| JSON object or array | JSON object or array | Same content, ignoring property order (`changed` on an object path compares content) |
 
 Values that don't fit these rules never match: e.g. a non-ISO date string (`"05/01/2026"`), a number as text
-(`"100"` vs `100`), or `NaN`.
+(`"100"` vs `100`), or `NaN`. `changed` uses the same equality, so `100` → `100.0` or the same instant in another
+offset isn't a change.
 
 `gt`, `gte`, `lt` and `lte` order values with the same rules: numbers by value, enums by underlying number (so
 `"Active"` is compared as `Status.Active`'s value), dates as instants, and strings ordinally (`"B"` < `"a"`). When two

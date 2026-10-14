@@ -887,6 +887,42 @@ public class RuleEngineIntegrationTests
         Assert.Empty(_logMessages);
     }
 
+    [Theory]
+    [MemberData(nameof(JsonStateKinds))]
+    public async Task RuleEngine_JsonStateDatesAndObjects_CompareByMeaning(string kind)
+    {
+        // Arrange: a date range in UTC against a date with a +02:00 offset, and an object that didn't change
+        var json = """
+        {
+          "name": "Delivered in May, address unchanged",
+          "eventType": "OrderUpdated",
+          "condition": {
+            "operator": "and",
+            "operands": [
+              { "operator": "gte", "operands": [{ "path": "DeliveredAt" }, { "value": "2026-05-01T00:00:00Z" }] },
+              { "operator": "lt", "operands": [{ "path": "DeliveredAt" }, { "value": "2026-06-01" }] },
+              { "operator": "not", "operands": [{ "operator": "changed", "operands": [{ "path": "Address" }] }] },
+              { "operator": "not", "operands": [{ "operator": "changed", "operands": [{ "path": "Total" }] }] }
+            ]
+          },
+          "actions": [{ "action": "test-log", "parameters": { "message": "Matched" } }]
+        }
+        """;
+
+        var current = ParseState(kind, """
+            { "DeliveredAt": "2026-06-01T01:30:00+02:00", "Total": 100, "Address": { "City": "Paris", "Zip": "75001" } }
+            """);
+        var previous = ParseState(kind, """
+            { "DeliveredAt": null, "Total": 100.0, "Address": { "Zip": "75001", "City": "Paris" } }
+            """);
+
+        // Act
+        await _engine.ExecuteAsync("OrderUpdated", current, previous, [RuleJsonParser.Parse(json)], TestContext.Current.CancellationToken);
+
+        // Assert: 01:30+02:00 is 23:30Z on 31 May, so it's inside the range
+        Assert.Equal(["Matched"], _logMessages);
+    }
+
     private static object ParseState(string kind, string json) => kind switch
     {
         "JsonElement" => JsonSerializer.Deserialize<object>(json)!,
