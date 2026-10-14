@@ -154,6 +154,7 @@ first (`RemoveOperator("eq").AddOperator<MyEquals>()`); `RemoveBuiltInOperators(
 - **[JSON Rule Format](docs/guides/json-rules.md)** - JSON format reference
 - **[Upgrading](docs/guides/upgrading.md)** - Breaking changes by version, with before/after examples
 - **[Console Sample](samples/RuleForge.Samples.Console/)** - Runnable examples: basics, scheduling, JSON + validation, DI
+- **[Rules-Service Sample](samples/RuleForge.Samples.RulesService/)** - A central rules service: JSON events per tenant, rules from files, scheduled actions with Quartz.NET
 - **[Roadmap](docs/roadmap.md)** - What's done, what's next, and the backlog
 - **[Changelog](CHANGELOG.md)** - Release notes
 
@@ -314,7 +315,8 @@ RuleForge/
 │   ├── RuleForge.Tests/            # Unit tests
 │   └── RuleForge.Tests.Integration/ # Integration tests
 ├── samples/
-│   └── RuleForge.Samples.Console/  # Example usage
+│   ├── RuleForge.Samples.Console/  # Example usage
+│   └── RuleForge.Samples.RulesService/ # Central rules service (ASP.NET Core + Quartz.NET)
 └── docs/                           # Guides, roadmap and design specs
 ```
 
