@@ -1,0 +1,33 @@
+[
+  {
+    "id": "vip-order",
+    "name": "VIP order",
+    "eventType": "OrderPlaced",
+    "condition": { "operator": "gte", "operands": [{ "path": "Total" }, { "value": 500 }] },
+    "actions": [
+      { "action": "send-email", "parameters": { "to": "Customer.Email", "subject": "Thank you for your order: a gift is on its way" } }
+    ]
+  },
+  {
+    "id": "payment-reminder",
+    "name": "Payment reminder",
+    "eventType": "OrderPlaced",
+    "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "AwaitingPayment" }] },
+    "actions": [
+      {
+        "action": "send-email",
+        "parameters": { "to": "Customer.Email", "subject": "Your payment is due in a minute" },
+        "schedule": { "mode": "Advance", "amount": 1, "unit": "Minutes", "referencePath": "PaymentDueAt" }
+      }
+    ]
+  },
+  {
+    "id": "status-changed",
+    "name": "Order status changed",
+    "eventType": "OrderUpdated",
+    "condition": { "operator": "changed", "operands": [{ "path": "Status" }] },
+    "actions": [
+      { "action": "send-email", "parameters": { "to": "Customer.Email", "subject": "Your order status has changed" } }
+    ]
+  }
+]

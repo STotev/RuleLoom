@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/samples/">
     <Project Path="samples/RuleForge.Samples.Console/RuleForge.Samples.Console.csproj" />
+    <Project Path="samples/RuleForge.Samples.RulesService/RuleForge.Samples.RulesService.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />

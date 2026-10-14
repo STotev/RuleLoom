@@ -1,0 +1,91 @@
+### Requests for the central rules-service sample. Start it with:
+###   dotnet run --project samples/RuleForge.Samples.RulesService
+### Written for the JetBrains (Rider) HTTP client: the pre-request scripts set due times relative to now.
+
+@baseUrl = http://localhost:5080
+
+### acme-shop: VIP order awaiting payment.
+### Matches "VIP order" (email now), "Big basket" (log) and "Payment reminder" (scheduled 1 minute before
+### PaymentDueAt, so about a minute from now). Every acme-shop response lists "Shipped SMS" as invalid.
+< {%
+    request.variables.set("paymentDueAt", new Date(Date.now() + 2 * 60 * 1000).toISOString());
+%}
+POST {{baseUrl}}/events
+Content-Type: application/json
+
+{
+  "eventType": "OrderPlaced",
+  "tenantId": "acme-shop",
+  "entityId": "order-1001",
+  "current": {
+    "Number": "SO-1001",
+    "Status": "AwaitingPayment",
+    "Total": 640.50,
+    "ItemCount": 6,
+    "PaymentDueAt": "{{paymentDueAt}}",
+    "Customer": { "Name": "Ada", "Email": "ada@example.com" }
+  }
+}
+
+### acme-shop: status changes from AwaitingPayment to Paid. Matches "Order status changed" (changed + previous).
+POST {{baseUrl}}/events
+Content-Type: application/json
+
+{
+  "eventType": "OrderUpdated",
+  "tenantId": "acme-shop",
+  "entityId": "order-1001",
+  "current": { "Number": "SO-1001", "Status": "Paid", "Total": 640.50, "Customer": { "Email": "ada@example.com" } },
+  "previous": { "Number": "SO-1001", "Status": "AwaitingPayment", "Total": 640.50, "Customer": { "Email": "ada@example.com" } }
+}
+
+### acme-shop: an update without a status change (the total is written differently). Nothing matches.
+POST {{baseUrl}}/events
+Content-Type: application/json
+
+{
+  "eventType": "OrderUpdated",
+  "tenantId": "acme-shop",
+  "entityId": "order-1001",
+  "current": { "Number": "SO-1001", "Status": "Paid", "Total": 640.5, "Customer": { "Email": "ada@example.com" } },
+  "previous": { "Number": "SO-1001", "Status": "Paid", "Total": 640.50, "Customer": { "Email": "ada@example.com" } }
+}
+
+### wheels-market: a new ad. Matches "Ad published": logs now, emails the seller in 30 seconds.
+POST {{baseUrl}}/events
+Content-Type: application/json
+
+{
+  "eventType": "AdPublished",
+  "tenantId": "wheels-market",
+  "entityId": "ad-77",
+  "current": {
+    "Title": "2019 hatchback, one owner",
+    "Status": "Published",
+    "Price": 10500,
+    "Seller": { "Name": "Grace", "Email": "grace@example.com" }
+  }
+}
+
+### wheels-market: the price drops below 10k. Matches "Price drop" ($previous.Price); the action condition adds the bargain log.
+POST {{baseUrl}}/events
+Content-Type: application/json
+
+{
+  "eventType": "AdUpdated",
+  "tenantId": "wheels-market",
+  "entityId": "ad-77",
+  "current": { "Title": "2019 hatchback, one owner", "Status": "Published", "Price": 9800, "Seller": { "Email": "grace@example.com" } },
+  "previous": { "Title": "2019 hatchback, one owner", "Status": "Published", "Price": 10500, "Seller": { "Email": "grace@example.com" } }
+}
+
+### Unknown tenant: 404.
+POST {{baseUrl}}/events
+Content-Type: application/json
+
+{
+  "eventType": "OrderPlaced",
+  "tenantId": "globex",
+  "entityId": "order-1",
+  "current": { "Total": 10 }
+}
