@@ -5,7 +5,7 @@
     "eventType": "OrderPlaced",
     "condition": { "operator": "gte", "operands": [{ "path": "ItemCount" }, { "value": 5 }] },
     "actions": [
-      { "action": "log", "parameters": { "message": "Big basket: offer free shipping on the next order" } }
+      { "action": "console-log", "parameters": { "message": "Big basket: offer free shipping on the next order" } }
     ]
   },
   {

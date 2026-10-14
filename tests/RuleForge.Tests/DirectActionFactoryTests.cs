@@ -10,11 +10,11 @@ public class DirectActionFactoryTests
     public void Constructor_WithExecutors_RegistersEachUnderItsDefaultName()
     {
         var sendEmail = new SendEmailAction();
-        var factory = new DirectActionFactory([sendEmail, new LogAction()]);
+        var factory = new DirectActionFactory([sendEmail, new ConsoleLogAction()]);
 
         Assert.True(factory.TryGetAction("send-email", out var executor));
         Assert.Same(sendEmail, executor);
-        Assert.Equal(["log", "send-email"], factory.ActionNames.Order());
+        Assert.Equal(["console-log", "send-email"], factory.ActionNames.Order());
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class DirectActionFactoryTests
     {
         var factory = new DirectActionFactory().Add(new SendEmailAction());
 
-        var ex = Assert.Throws<ArgumentException>(() => factory.Add(new LogAction(), "send-email"));
+        var ex = Assert.Throws<ArgumentException>(() => factory.Add(new ConsoleLogAction(), "send-email"));
 
         Assert.StartsWith("Action name 'send-email' is registered more than once.", ex.Message);
     }
@@ -86,11 +86,11 @@ public class DirectActionFactoryTests
     [Fact]
     public void Add_NameDifferingOnlyInCase_ThrowsNamingBoth()
     {
-        var factory = new DirectActionFactory().Add(new LogAction());
+        var factory = new DirectActionFactory().Add(new ConsoleLogAction());
 
-        var ex = Assert.Throws<ArgumentException>(() => factory.Add(new SendEmailAction(), "Log"));
+        var ex = Assert.Throws<ArgumentException>(() => factory.Add(new SendEmailAction(), "Console-Log"));
 
-        Assert.StartsWith("Action name 'Log' conflicts with 'log' (names are case-insensitive).", ex.Message);
+        Assert.StartsWith("Action name 'Console-Log' conflicts with 'console-log' (names are case-insensitive).", ex.Message);
     }
 
     private sealed class SendEmailAction : IAction

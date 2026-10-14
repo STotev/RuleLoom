@@ -8,7 +8,7 @@ public class ActionNamesTests
 {
     [Theory]
     [InlineData(typeof(SendEmailAction), "send-email")]
-    [InlineData(typeof(LogAction), "log")]
+    [InlineData(typeof(ConsoleLogAction), "console-log")]
     [InlineData(typeof(HttpRequestAction), "http-request")]
     [InlineData(typeof(SMSAction), "sms")]
     [InlineData(typeof(Notifier), "notifier")]

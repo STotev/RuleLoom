@@ -36,10 +36,10 @@ internal static class BasicExample
             },
             Actions =
             [
-                new ActionDefinition { Action = "log", Parameters = { ["message"] = "Price dropped — notify watchers." } },
+                new ActionDefinition { Action = "console-log", Parameters = { ["message"] = "Price dropped — notify watchers." } },
                 new ActionDefinition
                 {
-                    Action = "log",
+                    Action = "console-log",
                     Parameters = { ["message"] = "Big drop — flag for review." },
                     // Only when the new price is more than 10% below the market value.
                     Condition = new OperatorCondition
@@ -53,7 +53,7 @@ internal static class BasicExample
 
         var engine = new RuleEngine(
             new ConditionEvaluator(BuiltInOperators.Create()),
-            new DirectActionFactory([new LogAction()]));
+            new DirectActionFactory([new ConsoleLogAction()]));
 
         var previous = new CarAd { Title = "2019 Volvo V60", Price = 23_500m, MarketValue = 22_500m, Status = AdStatus.Active };
         var current = previous with { Price = 21_500m };
