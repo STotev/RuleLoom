@@ -103,4 +103,6 @@ Collected while building; #71 turns them into the final findings and the envelop
 - **Rules:** `acme-shop` also has a "Big basket" `log` rule, in the same file as the invalid rule, to show per-rule
   skipping. "Price drop" emails the seller and adds a `log` action with an action condition (`Price lt 10000`) instead
   of emailing watchers. The payment reminder's reference is `PaymentDueAt`.
+- **URL:** `http://localhost:5080` is set in `appsettings.json` (`Urls`), not a launch profile: Rider started the
+  project without `launchSettings.json`, on Kestrel's default port 5000.
 - **Package:** Quartz **4.3.0** (the `Quartz` package; 4.4 and 4.5 were days old).
