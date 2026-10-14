@@ -42,6 +42,7 @@ public class RuleEngineTests
         var engine = new RuleEngine(evaluator, factory);
         var rule = new RuleDefinition
         {
+            Id = "rule-a",
             Name = "Rule A",
             EventType = "Event",
             Condition = new ValueOperand { Value = true },
@@ -76,6 +77,7 @@ public class RuleEngineTests
         var engine = new RuleEngine(evaluator, factory);
         var rule = new RuleDefinition
         {
+            Id = "rule-a",
             Name = "Rule A",
             EventType = "Event",
             Condition = new ValueOperand { Value = true },
@@ -107,6 +109,7 @@ public class RuleEngineTests
         var engine = new RuleEngine(evaluator, factory);
         var rule = new RuleDefinition
         {
+            Id = "rule-a",
             Name = "Rule A",
             EventType = "Event",
             Condition = new ValueOperand { Value = true },
@@ -208,6 +211,7 @@ public class RuleEngineTests
         var engine = new RuleEngine(evaluator, factory, new FixedTimeProvider(fixedNow));
         var rule = new RuleDefinition
         {
+            Id = "rule-a",
             Name = "Rule A",
             EventType = "Event",
             Condition = new ValueOperand { Value = true },
@@ -251,6 +255,7 @@ public class RuleEngineTests
         var current = new OrderWithDateTimeOffset { DueDate = dueDate };
         var rule = new RuleDefinition
         {
+            Id = "rule-a",
             Name = "Rule A",
             EventType = "Event",
             Condition = new ValueOperand { Value = true },
@@ -292,6 +297,7 @@ public class RuleEngineTests
         var engine = new RuleEngine(evaluator, factory);
         var rule = new RuleDefinition
         {
+            Id = "rule-a",
             Name = "Rule A",
             EventType = "Event",
             Condition = new ValueOperand { Value = true },
@@ -330,6 +336,7 @@ public class RuleEngineTests
         var engine = new RuleEngine(evaluator, factory);
         var rule = new RuleDefinition
         {
+            Id = "rule-a",
             Name = "Rule A",
             EventType = "Event",
             Condition = new ValueOperand { Value = true },
@@ -370,6 +377,7 @@ public class RuleEngineTests
         var current = new { DueDate = "not-a-date" };
         var rule = new RuleDefinition
         {
+            Id = "rule-a",
             Name = "Rule A",
             EventType = "Event",
             Condition = new ValueOperand { Value = true },
@@ -402,6 +410,7 @@ public class RuleEngineTests
     private static RuleDefinition CreateRule(string name, string actionType, int priority = 1) =>
         new()
         {
+            Id = name,
             Name = name,
             EventType = "Event",
             Priority = priority,

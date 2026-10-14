@@ -13,6 +13,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "test-rule",
               "name": "Test Rule",
               "eventType": "OrderUpdated",
               "priority": 1,
@@ -38,6 +39,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "value-test",
               "name": "Value Test",
               "eventType": "Event1",
               "condition": { "operator": "eq", "operands": [{ "path": "Answer" }, { "value": 42 }] },
@@ -58,6 +60,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "operator-test",
               "name": "Operator Test",
               "eventType": "Event1",
               "condition": {
@@ -87,6 +90,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "nested-test",
               "name": "Nested Test",
               "eventType": "Event1",
               "condition": {
@@ -137,6 +141,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "action-test",
               "name": "Action Test",
               "eventType": "Event1",
               "condition": { "operator": "changed", "operands": [{ "path": "Field" }] },
@@ -175,6 +180,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "no-schedule-test",
               "name": "No Schedule Test",
               "eventType": "Event1",
               "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
@@ -199,6 +205,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "immediate-schedule-test",
               "name": "Immediate Schedule Test",
               "eventType": "Event1",
               "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
@@ -228,6 +235,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "delay-schedule-test",
               "name": "Delay Schedule Test",
               "eventType": "Event1",
               "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
@@ -261,6 +269,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "advance-schedule-test",
               "name": "Advance Schedule Test",
               "eventType": "Event1",
               "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
@@ -295,6 +304,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "case-insensitive-schedule-test",
               "name": "Case-insensitive Schedule Test",
               "eventType": "Event1",
               "condition": { "operator": "eq", "operands": [{ "value": true }, { "value": true }] },
@@ -327,6 +337,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "ID": "test",
               "NAME": "Test",
               "EVENTTYPE": "Event1",
               "CONDITION": { "OPERATOR": "changed", "OPERANDS": [{ "PATH": "Field" }] },
@@ -336,6 +347,7 @@ public class RuleJsonParserTests
 
         var rule = RuleJsonParser.Parse(json);
 
+        Assert.Equal("test", rule.Id);
         Assert.Equal("Test", rule.Name);
         Assert.Equal("Event1", rule.EventType);
     }
@@ -346,12 +358,12 @@ public class RuleJsonParserTests
         const string json =
             """
             [
-              { "name": "R1", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": null }] }, "actions": [] },
-              { "name": "R2", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": true }] }, "actions": [] },
-              { "name": "R3", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": "string" }] }, "actions": [] },
-              { "name": "R4", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": 42 }] }, "actions": [] },
-              { "name": "R5", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": 3.14 }] }, "actions": [] },
-              { "name": "R6", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": [1, 2, 3] }] }, "actions": [] }
+              { "id": "r1", "name": "R1", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": null }] }, "actions": [] },
+              { "id": "r2", "name": "R2", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": true }] }, "actions": [] },
+              { "id": "r3", "name": "R3", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": "string" }] }, "actions": [] },
+              { "id": "r4", "name": "R4", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": 42 }] }, "actions": [] },
+              { "id": "r5", "name": "R5", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": 3.14 }] }, "actions": [] },
+              { "id": "r6", "name": "R6", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "value": [1, 2, 3] }] }, "actions": [] }
             ]
             """;
 
@@ -380,6 +392,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "test",
               "eventType": "Event1",
               "condition": { "operator": "changed", "operands": [{ "path": "Field" }] },
               "actions": []
@@ -396,6 +409,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "test",
               "name": "Test",
               "eventType": "Event1",
               "condition": { "unknown": "property" },
@@ -413,9 +427,9 @@ public class RuleJsonParserTests
         const string json =
             """
             [
-              { "name": "Rule1", "eventType": "E1", "condition": { "operator": "changed", "operands": [{ "path": "A" }] }, "actions": [] },
-              { "name": "Rule2", "eventType": "E2", "condition": { "operator": "changed", "operands": [{ "path": "B" }] }, "actions": [] },
-              { "name": "Rule3", "eventType": "E3", "condition": { "operator": "changed", "operands": [{ "path": "C" }] }, "actions": [] }
+              { "id": "rule1", "name": "Rule1", "eventType": "E1", "condition": { "operator": "changed", "operands": [{ "path": "A" }] }, "actions": [] },
+              { "id": "rule2", "name": "Rule2", "eventType": "E2", "condition": { "operator": "changed", "operands": [{ "path": "B" }] }, "actions": [] },
+              { "id": "rule3", "name": "Rule3", "eventType": "E3", "condition": { "operator": "changed", "operands": [{ "path": "C" }] }, "actions": [] }
             ]
             """;
 
@@ -428,41 +442,11 @@ public class RuleJsonParserTests
     }
 
     [Fact]
-    public void Parse_WithGeneratedId_Success()
+    public void Parse_Id_IsRead()
     {
-        const string json =
-            """
-            {
-              "name": "Test",
-              "eventType": "Event1",
-              "condition": { "operator": "changed", "operands": [{ "path": "Field" }] },
-              "actions": []
-            }
-            """;
+        const string json = """{ "id": "custom-id-123", "name": "Test", "eventType": "Event1", "condition": { "operator": "changed", "operands": [{ "path": "Field" }] } }""";
 
-        var rule = RuleJsonParser.Parse(json);
-
-        Assert.NotNull(rule.Id);
-        Assert.NotEmpty(rule.Id);
-    }
-
-    [Fact]
-    public void Parse_UserProvidedId_Success()
-    {
-        const string json =
-            """
-            {
-              "id": "custom-id-123",
-              "name": "Test",
-              "eventType": "Event1",
-              "condition": { "operator": "changed", "operands": [{ "path": "Field" }] },
-              "actions": []
-            }
-            """;
-
-        var rule = RuleJsonParser.Parse(json);
-
-        Assert.Equal("custom-id-123", rule.Id);
+        Assert.Equal("custom-id-123", RuleJsonParser.Parse(json).Id);
     }
 
     [Fact]
@@ -471,6 +455,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "product-price-changed",
               "name": "Product price changed",
               "eventType": "ProductUpdated",
               "priority": 2,
@@ -543,6 +528,7 @@ public class RuleJsonParserTests
         const string json =
             """
             {
+              "id": "parameters",
               "name": "Parameters",
               "eventType": "E",
               "condition": { "operator": "eq", "operands": [{ "value": 1 }, { "value": 1 }] },

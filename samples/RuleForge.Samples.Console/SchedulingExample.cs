@@ -19,6 +19,7 @@ internal static class SchedulingExample
     {
         var rule = new RuleDefinition
         {
+            Id = "invoice-issued",
             Name = "Invoice issued",
             EventType = "InvoiceIssued",
             Condition = new OperatorCondition

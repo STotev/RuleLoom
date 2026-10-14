@@ -15,6 +15,7 @@ internal static class RuleJsonValidator
         if (rule.ValueKind != JsonValueKind.Object)
             throw new RuleParseException("A rule must be a JSON object.", path);
 
+        RequireNonEmptyString(rule, "id", path);
         RequireNonEmptyString(rule, "name", path);
         RequireNonEmptyString(rule, "eventType", path);
 

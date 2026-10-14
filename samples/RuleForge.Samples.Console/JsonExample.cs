@@ -15,6 +15,7 @@ internal static class JsonExample
     private const string Rules = """
     [
       {
+        "id": "below-market-value",
         "name": "Below market value",
         "eventType": "CarAdPublished",
         "priority": 10,
@@ -30,6 +31,7 @@ internal static class JsonExample
         ]
       },
       {
+        "id": "typo-in-operator",
         "name": "Typo in operator",
         "eventType": "CarAdPublished",
         "condition": { "operator": "greater", "operands": [{ "path": "Price" }, { "value": 50000 }] },

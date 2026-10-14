@@ -13,38 +13,43 @@ public class RuleJsonValidationTests
     {
         // Rule shape and required properties
         { "[]", "$" },
-        { """{ "eventType": "E", "condition": {{C}} }""", "$.name" },
-        { """{ "name": "", "eventType": "E", "condition": {{C}} }""", "$.name" },
-        { """{ "name": "   ", "eventType": "E", "condition": {{C}} }""", "$.name" },
-        { """{ "name": 5, "eventType": "E", "condition": {{C}} }""", "$.name" },
-        { """{ "name": "R", "condition": {{C}} }""", "$.eventType" },
-        { """{ "name": "R", "eventType": null, "condition": {{C}} }""", "$.eventType" },
-        { """{ "name": "R", "eventType": "E" }""", "$.condition" },
-        { """{ "name": "R", "eventType": "E", "condition": null }""", "$.condition" },
+        { """{ "name": "R", "eventType": "E", "condition": {{C}} }""", "$.id" },
+        { """{ "id": null, "name": "R", "eventType": "E", "condition": {{C}} }""", "$.id" },
+        { """{ "id": "", "name": "R", "eventType": "E", "condition": {{C}} }""", "$.id" },
+        { """{ "id": "  ", "name": "R", "eventType": "E", "condition": {{C}} }""", "$.id" },
+        { """{ "id": 42, "name": "R", "eventType": "E", "condition": {{C}} }""", "$.id" },
+        { """{ "id": "r", "eventType": "E", "condition": {{C}} }""", "$.name" },
+        { """{ "id": "r", "name": "", "eventType": "E", "condition": {{C}} }""", "$.name" },
+        { """{ "id": "r", "name": "   ", "eventType": "E", "condition": {{C}} }""", "$.name" },
+        { """{ "id": "r", "name": 5, "eventType": "E", "condition": {{C}} }""", "$.name" },
+        { """{ "id": "r", "name": "R", "condition": {{C}} }""", "$.eventType" },
+        { """{ "id": "r", "name": "R", "eventType": null, "condition": {{C}} }""", "$.eventType" },
+        { """{ "id": "r", "name": "R", "eventType": "E" }""", "$.condition" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": null }""", "$.condition" },
         // Root condition must be an operator
-        { """{ "name": "R", "eventType": "E", "condition": { "path": "Price" } }""", "$.condition" },
-        { """{ "name": "R", "eventType": "E", "condition": { "value": true } }""", "$.condition" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "path": "Price" } }""", "$.condition" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "value": true } }""", "$.condition" },
         // Condition nodes
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "" } }""", "$.condition.operator" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": 1 } }""", "$.condition.operator" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "path": "Price" } }""", "$.condition" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": {} } }""", "$.condition.operands" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "Price" }, {}] } }""", "$.condition.operands[1]" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "" }] } }""", "$.condition.operands[0].path" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "A", "value": 1 }] } }""", "$.condition.operands[0]" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": ["Price"] } }""", "$.condition.operands[0]" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "and", "operands": [{ "operator": "not", "operands": [{ "operator": " " }] }] } }""", "$.condition.operands[0].operands[0].operator" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "" } }""", "$.condition.operator" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": 1 } }""", "$.condition.operator" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "path": "Price" } }""", "$.condition" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": {} } }""", "$.condition.operands" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "Price" }, {}] } }""", "$.condition.operands[1]" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "" }] } }""", "$.condition.operands[0].path" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "A", "value": 1 }] } }""", "$.condition.operands[0]" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": ["Price"] } }""", "$.condition.operands[0]" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "and", "operands": [{ "operator": "not", "operands": [{ "operator": " " }] }] } }""", "$.condition.operands[0].operands[0].operator" },
         // Actions
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": {} }""", "$.actions" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [5] }""", "$.actions[0]" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "parameters": {} }] }""", "$.actions[0].action" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log" }, { "action": "" }] }""", "$.actions[1].action" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "parameters": [] }] }""", "$.actions[0].parameters" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "condition": { "path": "Active" } }] }""", "$.actions[0].condition" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": {} }""", "$.actions" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [5] }""", "$.actions[0]" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "parameters": {} }] }""", "$.actions[0].action" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log" }, { "action": "" }] }""", "$.actions[1].action" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "parameters": [] }] }""", "$.actions[0].parameters" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "condition": { "path": "Active" } }] }""", "$.actions[0].condition" },
         // Path variables: only $current and $previous
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$now" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
-        { """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$cur.Price" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
-        { """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "schedule": { "mode": "Delay", "amount": 1, "unit": "Hours", "referencePath": "$due" } }] }""", "$.actions[0].schedule.referencePath" }
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$now" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$cur.Price" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "schedule": { "mode": "Delay", "amount": 1, "unit": "Hours", "referencePath": "$due" } }] }""", "$.actions[0].schedule.referencePath" }
     };
 
     [Theory]
@@ -68,7 +73,7 @@ public class RuleJsonValidationTests
     [InlineData("Currently.Price")]
     public void Parse_ValidPaths_AreAccepted(string path)
     {
-        var json = $$"""{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "{{path}}" }, { "value": 1 }] } }""";
+        var json = $$"""{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "{{path}}" }, { "value": 1 }] } }""";
 
         var rule = RuleJsonParser.Parse(json);
 
@@ -78,7 +83,7 @@ public class RuleJsonValidationTests
     [Fact]
     public void Parse_RuleParseException_IsJsonException()
     {
-        Assert.ThrowsAny<JsonException>(() => RuleJsonParser.Parse("""{ "name": "R", "eventType": "E" }"""));
+        Assert.ThrowsAny<JsonException>(() => RuleJsonParser.Parse("""{ "id": "r", "name": "R", "eventType": "E" }"""));
     }
 
     [Fact]
@@ -93,7 +98,7 @@ public class RuleJsonValidationTests
     public void Parse_ValidRuleWithOptionalPartsOmittedOrNull_Succeeds()
     {
         var rule = RuleJsonParser.Parse(Expand(
-            """{ "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "condition": null }] }"""));
+            """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "condition": null }] }"""));
 
         Assert.Null(Assert.Single(rule.Actions).Condition);
     }
@@ -101,7 +106,7 @@ public class RuleJsonValidationTests
     [Fact]
     public void Parse_OperatorWithoutOperands_IsStructurallyValid()
     {
-        var rule = RuleJsonParser.Parse("""{ "name": "R", "eventType": "E", "condition": { "operator": "always" } }""");
+        var rule = RuleJsonParser.Parse("""{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "always" } }""");
 
         Assert.Empty(Assert.IsType<OperatorCondition>(rule.Condition).Operands);
     }
@@ -110,7 +115,7 @@ public class RuleJsonValidationTests
     public void Parse_ExplicitNullValue_IsValid()
     {
         var rule = RuleJsonParser.Parse(
-            """{ "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "A" }, { "value": null }] } }""");
+            """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "A" }, { "value": null }] } }""");
 
         var condition = Assert.IsType<OperatorCondition>(rule.Condition);
         Assert.Null(Assert.IsType<ValueOperand>(condition.Operands[1]).Value);
@@ -122,9 +127,9 @@ public class RuleJsonValidationTests
         var json = Expand(
             """
             [
-              { "name": "R1", "eventType": "E", "condition": {{C}} },
-              { "name": "R2", "eventType": "E", "condition": {{C}} },
-              { "name": "R3", "eventType": "E" }
+              { "id": "r1", "name": "R1", "eventType": "E", "condition": {{C}} },
+              { "id": "r2", "name": "R2", "eventType": "E", "condition": {{C}} },
+              { "id": "r3", "name": "R3", "eventType": "E" }
             ]
             """);
 
@@ -134,10 +139,26 @@ public class RuleJsonValidationTests
     }
 
     [Fact]
+    public void ParseMany_RuleWithoutId_ReportsItsIndex()
+    {
+        var json = Expand(
+            """
+            [
+              { "id": "r1", "name": "R1", "eventType": "E", "condition": {{C}} },
+              { "name": "R2", "eventType": "E", "condition": {{C}} }
+            ]
+            """);
+
+        var ex = Assert.Throws<RuleParseException>(() => RuleJsonParser.ParseMany(json));
+
+        Assert.Equal("$[1].id", ex.Path);
+    }
+
+    [Fact]
     public void ParseMany_NotAnArray_Throws()
     {
         var ex = Assert.Throws<RuleParseException>(
-            () => RuleJsonParser.ParseMany(Expand("""{ "name": "R", "eventType": "E", "condition": {{C}} }""")));
+            () => RuleJsonParser.ParseMany(Expand("""{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}} }""")));
 
         Assert.Equal("$", ex.Path);
     }
@@ -145,7 +166,7 @@ public class RuleJsonValidationTests
     [Fact]
     public async Task ParseAsync_InvalidRule_ThrowsWithLocation()
     {
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("""{ "name": "R", "condition": {} }"""));
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("""{ "id": "r", "name": "R", "condition": {} }"""));
 
         var ex = await Assert.ThrowsAsync<RuleParseException>(() => RuleJsonParser.ParseAsync(stream));
 

@@ -168,7 +168,7 @@ public class RuleEngineResultTests
     {
         var result = await _engine.ExecuteAsync(
             "Event", new { },
-            [Rule("This event", Always), new RuleDefinition { Name = "Other", EventType = "OtherEvent", Condition = Always }],
+            [Rule("This event", Always), new RuleDefinition { Id = "other", Name = "Other", EventType = "OtherEvent", Condition = Always }],
             TestContext.Current.CancellationToken);
 
         Assert.Equal(["This event"], result.Rules.Select(r => r.RuleName));
