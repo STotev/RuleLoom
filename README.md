@@ -67,7 +67,7 @@ var rule = new RuleDefinition
     [
         new ActionDefinition
         {
-            Type = "log",
+            Action = "console-log",
             Parameters = { ["message"] = "Price changed!" }
         }
     ]
@@ -76,7 +76,7 @@ var rule = new RuleDefinition
 // Create rule engine
 var engine = new RuleEngine(
     new ConditionEvaluator([new ChangedOperator(), new EqualsOperator()]),
-    new DirectActionFactory([new LogAction()])
+    new DirectActionFactory([new ConsoleLogAction()])
 );
 
 // Execute rules
@@ -117,7 +117,7 @@ RuleEngineResult result =
   },
   "actions": [
     {
-      "action": "log",
+      "action": "console-log",
       "parameters": {
         "message": "High value product updated!"
       }
@@ -216,7 +216,7 @@ More operators are on the [roadmap](docs/roadmap.md).
 
 | Action | Description | Parameters |
 |--------|-------------|------------|
-| `log` | Console logging | `message` |
+| `console-log` | Writes `message` to the console (for development; register it with `AddAction<ConsoleLogAction>()`) | `message` |
 
 Create custom actions by implementing `IAction`!
 

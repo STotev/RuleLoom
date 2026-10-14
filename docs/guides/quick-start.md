@@ -20,7 +20,7 @@ dotnet build
 | Project | Use it for |
 |---|---|
 | `RuleForge.Abstractions` | Contracts and models (no dependencies) |
-| `RuleForge` | The engine, built-in operators, `LogAction`, `RuleValidator` |
+| `RuleForge` | The engine, built-in operators, `ConsoleLogAction`, `RuleValidator` |
 | `RuleForge.Extensions.DependencyInjection` | `services.AddRuleForge(...)` |
 
 ## Your first rule
@@ -44,12 +44,12 @@ var rule = new RuleDefinition
         Operator = "lt",
         Operands = [new PathOperand { Path = "$current.Price" }, new PathOperand { Path = "$previous.Price" }]
     },
-    Actions = [new ActionDefinition { Action = "log", Parameters = { ["message"] = "Price dropped!" } }]
+    Actions = [new ActionDefinition { Action = "console-log", Parameters = { ["message"] = "Price dropped!" } }]
 };
 
 var engine = new RuleEngine(
     new ConditionEvaluator(BuiltInOperators.Create()),   // eq, changed, and, or, not, gt, gte, lt, lte
-    new DirectActionFactory([new LogAction()]));         // registered as "log"
+    new DirectActionFactory([new ConsoleLogAction()]));         // registered as "console-log"
 
 var previous = new { Price = 120m };
 var current = new { Price = 99m };
@@ -85,7 +85,7 @@ Failures are reported in the result, not thrown: one broken rule or action doesn
     ]
   },
   "actions": [
-    { "action": "log", "parameters": { "message": "Price dropped!" } }
+    { "action": "console-log", "parameters": { "message": "Price dropped!" } }
   ]
 }
 ```

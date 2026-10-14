@@ -86,7 +86,7 @@ var json = """
   },
   "actions": [
     {
-      "action": "log",
+      "action": "console-log",
       "parameters": { "message": "Price changed!" }
     }
   ]
@@ -353,7 +353,7 @@ IConditionOperator[] operators =
     new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator(),
     new GreaterThanOperator(), new GreaterThanOrEqualOperator(), new LessThanOperator(), new LessThanOrEqualOperator()
 ];
-IAction[] actions = [new LogAction()];
+IAction[] actions = [new ConsoleLogAction()];
 
 var engine = new RuleEngine(new ConditionEvaluator(operators), new DirectActionFactory(actions));
 RuleEngineResult result = await engine.ExecuteAsync(eventType, current, previous, [rule]);
