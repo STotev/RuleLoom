@@ -1,467 +1,138 @@
-# RuleLoom
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img src="docs/assets/logo.svg" alt="RuleLoom" width="360">
+  </picture>
+</p>
 
-> A powerful, extensible .NET library for building event-driven business rule engines with end-user rule authoring capabilities.
+<p align="center">
+  Event-driven business rules for .NET, written as JSON and run against your objects or JSON events.
+</p>
 
-[![CI](https://github.com/STotev/RuleLoom/actions/workflows/ci.yml/badge.svg)](https://github.com/STotev/RuleLoom/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![.NET](https://img.shields.io/badge/.NET-10.0-purple)](https://dotnet.microsoft.com/download)
-
----
-
-## 🎯 Overview
-
-RuleLoom is a library-first approach to building configurable rule engines. It allows developers to define **what's possible** (operators, actions, events) and end users to define **business logic** (rules) without code changes.
-
-### Key Features
-
-- ✅ **Event-Driven**: Trigger rules based on events with current/previous state tracking
-- ✅ **JSON-Based Rules**: Define rules externally, no code deployment needed
-- ✅ **Type-Safe**: Strong typing with compile-time checks
-- ✅ **Extensible**: Easy plugin model for operators and actions
-- ✅ **Performance**: Compiled expressions and efficient JSON parsing
-- ✅ **Zero Dependencies**: Abstractions layer has no external dependencies
-- ✅ **Testable**: Comprehensive test coverage (96%+)
+<p align="center">
+  <a href="https://github.com/STotev/RuleLoom/actions/workflows/ci.yml"><img src="https://github.com/STotev/RuleLoom/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.nuget.org/packages/RuleLoom"><img src="https://img.shields.io/nuget/vpre/RuleLoom?label=NuGet" alt="NuGet"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
+</p>
 
 ---
 
-## 🚀 Quick Start
+RuleLoom lets developers define **what's possible** (events, operators, actions) and lets users define **business
+logic** as rules, without a deployment. When something happens in your application (an order is placed, a price
+changes), the engine runs that event's rules against the current and previous state and runs or schedules their
+actions.
 
-### Installation
+- **Rules as data**: JSON rules you can store per customer, edit in a UI and validate before saving, or rules built in code.
+- **Any state**: paths resolve on .NET objects and on JSON (`JsonElement`, `JsonNode`), so a central service can run
+  rules on events from other services without their classes.
+- **Change-aware**: compare with the previous state (`changed`, `$previous.Price`).
+- **Comparison by meaning**: `100` equals `100.0`, enums match by name, ISO 8601 strings compare as dates.
+- **Your actions, your scheduler**: actions are classes you write; delayed actions come back with their due time for
+  Hangfire, Quartz.NET or any scheduler you use.
+- **Clear failures**: one failing rule or action doesn't stop the others; results and validation errors say exactly
+  what went wrong and where.
+- **Small footprint**: `RuleLoom.Abstractions` has no dependencies outside .NET; storage, tenancy and transport stay yours.
+
+## Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/STotev/RuleLoom.git
-
-# Build the solution
-cd RuleLoom
-dotnet build
-
-# Run tests
-dotnet test
+dotnet add package RuleLoom
+dotnet add package RuleLoom.Extensions.DependencyInjection   # optional: services.AddRuleLoom(...)
 ```
 
-### Basic Example
+| Package | Use it for |
+|---|---|
+| `RuleLoom` | The engine, built-in operators, validation |
+| `RuleLoom.Abstractions` | Contracts and models only, e.g. for projects that write actions or operators |
+| `RuleLoom.Extensions.DependencyInjection` | Registration with `Microsoft.Extensions.DependencyInjection` |
 
-```csharp
-using RuleLoom.Abstractions.Action;
-using RuleLoom.Abstractions.Condition;
-using RuleLoom.Abstractions.Rule;
-using RuleLoom.Actions;
-using RuleLoom.Engine;
-using RuleLoom.Evaluators;
-using RuleLoom.Operators;
+Requires .NET 10.
 
-// Define a rule
-var rule = new RuleDefinition
-{
-    Id = "price-change-alert",
-    Name = "Price Change Alert",
-    EventType = "ProductUpdated",
-    Priority = 10,
-    Condition = new OperatorCondition
-    {
-        Operator = "changed",
-        Operands = [new PathOperand { Path = "Price" }]
-    },
-    Actions =
-    [
-        new ActionDefinition
-        {
-            Action = "console-log",
-            Parameters = { ["message"] = "Price changed!" }
-        }
-    ]
-};
+## Example
 
-// Create rule engine
-var engine = new RuleEngine(
-    new ConditionEvaluator([new ChangedOperator(), new EqualsOperator()]),
-    new DirectActionFactory([new ConsoleLogAction()])
-);
-
-// Execute rules
-var previousData = new { Price = 100000 };
-var currentData = new { Price = 150000 };
-
-RuleEngineResult result =
-    await engine.ExecuteAsync("ProductUpdated", currentData, previousData, [rule]);
-// Output: "Price changed!"
-// result.Rules[0].Status == RuleExecutionStatus.Matched
-// result.Rules[0].ActionResults[0].Status == ActionExecutionStatus.ExecutedImmediately
-// result.HasFailures == false
-```
-
-### JSON Example
+A rule, as JSON:
 
 ```json
 {
-  "id": "high-value-product",
-  "name": "High Value Product",
-  "eventType": "ProductUpdated",
-  "priority": 5,
+  "id": "vip-order",
+  "name": "VIP order",
+  "eventType": "OrderPlaced",
   "condition": {
     "operator": "and",
     "operands": [
-      {
-        "operator": "changed",
-        "operands": [{ "path": "Price" }]
-      },
-      {
-        "operator": "eq",
-        "operands": [
-          { "path": "Status" },
-          { "value": "Active" }
-        ]
-      }
+      { "operator": "gte", "operands": [{ "path": "Total" }, { "value": 500 }] },
+      { "operator": "eq", "operands": [{ "path": "Customer.Tier" }, { "value": "Gold" }] }
     ]
   },
   "actions": [
+    { "action": "send-email", "parameters": { "template": "vip-thank-you" } },
     {
-      "action": "console-log",
-      "parameters": {
-        "message": "High value product updated!"
-      }
+      "action": "send-email",
+      "parameters": { "template": "payment-reminder" },
+      "schedule": { "mode": "Advance", "amount": 1, "unit": "Days", "referencePath": "PaymentDueAt" }
     }
   ]
 }
 ```
 
-```csharp
-var json = File.ReadAllText("rule.json");
-var rule = RuleJsonParser.Parse(json);
-await engine.ExecuteAsync("ProductUpdated", currentData, previousData, [rule]);
-```
-
----
-
-### With Dependency Injection
+An action, and the engine:
 
 ```csharp
-services.AddRuleLoom(rules => rules
-    .AddAction<SendEmailAction>()          // "send-email"; can inject IEmailService, DbContext, ILogger<T>, ...
-    .AddOperator<ContainsOperator>());     // built-in operators are registered automatically
-
-// In a request or message-handler scope:
-var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
-var result = await engine.ExecuteAsync("UserCreated", user, rules, cancellationToken);
-```
-
-Actions are resolved per scope, so they can use scoped services. To swap a built-in operator for your own, remove it
-first (`RemoveOperator("eq").AddOperator<MyEquals>()`); `RemoveBuiltInOperators()` starts from a fully custom set.
-`RuleValidator` can be resolved the same way to check rules before saving them.
-
-## 📚 Documentation
-
-- **[Quick Start Guide](docs/guides/quick-start.md)** - Rules in code and JSON, actions, operators, DI, validation
-- **[JSON Rule Format](docs/guides/json-rules.md)** - JSON format reference
-- **[Upgrading](docs/guides/upgrading.md)** - Breaking changes by version, with before/after examples
-- **[Console Sample](samples/RuleLoom.Samples.Console/)** - Runnable examples: basics, scheduling, JSON + validation, DI
-- **[Rules-Service Sample](samples/RuleLoom.Samples.RulesService/)** - A central rules service: JSON events per tenant, rules from files, scheduled actions with Quartz.NET
-- **[Roadmap](docs/roadmap.md)** - What's done, what's next, and the backlog
-- **[Changelog](CHANGELOG.md)** - Release notes
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────┐
-│   RuleLoom.Abstractions                │ ← Zero dependencies
-│   - Interfaces & Contracts              │
-│   - RuleDefinition, ConditionNode       │
-└─────────────────────────────────────────┘
-                    ↑
-┌─────────────────────────────────────────┐
-│   RuleLoom                             │
-│   - RuleEngine                          │
-│   - ConditionEvaluator                  │
-│   - Built-in Operators & Actions        │
-│   - ScheduleCalculator                  │
-└─────────────────────────────────────────┘
-```
-
-### Design Principles
-
-1. **Library-First** - Not a framework, integrates anywhere
-2. **Zero Lock-In** - Abstractions in separate package with no dependencies
-3. **Type Safety** - Strong typing throughout
-4. **Performance** - Compiled expressions, caching, minimal allocations
-5. **Testability** - Every component is mockable
-
----
-
-## 🔧 Built-in Operators
-
-| Operator | Description | Operands | Example |
-|----------|-------------|----------|---------|
-| `eq` | Equals ([comparison rules](docs/guides/json-rules.md#comparing-values)) | 2 | `Price == 100000` |
-| `changed` | Value changed | 1 | `Price changed` |
-| `and` | All true | 1+ | `A && B && C` |
-| `or` | Any true | 1+ | `A \|\| B \|\| C` |
-| `not` | Invert | 1 | `!(Status == "Inactive")` |
-| `gt` | Greater than | 2 | `Price > 1000000` |
-| `gte` | Greater than or equal | 2 | `Price >= 1000000` |
-| `lt` | Less than | 2 | `DueDate < "2026-12-31"` |
-| `lte` | Less than or equal | 2 | `Stock <= 5` |
-
-`eq` and the ordering operators follow the same [comparison rules](docs/guides/json-rules.md#comparing-values).
-Values that can't be ordered — a `null`, or a number against a non-numeric string — make `gt`/`gte`/`lt`/`lte`
-evaluate to `false`.
-
-More operators are on the [roadmap](docs/roadmap.md).
-
----
-
-## 🎬 Built-in Actions
-
-| Action | Description | Parameters |
-|--------|-------------|------------|
-| `console-log` | Writes `message` to the console (for development; register it with `AddAction<ConsoleLogAction>()`) | `message` |
-
-Create custom actions by implementing `IAction`!
-
----
-
-## 🔌 Extensibility
-
-### Custom Operator
-
-Operators read their operands through an `OperatorContext`: `GetValue(i)` for values, `Test(i)` for conditions
-(evaluated only when called), `GetPath(i)` for paths, and `AreEqual`/`TryCompare` for the
-[comparison rules](docs/guides/json-rules.md#comparing-values).
-
-```csharp
-public sealed class ContainsOperator : IConditionOperator
+public sealed class SendEmailAction(IEmailService email) : IAction        // "action": "send-email"
 {
-    public string Name => "contains";
-    public int MinOperands => 2;
-    public int MaxOperands => 2;
-
-    public bool Evaluate(OperatorContext ctx) =>
-        ctx.GetValue(0) is string text && ctx.GetValue(1) is string part &&
-        text.Contains(part, StringComparison.Ordinal);
-}
-```
-
-Unit-test it without the engine by building the context yourself:
-
-```csharp
-var condition = new OperatorCondition
-{
-    Operator = "contains",
-    Operands = [new PathOperand { Path = "Title" }, new ValueOperand { Value = "sale" }]
-};
-var ctx = new OperatorContext(condition, new EvaluationContext(new { Title = "Summer sale" }));
-
-Assert.True(new ContainsOperator().Evaluate(ctx));
-```
-
-Register it alongside the built-ins: `new ConditionEvaluator([new EqualsOperator(), ..., new ContainsOperator()])`.
-
-### Custom Action
-
-Rules refer to an action by the name it's registered under. By default that's the class name without an `Action`
-suffix, in kebab-case (`SendEmailAction` → `send-email`); `[ActionName("notify")]` on the class changes the default,
-and a name given at registration overrides both.
-
-```csharp
-public class SendEmailAction : IAction          // "action": "send-email"
-{
-    public async Task<ActionResult> ExecuteAsync(
-        ActionDefinition action,
-        EvaluationContext context,
-        CancellationToken cancellationToken = default)
+    public async Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken ct)
     {
-        // Typed reads with the shared conversion rules; throws a clear error if missing or unconvertible.
-        var to = action.GetParameter<string>("to");
-        var subject = action.GetParameter<string>("subject");
-
-        // Your email logic here
-        await SendEmailAsync(to, subject, cancellationToken);
+        await email.SendAsync(action.GetParameter<string>("template"), context.Current, ct);
         return ActionResult.Success();
     }
 }
 
-var actions = new DirectActionFactory()
-    .Add(new SendEmailAction())             // registered as "send-email"
-    .Add(new SendEmailAction(), "notify");  // ...and under another name
+services.AddRuleLoom(rules => rules.AddAction<SendEmailAction>());
+
+// When an order is placed (rules come from your storage):
+var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
+var result = await engine.ExecuteAsync("OrderPlaced", order, previous: null, rules, ct);
+
+foreach (var scheduled in result.ScheduledActions)                        // the reminder, due a day before PaymentDueAt
+    scheduler.Schedule(scheduled.Action, scheduled.Result.ScheduledFor);
 ```
 
----
+`order` can be a .NET object or JSON received from another service. `result.Rules` reports every rule for the event
+(`Matched`, `NotMatched` or `Failed`) and every action (`ExecutedImmediately`, `Scheduled`, `Skipped` or `Failed`).
 
-## 🧪 Testing
+## Operators
 
-```bash
-# Run all tests
-dotnet test
+| Operator | Meaning | Operands |
+|---|---|---|
+| `eq` | Equal ([comparison rules](docs/guides/json-rules.md#comparing-values)) | 2 |
+| `gt`, `gte`, `lt`, `lte` | Ordering: numbers, dates, strings | 2 |
+| `changed` | The value differs from the previous state | 1 (a path) |
+| `and`, `or` | All / any of the conditions | 1 or more |
+| `not` | The condition is false | 1 |
 
-# Run specific test project
-dotnet test --project tests/RuleLoom.Tests
-dotnet test --project tests/RuleLoom.Tests.Integration
+Add your own by implementing `IConditionOperator`; see the [quick start](docs/guides/quick-start.md#custom-operators).
 
-# Run with coverage (Cobertura XML in ./TestResults)
-dotnet test --coverage --coverage-output-format cobertura --results-directory ./TestResults
-```
+## Documentation
 
----
+- [Quick start](docs/guides/quick-start.md): rules in code and JSON, actions, operators, DI, validation
+- [JSON rule format](docs/guides/json-rules.md): the format, paths, rules on JSON state, comparison rules, scheduling
+- [Upgrading](docs/guides/upgrading.md): breaking changes by version, with before/after examples
+- Samples: a [console sample](samples/RuleLoom.Samples.Console/) and a
+  [central rules service](samples/RuleLoom.Samples.RulesService/) (ASP.NET Core, rules per tenant, Quartz.NET)
+- [Vision](docs/vision.md) and [roadmap](docs/roadmap.md): where RuleLoom is going and why
+- [Changelog](CHANGELOG.md)
 
-## 📦 Project Structure
+## Status
 
-```
-RuleLoom/
-├── src/
-│   ├── RuleLoom.Abstractions/     # Core contracts (zero dependencies)
-│   ├── RuleLoom/                  # Engine implementation
-│   └── RuleLoom.Extensions.DependencyInjection/ # DI registration (planned)
-├── tests/
-│   ├── RuleLoom.Tests/            # Unit tests
-│   └── RuleLoom.Tests.Integration/ # Integration tests
-├── samples/
-│   ├── RuleLoom.Samples.Console/  # Example usage
-│   └── RuleLoom.Samples.RulesService/ # Central rules service (ASP.NET Core + Quartz.NET)
-└── docs/                           # Guides, roadmap and design specs
-```
+RuleLoom is **pre-1.0**: the API is settling, and minor versions can contain breaking changes, each listed in the
+[upgrading guide](docs/guides/upgrading.md). Next on the [roadmap](docs/roadmap.md): event schemas and a fluent rule
+builder (0.6), hosting packages and an event envelope (0.7), and support for running scheduled actions later (0.8).
 
----
+## Contributing
 
-## 🗺️ Roadmap
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the development setup, tests and how
+changes are proposed; please report security issues as described in [SECURITY.md](SECURITY.md).
 
-- ✅ **Done**: core engine and operators, stability fixes, action results, scheduling model,
-  action factory, schedule calculation (0.2.0); API hardening — value comparison, `OperatorContext`,
-  `gt`/`gte`/`lt`/`lte`, complete results, case-insensitive names, typed action parameters,
-  `$current`/`$previous`, rule validation (0.3.0)
-- 🎯 **Next**: dependency injection extensions ([#5](https://github.com/STotev/RuleLoom/issues/5)),
-  then integration tests, samples and the 0.3.0 migration guide ([#6](https://github.com/STotev/RuleLoom/issues/6))
-- 📋 **Backlog**: benchmarks, time semantics, schema system, event system, more operators,
-  rule management, persistence, observability
+## License
 
-See the [full roadmap](docs/roadmap.md) for details.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-### Development Setup
-
-1. Clone the repository
-2. Install .NET 10.0 SDK
-3. Run `dotnet build` to build
-4. Run `dotnet test` to verify
-
-### Guidelines
-
-- Follow existing code style
-- Add tests for new features
-- Update documentation
-- Keep abstractions dependency-free
-
----
-
-## 📋 Requirements
-
-- .NET 10.0 or later
-- C# 14
-
----
-
-## 🎓 Use Cases
-
-### E-Commerce
-```json
-{
-  "id": "vip-customer-welcome",
-  "name": "VIP Customer Welcome",
-  "eventType": "OrderCreated",
-  "condition": {
-    "operator": "eq",
-    "operands": [{ "path": "CustomerTier" }, { "value": "VIP" }]
-  },
-  "actions": [
-    { "action": "send-email", "parameters": { "template": "vip-welcome" } },
-    { "action": "apply-discount", "parameters": { "percentage": 10 } }
-  ]
-}
-```
-
-### Car Marketplace
-```json
-{
-  "id": "premium-car-ad",
-  "name": "Premium Car Ad",
-  "eventType": "CarAdUpdated",
-  "condition": {
-    "operator": "and",
-    "operands": [
-      { "operator": "changed", "operands": [{ "path": "Price" }] },
-      { "operator": "gt", "operands": [{ "path": "Price" }, { "value": 100000 }] }
-    ]
-  },
-  "actions": [
-    { "action": "notify-manager", "parameters": { "urgency": "high" } }
-  ]
-}
-```
-
-### Workflow Automation
-```json
-{
-  "id": "approval-required",
-  "name": "Approval Required",
-  "eventType": "DocumentUpdated",
-  "condition": {
-    "operator": "and",
-    "operands": [
-      { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Draft" }] },
-      { "operator": "gt", "operands": [{ "path": "Amount" }, { "value": 10000 }] }
-    ]
-  },
-  "actions": [
-    { "action": "create-approval-task", "parameters": { "approver": "manager" } }
-  ]
-}
-```
-
----
-
-## ⚠️ Current Limitations
-
-- Nested property resolution needs investigation
-- Scheduled actions are calculated (`ScheduledFor`) but not dispatched — bring your own scheduler
-- No observability/logging yet
-- No persistence layer yet
-- Limited operator set
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on
-reporting bugs, requesting features, and submitting pull requests.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- Built with .NET 10.0
-- Uses System.Text.Json for high-performance parsing
-- Inspired by rule engines like Drools, Easy Rules, and RulesEngine
-
----
-
-## 📞 Support
-
-- 📖 [Documentation](docs/)
-- 🐛 [Issue Tracker](https://github.com/STotev/RuleLoom/issues)
-- 💬 [Discussions](https://github.com/STotev/RuleLoom/discussions)
-
----
-
-**Built with ❤️ for the .NET community**
+[MIT](LICENSE)
