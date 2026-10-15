@@ -11,7 +11,7 @@ them. It shows RuleForge used as intended in that setup:
 - **Scheduled actions** are handed to Quartz.NET (in-memory store) and run when due.
 
 It's also a spike: what was awkward while building it is recorded in the
-[spec's findings](../../docs/specs/2026-10-14-rules-service-sample-design.md#findings-draft).
+[spec's findings](../../docs/specs/2026-10-14-rules-service-sample-design.md#findings).
 
 ## Run it
 
