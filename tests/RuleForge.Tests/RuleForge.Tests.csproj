@@ -1,8 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\RuleForge\RuleForge.csproj" />
-    <ProjectReference Include="..\..\src\RuleForge.Abstractions\RuleForge.Abstractions.csproj" />
-  </ItemGroup>
-
-</Project>

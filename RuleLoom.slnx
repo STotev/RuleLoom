@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/RuleLoom.Samples.Console/RuleLoom.Samples.Console.csproj" />
+    <Project Path="samples/RuleLoom.Samples.RulesService/RuleLoom.Samples.RulesService.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/RuleLoom.Abstractions/RuleLoom.Abstractions.csproj" />
+    <Project Path="src/RuleLoom/RuleLoom.csproj" />
+    <Project Path="src/RuleLoom.Extensions.DependencyInjection/RuleLoom.Extensions.DependencyInjection.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RuleLoom.Tests.Integration/RuleLoom.Tests.Integration.csproj" />
+    <Project Path="tests/RuleLoom.Extensions.DependencyInjection.Tests/RuleLoom.Extensions.DependencyInjection.Tests.csproj" />
+    <Project Path="tests/RuleLoom.Tests/RuleLoom.Tests.csproj" />
+  </Folder>
+</Solution>

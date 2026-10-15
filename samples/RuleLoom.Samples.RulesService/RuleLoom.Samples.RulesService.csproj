@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RuleLoom\RuleLoom.csproj" />
+    <ProjectReference Include="..\..\src\RuleLoom.Extensions.DependencyInjection\RuleLoom.Extensions.DependencyInjection.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Quartz" />
+  </ItemGroup>
+
+</Project>

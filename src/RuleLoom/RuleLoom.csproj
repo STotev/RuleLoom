@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="RuleLoom.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\RuleLoom.Abstractions\RuleLoom.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>
