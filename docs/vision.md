@@ -59,7 +59,7 @@ For schemas the reference is Swagger / Swashbuckle: schemas generated at runtime
 | **Scheduling dispatch** | The engine computes *when* (`ScheduledFor`) and returns `ScheduledActions` with their definitions; running them later is up to the consumer's scheduler (Hangfire, Quartz, …). Integration packages would help but aren't required | Consumers already run schedulers; RuleLoom shouldn't force one |
 | **Transport** | Not part of the **core** library: no message-bus code, and no HTTP endpoints in the core packages. Optional hosting packages (dashboard, schema API) may expose HTTP endpoints that consumers map into their own app | Consumers choose their own infrastructure; opt-in endpoints keep the core host-agnostic |
 | **Rule-authoring UI** | A separate project (the maintainer's), not part of the library | Keeps the library UI-free; the UI consumes RuleLoom through an API |
-| **Packaging** | Unpublished until release readiness (0.9/1.0), when the first NuGet packages are published. While unpublished, breaking changes need no compatibility shims | See the roadmap's release notes |
+| **Packaging** | Published to NuGet from 0.5.0 (`RuleLoom`, `RuleLoom.Abstractions`, `RuleLoom.Extensions.DependencyInjection`) by the release workflow, using nuget.org trusted publishing. Pre-1.0, minor versions can break; breaking changes are listed in the upgrading guide, without compatibility shims | See the roadmap's release notes |
 | **JSON state** | Core path resolution understands `JsonElement` and `JsonNode` (what System.Text.Json produces without a class; JSON has no separate dictionary type), with the same case rules as properties (exact match wins, ambiguous case-insensitive matches resolve to `null`). Values flow into `ValueComparer`/`ValueConverter` | A central service must evaluate rules on events it receives as JSON, without the producers' classes. `System.Text.Json` is part of the BCL, so `RuleLoom.Abstractions` stays dependency-free. Schemas add typing and validation on top but aren't required. In-memory .NET dictionaries and legacy dynamic types (`ExpandoObject`) aren't supported |
 | **Schemas: source of truth** | **Code-first**, like Swagger: the producer's .NET types (usually DTOs mapped from aggregates) describe the event; schemas are generated from them at **runtime** by reflection, with types inferred from the CLR | The authoring UI needs the fields a user can pick for a path operand, with labels; producers already have those types. Schema-first (generating classes in the rules service) would need a rebuild for every new event and is unnecessary once JSON resolves |
 | **Schemas: configuration** | A **fluent builder** first (`schema.Event<OrderDto>("order.placed", e => e.Field(x => x.Total).Label("Order total"))`), with attributes later as a thin convention layer that calls the same builder. Precedence: CLR inference → attributes → explicit fluent calls | Builders are easier to test and experiment with and scale to more options than attributes; one model underneath (as in EF Core) |
@@ -163,7 +163,7 @@ Optional strictness on top of untyped JSON support. To consider in the 0.6 desig
 the gap (a missing or mistyped field just resolves to `null`).
 
 ### Also on the roadmap backlog
-Time semantics review, path variables and functions, more operators, benchmarks (#27), NuGet packaging — see the
+Time semantics review, path variables and functions, more operators, benchmarks (#27) — see the
 [roadmap](roadmap.md#-backlog--not-yet-scheduled).
 
 ## More ideas

@@ -9,15 +9,12 @@ schedule **actions**. Rules can be written in code or as JSON, so end users can 
 
 ## Install
 
-RuleLoom isn't on NuGet yet. Clone the repository and reference the projects:
-
 ```bash
-git clone https://github.com/STotev/RuleLoom.git
-cd RuleLoom
-dotnet build
+dotnet add package RuleLoom
+dotnet add package RuleLoom.Extensions.DependencyInjection   # optional: services.AddRuleLoom(...)
 ```
 
-| Project | Use it for |
+| Package | Use it for |
 |---|---|
 | `RuleLoom.Abstractions` | Contracts and models (no dependencies) |
 | `RuleLoom` | The engine, built-in operators, `ConsoleLogAction`, `RuleValidator` |

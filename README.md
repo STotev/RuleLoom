@@ -332,7 +332,7 @@ RuleLoom/
   `$current`/`$previous`, rule validation (0.3.0)
 - 🎯 **Next**: dependency injection extensions ([#5](https://github.com/STotev/RuleLoom/issues/5)),
   then integration tests, samples and the 0.3.0 migration guide ([#6](https://github.com/STotev/RuleLoom/issues/6))
-- 📋 **Backlog**: benchmarks, time semantics, schema system, event system, NuGet packaging, more operators,
+- 📋 **Backlog**: benchmarks, time semantics, schema system, event system, more operators,
   rule management, persistence, observability
 
 See the [full roadmap](docs/roadmap.md) for details.
