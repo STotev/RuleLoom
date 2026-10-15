@@ -1,7 +1,7 @@
 # Design: Require a Rule ID
 
-**Issue:** [#77 Require a rule id](https://github.com/STotev/RuleForge/issues/77)
-**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleForge/issues/66) (spike follow-up)
+**Issue:** [#77 Require a rule id](https://github.com/STotev/RuleLoom/issues/77)
+**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (spike follow-up)
 **Date:** 2026-10-14
 **Status:** Approved (AFK)
 

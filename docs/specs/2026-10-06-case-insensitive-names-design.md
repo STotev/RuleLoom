@@ -1,7 +1,7 @@
 # Design: Case-Insensitive Names
 
-**Issue:** [#37 API hardening: case-insensitive names](https://github.com/STotev/RuleForge/issues/37)
-**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (module 5 and the case policy)
+**Issue:** [#37 API hardening: case-insensitive names](https://github.com/STotev/RuleLoom/issues/37)
+**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (module 5 and the case policy)
 **Date:** 2026-10-06
 **Status:** Approved (AFK)
 

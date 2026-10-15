@@ -1,7 +1,7 @@
 # Design: Ordering Operators `gt`, `gte`, `lt`, `lte`
 
-**Issue:** [#36 API hardening: gt, gte, lt and lte operators](https://github.com/STotev/RuleForge/issues/36)
-**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (module 4)
+**Issue:** [#36 API hardening: gt, gte, lt and lte operators](https://github.com/STotev/RuleLoom/issues/36)
+**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (module 4)
 **Date:** 2026-10-06
 **Status:** Approved (AFK)
 
@@ -21,7 +21,7 @@ ordering operators, and the README even showed a hand-written `gt` as a custom-o
 | Incomparable values | Evaluate to `false`, never throw | PRD user story 13: one odd value shouldn't fail the rule. This includes `null` on either side, `NaN`, a number vs a non-numeric string, a date vs a non-ISO string, and different enum types |
 | Consequence | `gt` and `lte` are **not** complements: for incomparable values both are `false` | Same as SQL's handling of `NULL`; `not` + `gt` is the way to say "not greater than, or unknown" |
 | Implementation | Four small sealed classes, each one line over `TryCompare` | Simplest; no shared base class for four one-liners |
-| Registration | Added wherever the built-in operators are listed (sample, guides, tests) | There is no central "default operators" list yet; DI (#5) will provide one through `AddRuleForge()` |
+| Registration | Added wherever the built-in operators are listed (sample, guides, tests) | There is no central "default operators" list yet; DI (#5) will provide one through `AddRuleLoom()` |
 
 ## Behaviour
 

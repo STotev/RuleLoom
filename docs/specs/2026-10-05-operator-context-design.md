@@ -1,8 +1,8 @@
 # Design: OperatorContext Operator API
 
-**Issue:** [#34 API hardening: OperatorContext operator API](https://github.com/STotev/RuleForge/issues/34) (also closes #17)
-**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (modules 2–4)
-**Supersedes:** `docs/archive/operator-context-api-redesign.md` (March 2026 proposal), with the revisions agreed in PRD #22
+**Issue:** [#34 API hardening: OperatorContext operator API](https://github.com/STotev/RuleLoom/issues/34) (also closes #17)
+**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (modules 2–4)
+**Supersedes:** the March 2026 operator-context proposal (no longer in the repository), with the revisions agreed in PRD #22
 **Date:** 2026-10-05
 **Status:** Approved 2026-10-05 (HITL review; Q1–Q4 resolved as recommended)
 
@@ -25,7 +25,7 @@ expected fails with `Root must be operator` even when the node isn't the root (#
 ## Proposed API
 
 ```csharp
-namespace RuleForge.Abstractions.Condition;
+namespace RuleLoom.Abstractions.Condition;
 
 public interface IConditionOperator
 {
@@ -122,7 +122,7 @@ public void Evaluate_TextContainsPart_ReturnsTrue()
 |---|---|---|
 | Composition via `Test(ConditionNode)` (from the March proposal) | Dropped | PRD #22: builds operator trees from strings on every evaluation and adds little for plugin authors |
 | `EvaluationContext` | Stays public, and is exposed on `OperatorContext` | Actions and scheduling receive it; operators may need it for advanced cases |
-| Where `OperatorContext` lives | `RuleForge.Abstractions.Condition` | Next to `IConditionOperator`; depends only on Abstractions types (`EvaluationContext`, `ValueComparer`) |
+| Where `OperatorContext` lives | `RuleLoom.Abstractions.Condition` | Next to `IConditionOperator`; depends only on Abstractions types (`EvaluationContext`, `ValueComparer`) |
 | `OperatorContext` constructor takes the `OperatorCondition` | Yes, not a raw operand list | Gives the operator name for error messages and keeps the constructor short |
 | Class or struct | `sealed class` | One small allocation per operator evaluation is negligible next to path resolution; performance is measured in #27 |
 | Operand count validation | Still done by `ConditionEvaluator` before calling `Evaluate`, so `GetValue`/`Test`/`GetPath` can assume valid indexes up to `MinOperands` | Unchanged behaviour |
@@ -130,7 +130,7 @@ public void Evaluate_TextContainsPart_ReturnsTrue()
 | Duplicate operator names (#17) | `ArgumentException` naming the duplicate, e.g. `Operator 'eq' is registered more than once.` | |
 | Non-operator node passed to `ConditionEvaluator.Evaluate` (#17) | `InvalidOperationException` naming the node type, e.g. `Expected an operator condition but got PathOperand.`; no mention of "root" | The parser (#31) already rejects non-operator roots, so this is mostly reached via `Test(i)` |
 | `changed` | Same semantics; `GetPath(0)` gives a clear error for non-path operands | `$current`/`$previous` and scoped paths are #38 (folds in #16) |
-| The March proposal | Moved to `docs/archive/` with a pointer to this spec | Superseded |
+| The March proposal | Archived (no longer in the repository) | Superseded |
 
 ## Resolved questions
 

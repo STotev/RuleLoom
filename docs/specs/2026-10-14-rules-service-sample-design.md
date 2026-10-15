@@ -1,7 +1,7 @@
 # Design: Central Rules-Service Sample (Spike)
 
-**Issue:** [#70 Central rules-service sample (spike)](https://github.com/STotev/RuleForge/issues/70)
-**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleForge/issues/66) (user stories 25–31)
+**Issue:** [#70 Central rules-service sample (spike)](https://github.com/STotev/RuleLoom/issues/70)
+**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (user stories 25–31)
 **Date:** 2026-10-14
 **Status:** Approved (HITL)
 
@@ -9,7 +9,7 @@
 
 ## Problem
 
-RuleForge is meant to run inside a central rules service that receives events from other services as JSON
+RuleLoom is meant to run inside a central rules service that receives events from other services as JSON
 (`docs/vision.md`). Since #68 and #69 rules run on JSON state, but nobody has built such a service with the library
 yet. The open questions (the event envelope, how a consumer runs scheduled actions later, keys and cancellation) can't
 be settled on paper. This sample uses the library *as intended* and records what hurts; the findings go to #71.
@@ -18,11 +18,11 @@ be settled on paper. This sample uses the library *as intended* and records what
 
 | Question | Decision | Rationale |
 |---|---|---|
-| Project | `samples/RuleForge.Samples.RulesService`: an ASP.NET Core minimal API in the solution, referencing `RuleForge` and `RuleForge.Extensions.DependencyInjection` | Mirrors a real central service; packages it needs (Quartz) stay out of the libraries |
+| Project | `samples/RuleLoom.Samples.RulesService`: an ASP.NET Core minimal API in the solution, referencing `RuleLoom` and `RuleLoom.Extensions.DependencyInjection` | Mirrors a real central service; packages it needs (Quartz) stay out of the libraries |
 | Wire format | `POST /events` with `{ eventType, tenantId, entityId, current, previous? }`; `current`/`previous` bind as `JsonElement` | Minimal; `entityId` is needed for job keys. It's the sample's own format, not a library contract: what's missing becomes a finding |
 | Tenants | `acme-shop` (orders) and `wheels-market` (car ads), one folder of rule files each | Two tenants with different rules and event types; reuses the console sample's domains |
 | Rule loading | Every request reads `Rules/{tenantId}/*.json`, parses with `RuleJsonParser.ParseMany`, validates with `RuleValidator`; invalid files and rules are reported in the response and skipped. Unknown tenant → 404 | Storage and tenancy stay with the consumer; shows the recommended validate-then-run flow |
-| Actions | Custom `SendEmailAction` (`send-email`, logs the email) plus the built-in `log` | At least one custom action registered with `AddRuleForge` |
+| Actions | Custom `SendEmailAction` (`send-email`, logs the email) plus the built-in `log` | At least one custom action registered with `AddRuleLoom` |
 | Response | A DTO of the engine result (rules, action results, `scheduledFor`, error messages), the invalid rules and the scheduled job keys | `RuleEngineResult` holds `Exception`s, which don't serialize usefully |
 | Scheduling | Quartz.NET (`Quartz.Extensions.Hosting`, in-memory store). One job per `ScheduledAction`, triggered at `ScheduledFor`, keyed `{tenantId}/{entityId}/{ruleId}/{actionIndex}` and scheduled with `replace: true` | The same event sent twice replaces the pending job instead of failing on a duplicate key. Nothing is cancelled (out of scope) |
 | At due time | The job opens a DI scope, resolves the executor through `IActionFactory` and runs it with the event's snapshot (`new EvaluationContext(current, previous)`); no condition re-check | The plainest thing the current API allows; re-checking and stale state are findings for 0.8 |
@@ -57,7 +57,7 @@ an unknown tenant (404).
 ## Findings
 
 Collected while building the sample, then decided with the maintainer in
-[#71](https://github.com/STotev/RuleForge/issues/71) (2026-10-15). Each finding ends with its decision or follow-up.
+[#71](https://github.com/STotev/RuleLoom/issues/71) (2026-10-15). Each finding ends with its decision or follow-up.
 
 ### What worked
 
@@ -76,7 +76,7 @@ Collected while building the sample, then decided with the maintainer in
 - Tenant and entity ID had no place in the library, so the sample carried them beside the engine, including into the
   scheduled job's data.
 
-**Decision:** RuleForge owns an envelope **contract**, `RuleEvent`, not a transport (recorded in
+**Decision:** RuleLoom owns an envelope **contract**, `RuleEvent`, not a transport (recorded in
 [`vision.md`](../vision.md#decided)):
 
 ```csharp
@@ -95,7 +95,7 @@ public sealed record RuleEvent(string EventType, object Current, object? Previou
 - Actions and custom operators read it from `EvaluationContext.Event`; rules reach it with **`$event.` paths**
   (`$event.Metadata.region` in conditions, `$event.OccurredAt` as a `referencePath`).
 - The library defines its JSON shape (for producers and the 0.7 registration client) but never sends it.
-- Deduplication by `EventId` is the consumer's or the transport's (e.g. an inbox); RuleForge passes the ID through.
+- Deduplication by `EventId` is the consumer's or the transport's (e.g. an inbox); RuleLoom passes the ID through.
 - Built in **0.7**, as planned.
 
 ### Running scheduled actions later
@@ -114,7 +114,7 @@ looks up the action and applies the same failure rules as `ExecuteAsync`, with a
 ### Keys and cancellation
 
 - A stable key needs the rule's identity, but `RuleDefinition.Id` defaulted to a new GUID on every parse, and rules
-  are re-read for every event. **Fixed in [#77](https://github.com/STotev/RuleForge/issues/77):** `id` is required;
+  are re-read for every event. **Fixed in [#77](https://github.com/STotev/RuleLoom/issues/77):** `id` is required;
   identity comes from where the rule is stored.
 - The entity part of the key came from the sample's wire format, outside the library.
 - Replacing a pending action in Quartz needs the key on the trigger as well as the job: with a random trigger key the
@@ -140,13 +140,13 @@ that are no longer wanted) remains the main open question for the scheduling PRD
 
 ### API friction
 
-- `log` is built in but `AddRuleForge` doesn't register it (by design, see the DI spec); with it missing, every rule
-  using it was skipped while the service answered 200. **Fixed in [#78](https://github.com/STotev/RuleForge/issues/78):**
+- `log` is built in but `AddRuleLoom` doesn't register it (by design, see the DI spec); with it missing, every rule
+  using it was skipped while the service answered 200. **Fixed in [#78](https://github.com/STotev/RuleLoom/issues/78):**
   renamed to `ConsoleLogAction` (`console-log`) so its development-only purpose is clear; it stays opt-in so it doesn't
   appear in action lists offered to users. Validating rules when they're saved, not only per event, would surface such
   mistakes earlier; worth a line in the guides.
 - `RuleJsonParser.ParseMany` needs a JSON array, and one shape error rejects the whole file; only `RuleValidator`
-  errors are per rule. Backlog: [#81](https://github.com/STotev/RuleForge/issues/81).
+  errors are per rule. Backlog: [#81](https://github.com/STotev/RuleLoom/issues/81).
 - Due times relative to now need a client-side script in the `.http` file (Rider pre-request script).
 - Quartz 4 moved hosting into the `Quartz` package (`Quartz.Extensions.Hosting` is empty) and changed `IJob.Execute`
   to `ValueTask Execute(context, cancellationToken)`; worth knowing for a future scheduler integration package.
@@ -158,7 +158,7 @@ and will travel in `RuleEvent.Metadata`. They stay *under consideration* in the 
 
 ## Deviations
 
-- **Actions:** `AddRuleForge` doesn't register the built-in `log`, so the sample adds `AddAction<LogAction>()`.
+- **Actions:** `AddRuleLoom` doesn't register the built-in `log`, so the sample adds `AddAction<LogAction>()`.
 - **Job keys:** the trigger gets the same key as the job, so `ScheduleJobOptions.Replacing` replaces the pending
   action instead of adding a second trigger.
 - **Rules:** `acme-shop` also has a "Big basket" `log` rule, in the same file as the invalid rule, to show per-rule

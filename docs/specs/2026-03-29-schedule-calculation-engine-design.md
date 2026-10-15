@@ -22,7 +22,7 @@
 | `ActionResult.ScheduledFor` type | Upgrade `DateTime?` → `DateTimeOffset?` | Unambiguous timezone semantics; `TimeProvider.GetUtcNow()` returns `DateTimeOffset` |
 | Missing `ReferencePath` | Throw `InvalidOperationException` | Being strict is better for a library; explicit failure surfaces misconfiguration early |
 | Non-DateTime `ReferencePath` | Throw `InvalidOperationException` | Same rationale — misconfigured rule should fail visibly |
-| Past-date result | Return `Scheduled` as-is | RuleForge defers scheduler dispatch to the consumer; computing a past date is valid output |
+| Past-date result | Return `Scheduled` as-is | RuleLoom defers scheduler dispatch to the consumer; computing a past date is valid output |
 
 ---
 
@@ -31,15 +31,15 @@
 ### New File
 
 ```
-src/RuleForge/Scheduling/ScheduleCalculator.cs
+src/RuleLoom/Scheduling/ScheduleCalculator.cs
 ```
 
 ### Changed Files
 
 | File | Change |
 |---|---|
-| `src/RuleForge.Abstractions/Action/ActionResult.cs` | `ScheduledFor`: `DateTime?` → `DateTimeOffset?`; `Scheduled()` param: `DateTime` → `DateTimeOffset` |
-| `src/RuleForge/Engine/RuleEngine.cs` | Optional `TimeProvider? timeProvider = null` constructor param; scheduling check in action loop |
+| `src/RuleLoom.Abstractions/Action/ActionResult.cs` | `ScheduledFor`: `DateTime?` → `DateTimeOffset?`; `Scheduled()` param: `DateTime` → `DateTimeOffset` |
+| `src/RuleLoom/Engine/RuleEngine.cs` | Optional `TimeProvider? timeProvider = null` constructor param; scheduling check in action loop |
 
 ---
 
@@ -48,8 +48,8 @@ src/RuleForge/Scheduling/ScheduleCalculator.cs
 ### `ScheduleCalculator` (new)
 
 ```csharp
-// src/RuleForge/Scheduling/ScheduleCalculator.cs
-namespace RuleForge.Scheduling;
+// src/RuleLoom/Scheduling/ScheduleCalculator.cs
+namespace RuleLoom.Scheduling;
 
 internal static class ScheduleCalculator
 {
@@ -194,7 +194,7 @@ RuleEngine.ExecuteAsync(eventType, current, previous, rules)
 
 ## Test Plan
 
-### `ScheduleCalculatorTests` (unit, `RuleForge.Tests`)
+### `ScheduleCalculatorTests` (unit, `RuleLoom.Tests`)
 
 **Mode × Unit matrix** (8 tests, using fixed `utcNow`):
 
@@ -227,7 +227,7 @@ RuleEngine.ExecuteAsync(eventType, current, previous, rules)
 | `Calculate_AmountNull_Throws` | `Amount = null` on Delay | `InvalidOperationException` |
 | `Calculate_ImmediateMode_Throws` | Mode = Immediate | `ArgumentException` |
 
-### `RuleEngineTests` additions (unit, `RuleForge.Tests`)
+### `RuleEngineTests` additions (unit, `RuleLoom.Tests`)
 
 | Test | Scenario | Expected |
 |---|---|---|

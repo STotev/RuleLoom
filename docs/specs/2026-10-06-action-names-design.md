@@ -1,7 +1,7 @@
 # Design: Action Names by Registration
 
-**Issue:** [#55 Name actions by registration](https://github.com/STotev/RuleForge/issues/55) (blocks #5)
-**Parent PRD:** [#1 Action Scheduling & Dependency Injection Support](https://github.com/STotev/RuleForge/issues/1)
+**Issue:** [#55 Name actions by registration](https://github.com/STotev/RuleLoom/issues/55) (blocks #5)
+**Parent PRD:** [#1 Action Scheduling & Dependency Injection Support](https://github.com/STotev/RuleLoom/issues/1)
 **Date:** 2026-10-06
 **Status:** Approved (decided while reviewing #5's spec, PR #54)
 

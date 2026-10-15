@@ -1,7 +1,7 @@
 # Design: Parse-Time Structural Validation
 
-**Issue:** [#31 API hardening: parse-time structural validation](https://github.com/STotev/RuleForge/issues/31)
-**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (module 6, structural part)
+**Issue:** [#31 API hardening: parse-time structural validation](https://github.com/STotev/RuleLoom/issues/31)
+**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (module 6, structural part)
 **Date:** 2026-10-04
 **Status:** Approved (AFK)
 
@@ -25,7 +25,7 @@ Errors that are reported don't say where in the rule the problem is.
 | Question | Decision | Rationale |
 |---|---|---|
 | Where validation runs | On the JSON document, **before** deserialization: parse to a `JsonElement`, validate its shape, then deserialize from the element | Locations can be computed exactly; the polymorphic converter only sees one node subtree and can't know its path in the document |
-| Exception type | New public `RuleParseException : JsonException` in `RuleForge.Abstractions.Rule` | Existing `catch (JsonException)` code keeps working; callers that care can catch the specific type |
+| Exception type | New public `RuleParseException : JsonException` in `RuleLoom.Abstractions.Rule` | Existing `catch (JsonException)` code keeps working; callers that care can catch the specific type |
 | Location format | JSONPath, as in `JsonException.Path`: `$.condition.operands[1]`; for `ParseMany`, `$[2].condition`. The location is also included in the message | Matches the standard `System.Text.Json` convention; #39 (`RuleValidator`) reuses the same format |
 | Required rule properties | `name`, `eventType`: non-empty, non-whitespace strings. `condition`: an operator node | PRD user stories 38–39 |
 | C# `required` | `RuleDefinition.Name` and `EventType` become `required` (`Condition` already is) | Code-built rules get the same guarantee at compile time. All rules in the repo already set them |
@@ -43,7 +43,7 @@ Errors that are reported don't say where in the rule the problem is.
 ## API
 
 ```csharp
-namespace RuleForge.Abstractions.Rule;
+namespace RuleLoom.Abstractions.Rule;
 
 public sealed class RuleParseException : JsonException
 {

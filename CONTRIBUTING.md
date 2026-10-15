@@ -1,4 +1,4 @@
-# Contributing to RuleForge
+# Contributing to RuleLoom
 
 Thank you for your interest in contributing!
 
@@ -28,8 +28,8 @@ Report unacceptable behavior via the contact in [SECURITY.md](SECURITY.md).
 ### Build and test
 
 ```bash
-git clone https://github.com/STotev/RuleForge.git
-cd RuleForge
+git clone https://github.com/STotev/RuleLoom.git
+cd RuleLoom
 dotnet build
 dotnet test
 ```
@@ -65,12 +65,12 @@ Commits within a PR should follow the same format, but only the PR title reaches
 ## Project structure
 
 ```
-src/RuleForge.Abstractions/          # Zero-dependency contracts — no external NuGet references allowed
-src/RuleForge/                       # Default implementations, built-in operators and actions
-src/RuleForge.Extensions.DependencyInjection/  # Optional DI helpers
-tests/RuleForge.Tests/               # Unit tests
-tests/RuleForge.Tests.Integration/   # Integration tests
-samples/RuleForge.Samples.Console/   # Usage examples
+src/RuleLoom.Abstractions/          # Zero-dependency contracts — no external NuGet references allowed
+src/RuleLoom/                       # Default implementations, built-in operators and actions
+src/RuleLoom.Extensions.DependencyInjection/  # Optional DI helpers
+tests/RuleLoom.Tests/               # Unit tests
+tests/RuleLoom.Tests.Integration/   # Integration tests
+samples/RuleLoom.Samples.Console/   # Usage examples
 ```
 
 ---

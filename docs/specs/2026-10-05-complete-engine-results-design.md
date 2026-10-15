@@ -1,7 +1,7 @@
 # Design: Complete Engine Results
 
-**Issue:** [#32 API hardening: complete engine results](https://github.com/STotev/RuleForge/issues/32) (also closes #18)
-**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (module 8)
+**Issue:** [#32 API hardening: complete engine results](https://github.com/STotev/RuleLoom/issues/32) (also closes #18)
+**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (module 8)
 **Date:** 2026-10-05
 **Status:** Approved 2026-10-05 (HITL review; Q1–Q4 resolved as recommended)
 
@@ -24,7 +24,7 @@ happened:
 ## Proposed shape
 
 ```csharp
-namespace RuleForge.Abstractions.Rule;
+namespace RuleLoom.Abstractions.Rule;
 
 public sealed record RuleEngineResult
 {
@@ -52,7 +52,7 @@ public enum RuleExecutionStatus { Matched, NotMatched, Failed }
 public sealed record ScheduledAction(string RuleId, string RuleName, ActionDefinition Action, ActionResult Result);
 ```
 
-`ActionResult` (namespace `RuleForge.Abstractions.Action`) gains two properties, which the **engine** sets on every
+`ActionResult` (namespace `RuleLoom.Abstractions.Action`) gains two properties, which the **engine** sets on every
 result, including the ones returned by executors (see Q3):
 
 ```csharp
@@ -90,7 +90,7 @@ A rule whose actions failed keeps `Status = Matched` (the rule did match); the f
 
 | Question | Decision | Rationale |
 |---|---|---|
-| Where the types live | `RuleForge.Abstractions.Rule` (`RuleEngineResult`, `RuleExecutionStatus`, `ScheduledAction`) | Results are contracts that DI (#5) and future scheduler integrations consume; Abstractions stays dependency-free |
+| Where the types live | `RuleLoom.Abstractions.Rule` (`RuleEngineResult`, `RuleExecutionStatus`, `ScheduledAction`) | Results are contracts that DI (#5) and future scheduler integrations consume; Abstractions stays dependency-free |
 | Rules with another event type | Not included | They weren't considered for this event (PRD) |
 | `NotMatched` entries | Included, with empty `ActionResults` | Callers can tell "didn't match" from "wasn't considered" |
 | Rule ID | `RuleId` added; `RuleName` kept | Names aren't unique; IDs are generated when absent |

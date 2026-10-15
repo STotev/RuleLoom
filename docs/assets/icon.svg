@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="RuleLoom"><title>RuleLoom</title><defs>
+    <linearGradient id="rl-h" gradientUnits="userSpaceOnUse" x1="-110" y1="0" x2="110" y2="0">
+      <stop offset="0" stop-color="#3FE3F2"/><stop offset="1" stop-color="#2B59E8"/>
+    </linearGradient>
+    <linearGradient id="rl-v" gradientUnits="userSpaceOnUse" x1="0" y1="-110" x2="0" y2="110">
+      <stop offset="0" stop-color="#36C8F4"/><stop offset="1" stop-color="#2D4FE0"/>
+    </linearGradient>
+    <linearGradient id="rl-accent-h" gradientUnits="userSpaceOnUse" x1="-100" y1="0" x2="100" y2="0">
+      <stop offset="0" stop-color="#A08CF5"/><stop offset="1" stop-color="#6E5BE6"/>
+    </linearGradient>
+    <linearGradient id="rl-accent-v" gradientUnits="userSpaceOnUse" x1="0" y1="-100" x2="0" y2="100">
+      <stop offset="0" stop-color="#A08CF5"/><stop offset="1" stop-color="#6E5BE6"/>
+    </linearGradient><mask id="rl-m-h0" maskUnits="userSpaceOnUse" x="-200" y="-200" width="400" height="400"><rect x="-200" y="-200" width="400" height="400" fill="#fff"/><rect x="-9.5" y="-57" width="19" height="34" fill="#000"/><rect x="19" y="-57" width="42" height="34" fill="#000"/></mask><mask id="rl-m-h1" maskUnits="userSpaceOnUse" x="-200" y="-200" width="400" height="400"><rect x="-200" y="-200" width="400" height="400" fill="#fff"/><rect x="-61" y="23" width="42" height="34" fill="#000"/></mask><mask id="rl-m-v0" maskUnits="userSpaceOnUse" x="-200" y="-200" width="400" height="400"><rect x="-200" y="-200" width="400" height="400" fill="#fff"/><rect x="-57" y="-61" width="34" height="42" fill="#000"/></mask><mask id="rl-m-v1" maskUnits="userSpaceOnUse" x="-200" y="-200" width="400" height="400"><rect x="-200" y="-200" width="400" height="400" fill="#fff"/><rect x="-5.5" y="19" width="11" height="42" fill="#000"/></mask><mask id="rl-m-v2" maskUnits="userSpaceOnUse" x="-200" y="-200" width="400" height="400"><rect x="-200" y="-200" width="400" height="400" fill="#fff"/><rect x="23" y="19" width="34" height="42" fill="#000"/></mask></defs><g transform="translate(128 128) scale(1) rotate(45)"><rect x="-114" y="-56" width="228" height="32" rx="4" fill="url(#rl-h)" mask="url(#rl-m-h0)"/><rect x="-114" y="24" width="228" height="32" rx="4" fill="url(#rl-h)" mask="url(#rl-m-h1)"/><rect x="-56" y="-114" width="32" height="228" rx="4" fill="url(#rl-v)" mask="url(#rl-m-v0)"/><rect x="-4.5" y="-114" width="9" height="228" rx="3" fill="url(#rl-accent-v)" mask="url(#rl-m-v1)"/><rect x="24" y="-114" width="32" height="228" rx="4" fill="url(#rl-v)" mask="url(#rl-m-v2)"/></g></svg>
