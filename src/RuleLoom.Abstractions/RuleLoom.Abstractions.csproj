@@ -1,4 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+      <Description>Contracts and models for RuleLoom: rule definitions, conditions, actions, results, the JSON rule parser and value comparison. No dependencies outside the .NET base library.</Description>
+      <PackageTags>rules;rule-engine;business-rules;json;events;abstractions</PackageTags>
+    </PropertyGroup>
 
     <ItemGroup>
       <InternalsVisibleTo Include="RuleLoom.Tests" />

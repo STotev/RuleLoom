@@ -59,6 +59,8 @@ internal static class RuleJsonValidator
         }
     }
 
+    /// <param name="node">The condition node to check.</param>
+    /// <param name="path">The JSONPath of <paramref name="node"/>, used in errors.</param>
     /// <param name="operatorRequiredFor">
     /// When set, the node must be an operator; the text names what requires it (e.g. "The rule's root condition").
     /// </param>

@@ -86,7 +86,10 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 Namespaces follow folders: `RuleLoom.Abstractions.{Action,Condition,Rule,Scheduling,Values}` and
 `RuleLoom.{Engine,Evaluators,Operators,Actions,Scheduling,Validation}` (there is no `RuleLoom.Core`).
 
-Versioning is from git tags via MinVer (`Directory.Build.props`); release-please creates the tags.
+Versioning is from git tags via MinVer (`Directory.Build.props`); release-please creates the tags. Package metadata
+is in `src/Directory.Build.props` (the package README is `src/PACKAGE.md`, the icon `docs/assets/icon.png`); when a
+release PR merges, the `publish` job in `release-please.yml` packs, pushes to nuget.org (trusted publishing,
+environment `nuget`) and attaches the packages to the GitHub release.
 
 ### Execution flow (`RuleEngine.ExecuteAsync`)
 

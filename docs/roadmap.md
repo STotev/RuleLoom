@@ -24,6 +24,7 @@ connect to historical docs — they were reused inconsistently between documents
 | 0.2.1 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.2.1) 2026-10-03 | Nested path fix (#14), shared path cache (#15) |
 | 0.3.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.3.0) 2026-10-06 | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
 | 0.4.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.4.0) 2026-10-06 | Action names by registration, `IAction`, dependency injection, upgrading guide |
+| 0.5.0 | Next: the first release published to NuGet | JSON state, ISO date comparison, required rule ids, `ConsoleLogAction`, central rules-service sample |
 
 ---
 
@@ -98,7 +99,7 @@ becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66. T
 | **0.6: Schema System & fluent rule builder** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder (including whether a parameter is a value or a path, found in the 0.5 spike); `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator`; **fluent rule builder** that produces `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the expression → path translation with the schema builder | Detail under [Schema & validation](#schema--validation) below |
 | **0.7: Hosting & producer utilities** | `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, JSON shape) | Optional packages; no rule CRUD |
 | **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
-| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides, NuGet package metadata, first NuGet publish | Release is cleared; publishing waits for this milestone |
+| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides | Release is cleared; publishing waits for this milestone |
 | **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
 
 ### 0.5 — PRD [#66](https://github.com/STotev/RuleLoom/issues/66)
@@ -215,8 +216,8 @@ BenchmarkDotNet suite (path resolution, condition evaluation, JSON parsing, engi
 published results in `docs/benchmarks.md`, a README Performance section, and a manual CI workflow. After #22, before 1.0.
 
 ### Packaging & documentation (old Phase 1.4)
-NuGet package metadata and publishing workflow (packages are now `RuleLoom.Abstractions`, `RuleLoom`,
-`RuleLoom.Extensions.DependencyInjection`), XML docs on all public APIs, concept/operator guides,
+XML docs on all public APIs (packages ship XML docs; missing ones outside Abstractions are suppressed until then),
+concept/operator guides,
 scenario samples. Detail: old roadmap §1.4, PRD #1 plan Phase 3.
 
 ### Developer experience (old Phase 2)

@@ -1,4 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+      <Description>RuleLoom: an event-driven business rule engine for .NET. Rules are written as JSON (or built in code) and run against .NET objects or JSON state, with built-in operators, actions, scheduling calculation and validation.</Description>
+    </PropertyGroup>
 
     <ItemGroup>
       <InternalsVisibleTo Include="RuleLoom.Tests" />
