@@ -4,79 +4,79 @@ All notable changes to this project are documented in this file. It is generated
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/) — do not edit it by hand.
 
-## [0.4.0](https://github.com/STotev/RuleForge/compare/v0.3.0...v0.4.0) (2026-10-06)
+## [0.4.0](https://github.com/STotev/RuleLoom/compare/v0.3.0...v0.4.0) (2026-10-06)
 
 
 ### ⚠ BREAKING CHANGES
 
-* rename IActionExecutor to IAction ([#59](https://github.com/STotev/RuleForge/issues/59))
-* name actions by registration and reference them as "action" ([#56](https://github.com/STotev/RuleForge/issues/56))
+* rename IActionExecutor to IAction ([#59](https://github.com/STotev/RuleLoom/issues/59))
+* name actions by registration and reference them as "action" ([#56](https://github.com/STotev/RuleLoom/issues/56))
 
 ### Features
 
-* add AddRuleForge dependency injection extensions ([#54](https://github.com/STotev/RuleForge/issues/54)) ([48401a3](https://github.com/STotev/RuleForge/commit/48401a37d30a5638f23362d3bd39cba9f6e394fe))
-* name actions by registration and reference them as "action" ([#56](https://github.com/STotev/RuleForge/issues/56)) ([3eea391](https://github.com/STotev/RuleForge/commit/3eea391f096da47778392c8f7c5ef250f31e7c1e))
+* add AddRuleForge dependency injection extensions ([#54](https://github.com/STotev/RuleLoom/issues/54)) ([48401a3](https://github.com/STotev/RuleLoom/commit/48401a37d30a5638f23362d3bd39cba9f6e394fe))
+* name actions by registration and reference them as "action" ([#56](https://github.com/STotev/RuleLoom/issues/56)) ([3eea391](https://github.com/STotev/RuleLoom/commit/3eea391f096da47778392c8f7c5ef250f31e7c1e))
 
 
 ### Code Refactoring
 
-* rename IActionExecutor to IAction ([#59](https://github.com/STotev/RuleForge/issues/59)) ([766b887](https://github.com/STotev/RuleForge/commit/766b887d803f11d93f5b008081245f4e6f13456c))
+* rename IActionExecutor to IAction ([#59](https://github.com/STotev/RuleLoom/issues/59)) ([766b887](https://github.com/STotev/RuleLoom/commit/766b887d803f11d93f5b008081245f4e6f13456c))
 
-## [0.3.0](https://github.com/STotev/RuleForge/compare/v0.2.1...v0.3.0) (2026-10-06)
+## [0.3.0](https://github.com/STotev/RuleLoom/compare/v0.2.1...v0.3.0) (2026-10-06)
 
 
 ### ⚠ BREAKING CHANGES
 
-* add RuleValidator for rules against registered operators and actions ([#51](https://github.com/STotev/RuleForge/issues/51))
-* select state with $current and $previous path prefixes ([#50](https://github.com/STotev/RuleForge/issues/50))
-* parse action parameters as CLR values and add GetParameter<T> ([#49](https://github.com/STotev/RuleForge/issues/49))
-* accept only ISO 8601 strings for schedule ReferencePath ([#48](https://github.com/STotev/RuleForge/issues/48))
-* match operator, action, event and property names ignoring case ([#47](https://github.com/STotev/RuleForge/issues/47))
-* replace the operator signature with OperatorContext ([#45](https://github.com/STotev/RuleForge/issues/45))
-* return complete, structured results from RuleEngine ([#44](https://github.com/STotev/RuleForge/issues/44))
-* validate rule JSON structure at parse time ([#43](https://github.com/STotev/RuleForge/issues/43))
+* add RuleValidator for rules against registered operators and actions ([#51](https://github.com/STotev/RuleLoom/issues/51))
+* select state with $current and $previous path prefixes ([#50](https://github.com/STotev/RuleLoom/issues/50))
+* parse action parameters as CLR values and add GetParameter<T> ([#49](https://github.com/STotev/RuleLoom/issues/49))
+* accept only ISO 8601 strings for schedule ReferencePath ([#48](https://github.com/STotev/RuleLoom/issues/48))
+* match operator, action, event and property names ignoring case ([#47](https://github.com/STotev/RuleLoom/issues/47))
+* replace the operator signature with OperatorContext ([#45](https://github.com/STotev/RuleLoom/issues/45))
+* return complete, structured results from RuleEngine ([#44](https://github.com/STotev/RuleLoom/issues/44))
+* validate rule JSON structure at parse time ([#43](https://github.com/STotev/RuleLoom/issues/43))
 
 ### Features
 
-* accept only ISO 8601 strings for schedule ReferencePath ([#48](https://github.com/STotev/RuleForge/issues/48)) ([4ea5fd3](https://github.com/STotev/RuleForge/commit/4ea5fd35b6a00399d61502770f68a2132b26a7f6))
-* add gt, gte, lt and lte operators ([#46](https://github.com/STotev/RuleForge/issues/46)) ([06e8dd7](https://github.com/STotev/RuleForge/commit/06e8dd7c88c455adec345d96c050432a3227caf9))
-* add RuleValidator for rules against registered operators and actions ([#51](https://github.com/STotev/RuleForge/issues/51)) ([60decb7](https://github.com/STotev/RuleForge/commit/60decb7029d52d7f1dd5e6b2111d8bf1323edf79))
-* compare rule values by meaning across CLR types ([#41](https://github.com/STotev/RuleForge/issues/41)) ([b554e73](https://github.com/STotev/RuleForge/commit/b554e73e420824406e3e851588f8e83dc8cc165e))
-* match operator, action, event and property names ignoring case ([#47](https://github.com/STotev/RuleForge/issues/47)) ([ae1f955](https://github.com/STotev/RuleForge/commit/ae1f955e10c89ba78d25c089b3722f2c3ccfaafb))
-* parse action parameters as CLR values and add GetParameter&lt;T&gt; ([#49](https://github.com/STotev/RuleForge/issues/49)) ([2f3af81](https://github.com/STotev/RuleForge/commit/2f3af816c3a3a3ba557ca5dfe078416f33eccc31))
-* replace the operator signature with OperatorContext ([#45](https://github.com/STotev/RuleForge/issues/45)) ([9fa72c3](https://github.com/STotev/RuleForge/commit/9fa72c321e11114b99ab0fbedef392afdc92cd8c))
-* return complete, structured results from RuleEngine ([#44](https://github.com/STotev/RuleForge/issues/44)) ([436fe35](https://github.com/STotev/RuleForge/commit/436fe35c1e2745248c543579c8a26378021dadfc))
-* select state with $current and $previous path prefixes ([#50](https://github.com/STotev/RuleForge/issues/50)) ([72055de](https://github.com/STotev/RuleForge/commit/72055deac909dc07a9630b9f45e3fcac20663e19))
-* validate rule JSON structure at parse time ([#43](https://github.com/STotev/RuleForge/issues/43)) ([cff6252](https://github.com/STotev/RuleForge/commit/cff6252a73669ada49ed1282b927e67fdb864297))
+* accept only ISO 8601 strings for schedule ReferencePath ([#48](https://github.com/STotev/RuleLoom/issues/48)) ([4ea5fd3](https://github.com/STotev/RuleLoom/commit/4ea5fd35b6a00399d61502770f68a2132b26a7f6))
+* add gt, gte, lt and lte operators ([#46](https://github.com/STotev/RuleLoom/issues/46)) ([06e8dd7](https://github.com/STotev/RuleLoom/commit/06e8dd7c88c455adec345d96c050432a3227caf9))
+* add RuleValidator for rules against registered operators and actions ([#51](https://github.com/STotev/RuleLoom/issues/51)) ([60decb7](https://github.com/STotev/RuleLoom/commit/60decb7029d52d7f1dd5e6b2111d8bf1323edf79))
+* compare rule values by meaning across CLR types ([#41](https://github.com/STotev/RuleLoom/issues/41)) ([b554e73](https://github.com/STotev/RuleLoom/commit/b554e73e420824406e3e851588f8e83dc8cc165e))
+* match operator, action, event and property names ignoring case ([#47](https://github.com/STotev/RuleLoom/issues/47)) ([ae1f955](https://github.com/STotev/RuleLoom/commit/ae1f955e10c89ba78d25c089b3722f2c3ccfaafb))
+* parse action parameters as CLR values and add GetParameter&lt;T&gt; ([#49](https://github.com/STotev/RuleLoom/issues/49)) ([2f3af81](https://github.com/STotev/RuleLoom/commit/2f3af816c3a3a3ba557ca5dfe078416f33eccc31))
+* replace the operator signature with OperatorContext ([#45](https://github.com/STotev/RuleLoom/issues/45)) ([9fa72c3](https://github.com/STotev/RuleLoom/commit/9fa72c321e11114b99ab0fbedef392afdc92cd8c))
+* return complete, structured results from RuleEngine ([#44](https://github.com/STotev/RuleLoom/issues/44)) ([436fe35](https://github.com/STotev/RuleLoom/commit/436fe35c1e2745248c543579c8a26378021dadfc))
+* select state with $current and $previous path prefixes ([#50](https://github.com/STotev/RuleLoom/issues/50)) ([72055de](https://github.com/STotev/RuleLoom/commit/72055deac909dc07a9630b9f45e3fcac20663e19))
+* validate rule JSON structure at parse time ([#43](https://github.com/STotev/RuleLoom/issues/43)) ([cff6252](https://github.com/STotev/RuleLoom/commit/cff6252a73669ada49ed1282b927e67fdb864297))
 
-## [0.2.1](https://github.com/STotev/RuleForge/compare/v0.2.0...v0.2.1) (2026-10-03)
+## [0.2.1](https://github.com/STotev/RuleLoom/compare/v0.2.0...v0.2.1) (2026-10-03)
 
 
 ### Bug Fixes
 
-* resolve unscoped nested paths against current state ([#24](https://github.com/STotev/RuleForge/issues/24)) ([4fe881a](https://github.com/STotev/RuleForge/commit/4fe881ac2bb55e27f97e88d560524d3ed337266f))
+* resolve unscoped nested paths against current state ([#24](https://github.com/STotev/RuleLoom/issues/24)) ([4fe881a](https://github.com/STotev/RuleLoom/commit/4fe881ac2bb55e27f97e88d560524d3ed337266f))
 
 
 ### Performance Improvements
 
-* share the path accessor cache across evaluation contexts ([#26](https://github.com/STotev/RuleForge/issues/26)) ([a8a1095](https://github.com/STotev/RuleForge/commit/a8a10953eda54a4885932aec5363d52a8e33886f))
+* share the path accessor cache across evaluation contexts ([#26](https://github.com/STotev/RuleLoom/issues/26)) ([a8a1095](https://github.com/STotev/RuleLoom/commit/a8a10953eda54a4885932aec5363d52a8e33886f))
 
-## [0.2.0](https://github.com/STotev/RuleForge/compare/v0.1.0...v0.2.0) (2026-10-02)
+## [0.2.0](https://github.com/STotev/RuleLoom/compare/v0.1.0...v0.2.0) (2026-10-02)
 
 
 ### ⚠ BREAKING CHANGES
 
-* the library is renamed from BusinessRules to RuleForge: projects and namespaces `BusinessRules.Abstractions.*` → `RuleForge.Abstractions.*` and `BusinessRules.Core.*` → `RuleForge.*` (e.g. `RuleForge.Engine`, `RuleForge.Operators`) ([8f842b4](https://github.com/STotev/RuleForge/commit/8f842b4), [f53f86c](https://github.com/STotev/RuleForge/commit/f53f86c))
-* `IActionExecutor.ExecuteAsync` now returns `Task<ActionResult>` and accepts a `CancellationToken`. Migration: add the token parameter and return `ActionResult.Success()` ([#7](https://github.com/STotev/RuleForge/pull/7))
-* `RuleEngine` takes an `IActionExecutorFactory` instead of `IEnumerable<IActionExecutor>`. Migration: wrap existing actions in `new DirectActionExecutorFactory(actions)` ([#9](https://github.com/STotev/RuleForge/pull/9))
-* `RuleEngine.ExecuteAsync` returns `Task<IReadOnlyList<RuleExecutionResult>>` (one entry per matched rule) instead of `Task` ([#9](https://github.com/STotev/RuleForge/pull/9))
-* actions whose `schedule` has mode `Delay` or `Advance` are no longer executed; they return an `ActionResult` with status `Scheduled` and the computed `ScheduledFor` ([#10](https://github.com/STotev/RuleForge/pull/10))
-* `RuleEngine` and `LogAction` are now `sealed` ([#7](https://github.com/STotev/RuleForge/pull/7))
+* the library is renamed from BusinessRules to RuleForge: projects and namespaces `BusinessRules.Abstractions.*` → `RuleForge.Abstractions.*` and `BusinessRules.Core.*` → `RuleForge.*` (e.g. `RuleForge.Engine`, `RuleForge.Operators`) ([8f842b4](https://github.com/STotev/RuleLoom/commit/8f842b4), [f53f86c](https://github.com/STotev/RuleLoom/commit/f53f86c))
+* `IActionExecutor.ExecuteAsync` now returns `Task<ActionResult>` and accepts a `CancellationToken`. Migration: add the token parameter and return `ActionResult.Success()` ([#7](https://github.com/STotev/RuleLoom/pull/7))
+* `RuleEngine` takes an `IActionExecutorFactory` instead of `IEnumerable<IActionExecutor>`. Migration: wrap existing actions in `new DirectActionExecutorFactory(actions)` ([#9](https://github.com/STotev/RuleLoom/pull/9))
+* `RuleEngine.ExecuteAsync` returns `Task<IReadOnlyList<RuleExecutionResult>>` (one entry per matched rule) instead of `Task` ([#9](https://github.com/STotev/RuleLoom/pull/9))
+* actions whose `schedule` has mode `Delay` or `Advance` are no longer executed; they return an `ActionResult` with status `Scheduled` and the computed `ScheduledFor` ([#10](https://github.com/STotev/RuleLoom/pull/10))
+* `RuleEngine` and `LogAction` are now `sealed` ([#7](https://github.com/STotev/RuleLoom/pull/7))
 
 
 ### Features
 
-* action results: `ActionResult` and `ActionExecutionStatus` (`ExecutedImmediately`, `Scheduled`, `Skipped`, `Failed`), aggregated per rule in `RuleExecutionResult` ([#7](https://github.com/STotev/RuleForge/pull/7), [#9](https://github.com/STotev/RuleForge/pull/9))
-* scheduling model: optional `ActionDefinition.Schedule` (`ScheduleMetadata` with `Immediate`/`Delay`/`Advance` modes, seconds to days, optional `referencePath`), parsed from JSON ([#7](https://github.com/STotev/RuleForge/pull/7))
-* action factory: `IActionExecutorFactory` with `DirectActionExecutorFactory` as the default implementation ([#9](https://github.com/STotev/RuleForge/pull/9))
-* schedule calculation: `RuleEngine` computes UTC `ScheduledFor` from a reference path or an injectable `TimeProvider`; scheduling errors return `Failed` ([#10](https://github.com/STotev/RuleForge/pull/10))
+* action results: `ActionResult` and `ActionExecutionStatus` (`ExecutedImmediately`, `Scheduled`, `Skipped`, `Failed`), aggregated per rule in `RuleExecutionResult` ([#7](https://github.com/STotev/RuleLoom/pull/7), [#9](https://github.com/STotev/RuleLoom/pull/9))
+* scheduling model: optional `ActionDefinition.Schedule` (`ScheduleMetadata` with `Immediate`/`Delay`/`Advance` modes, seconds to days, optional `referencePath`), parsed from JSON ([#7](https://github.com/STotev/RuleLoom/pull/7))
+* action factory: `IActionExecutorFactory` with `DirectActionExecutorFactory` as the default implementation ([#9](https://github.com/STotev/RuleLoom/pull/9))
+* schedule calculation: `RuleEngine` computes UTC `ScheduledFor` from a reference path or an injectable `TimeProvider`; scheduling errors return `Failed` ([#10](https://github.com/STotev/RuleLoom/pull/10))
