@@ -112,10 +112,11 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 
 | Milestone | Contents | Notes |
 |---|---|---|
-| **0.6: Schema System & fluent rule builder** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder (including whether a parameter is a value or a path, found in the 0.5 spike); `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator`; **fluent rule builder** that produces `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the expression → path translation with the schema builder | Detail under [Schema & validation](#schema--validation) below |
-| **0.7: Hosting & producer utilities** | `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, JSON shape) | Optional packages; no rule CRUD |
+| **0.6: Schemas and contexts** ([PRD #87](https://github.com/STotev/RuleLoom/issues/87)) | New `RuleLoom.Schemas` package: event schema classes (`EventSchema<T>`) with inference from DTOs, JSON Schema export/import, `ISchemaStore` + in-memory store; **contexts** (`@customer.Tier`) loaded by consumer-registered context providers, prefetched once per event; previous state rebuilt from changed fields; schema-aware `RuleValidator` (unknown paths and contexts are errors, type mismatches warnings); `#` reserved for functions | Detail under [Schema & validation](#schema--validation) below |
+| **0.7: Authoring surface & hosting** | Transport-free **catalogue** (event schemas, operators, actions, validate); **action descriptors** (FluentValidation-style; parameters that are values or paths); `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration); HTTP schema registration client and optional build-time schema generation; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape) | Optional packages; no rule CRUD |
 | **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
 | **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides | 1.0 marks a stable API; packages are already published from 0.5.0 |
+| **After 0.7** | **Fluent rule builder** producing `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the schema builder's expression → path translation | Mainly for in-process users; placed once 0.7 settles |
 | **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
 
 ---
@@ -181,12 +182,12 @@ parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variab
   and pick a state through the API instead.
 - **A public API to define and register variables**, e.g. `$event` (event metadata), `$rule`, `$tenant`, or
   application-specific ones, registered alongside operators and actions (and through DI, #5).
-- **Functions**, e.g. `$now()`, `$today()`, `$now(Europe/London)`. Possibly with their own sigil, such as `@now(...)`,
-  to tell functions from variables. They'd have to use the injected `TimeProvider`, so they stay deterministic in
+- **Functions**, e.g. `#now()`, `#today()`, `#now(Europe/London)`, with the `#` sigil reserved for them in 0.6
+  (`@` is taken by contexts, PRD #87). They'd have to use the injected `TimeProvider`, so they stay deterministic in
   tests, and they tie directly into the **time semantics review** above.
 
 **Questions**:
-- Syntax: `$` for both, or `$` for variables and `@` for functions? Is `$current()` a function or a variable?
+- Syntax: settled in 0.6 — `$` for RuleLoom's variables, `@` for contexts, `#` for functions.
 - Strings vs structure: parse function calls out of `path` strings (a small expression language), or add a structured
   JSON node such as `{ "function": "now", "args": ["Europe/London"] }` (a new `ConditionNode` type) that the parser
   and UIs handle without string parsing?
@@ -197,12 +198,13 @@ parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variab
   (analysis §7); functions could be its first step or a separate feature.
 
 ### Schema & validation
-Scheduled for **0.6**; the design decisions (code-first, fluent builder, runtime registration, `ISchemaStore`,
-catalogue) are in [`vision.md`](vision.md#decided). Earlier sketch: old roadmap §1.2.
+**0.6** ([PRD #87](https://github.com/STotev/RuleLoom/issues/87)) delivers schemas, contexts and path validation;
+the catalogue and action descriptors follow in 0.7. Design decisions are in [`vision.md`](vision.md#decided). Earlier
+sketch: old roadmap §1.2.
 
 The schema is intended as the single source for:
-- **UI form generation**: fields, types and labels for rule-authoring UIs.
-- **Path validation / whitelisting**: reject unknown paths when a rule is saved. `RuleValidator` in #22 can't do this
+- **UI form generation**: fields, types and labels for rule-authoring UIs (read through the 0.7 catalogue).
+- **Path validation / whitelisting**: reject unknown paths when a rule is saved (0.6). `RuleValidator` in #22 can't do this
   because it doesn't know an event's CLR type.
 - **Path cache**: pre-warm or bound the shared accessor cache (#15) to schema paths, possibly as a DI registration
   option. Today the cache grows with every distinct (type, path), which is fine while rules are developer-authored.
