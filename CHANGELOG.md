@@ -4,6 +4,28 @@ All notable changes to this project are documented in this file. It is generated
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/) — do not edit it by hand.
 
+## [0.5.0](https://github.com/STotev/RuleLoom/compare/v0.4.0...v0.5.0) (2026-10-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename RuleForge to RuleLoom ([#83](https://github.com/STotev/RuleLoom/issues/83))
+* rename LogAction to ConsoleLogAction (console-log) ([#80](https://github.com/STotev/RuleLoom/issues/80))
+* require a rule id ([#79](https://github.com/STotev/RuleLoom/issues/79))
+* compare ISO date strings as instants and JSON values by content ([#75](https://github.com/STotev/RuleLoom/issues/75))
+
+### Features
+
+* compare ISO date strings as instants and JSON values by content ([#75](https://github.com/STotev/RuleLoom/issues/75)) ([03c2b20](https://github.com/STotev/RuleLoom/commit/03c2b209b698e3f9a8ed671bedb9744d56e20b8d))
+* rename LogAction to ConsoleLogAction (console-log) ([#80](https://github.com/STotev/RuleLoom/issues/80)) ([054f049](https://github.com/STotev/RuleLoom/commit/054f049a6be5a330fba6280a89762692f91803d2))
+* require a rule id ([#79](https://github.com/STotev/RuleLoom/issues/79)) ([928d245](https://github.com/STotev/RuleLoom/commit/928d2450ec78ab12a8b8c137d84d3c8d07d47e7d))
+* resolve paths on JSON state ([#72](https://github.com/STotev/RuleLoom/issues/72)) ([3b2ca89](https://github.com/STotev/RuleLoom/commit/3b2ca89328209c8261610815971020a4b501f01f))
+
+
+### Code Refactoring
+
+* rename RuleForge to RuleLoom ([#83](https://github.com/STotev/RuleLoom/issues/83)) ([a1c2eef](https://github.com/STotev/RuleLoom/commit/a1c2eefc33c4cde0089d80d0c7e4dc6783747dd2))
+
 ## [0.4.0](https://github.com/STotev/RuleLoom/compare/v0.3.0...v0.4.0) (2026-10-06)
 
 
