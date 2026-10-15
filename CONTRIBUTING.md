@@ -34,6 +34,14 @@ dotnet build
 dotnet test
 ```
 
+Tests use xUnit v3 on Microsoft.Testing.Platform, so test projects are passed with `--project`:
+
+```bash
+dotnet test --project tests/RuleLoom.Tests                 # one project
+dotnet test --filter-class "RuleLoom.Tests.ValueComparerTests"
+dotnet test --coverage --coverage-output-format cobertura --results-directory ./TestResults
+```
+
 ---
 
 ## Submitting changes
@@ -67,10 +75,13 @@ Commits within a PR should follow the same format, but only the PR title reaches
 ```
 src/RuleLoom.Abstractions/          # Zero-dependency contracts — no external NuGet references allowed
 src/RuleLoom/                       # Default implementations, built-in operators and actions
-src/RuleLoom.Extensions.DependencyInjection/  # Optional DI helpers
+src/RuleLoom.Extensions.DependencyInjection/  # services.AddRuleLoom(...)
 tests/RuleLoom.Tests/               # Unit tests
-tests/RuleLoom.Tests.Integration/   # Integration tests
+tests/RuleLoom.Tests.Integration/   # End-to-end tests
+tests/RuleLoom.Extensions.DependencyInjection.Tests/  # DI registration tests
 samples/RuleLoom.Samples.Console/   # Usage examples
+samples/RuleLoom.Samples.RulesService/  # Central rules service (ASP.NET Core, Quartz.NET)
+docs/                               # Guides, roadmap, vision and design specs
 ```
 
 ---
