@@ -10,7 +10,7 @@
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-To report a vulnerability privately, use [GitHub Security Advisories](https://github.com/STotev/RuleForge/security/advisories/new).
+To report a vulnerability privately, use [GitHub Security Advisories](https://github.com/STotev/RuleLoom/security/advisories/new).
 
 You can expect an initial response within 7 days. If the vulnerability is confirmed, a
 patch will be prioritized and a CVE will be requested where applicable. You will be

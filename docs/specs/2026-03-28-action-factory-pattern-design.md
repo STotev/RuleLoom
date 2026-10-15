@@ -1,7 +1,7 @@
 # Design: Action Factory Pattern & RuleEngine Update (Phase 1.2B)
 
-**Issue:** [#3 — Phase 1.2B: Action Factory Pattern & RuleEngine Update](https://github.com/STotev/RuleForge/issues/3)  
-**Parent PRD:** [#1 — PRD: Action Scheduling & Dependency Injection Support](https://github.com/STotev/RuleForge/issues/1)  
+**Issue:** [#3 — Phase 1.2B: Action Factory Pattern & RuleEngine Update](https://github.com/STotev/RuleLoom/issues/3)  
+**Parent PRD:** [#1 — PRD: Action Scheduling & Dependency Injection Support](https://github.com/STotev/RuleLoom/issues/1)  
 **Depends on:** Phase 1.2A (issue #2, closed) — `ActionResult`, `RuleExecutionResult`, `ScheduleMetadata`, and `IActionExecutor<ActionResult>` are already in place.
 
 ---
@@ -26,12 +26,12 @@ Introduce `IActionExecutorFactory` as the resolution abstraction and `DirectActi
 
 ## Architecture
 
-### New Types in `RuleForge.Abstractions`
+### New Types in `RuleLoom.Abstractions`
 
 #### `IActionExecutorFactory` (`Action/IActionExecutorFactory.cs`)
 
 ```csharp
-namespace RuleForge.Abstractions.Action;
+namespace RuleLoom.Abstractions.Action;
 
 public interface IActionExecutorFactory
 {
@@ -46,7 +46,7 @@ public interface IActionExecutorFactory
 #### `RuleActionResult` (`Action/RuleActionResult.cs`)
 
 ```csharp
-namespace RuleForge.Abstractions.Action;
+namespace RuleLoom.Abstractions.Action;
 
 public sealed record RuleActionResult(ActionResult Result, string RuleName, string ActionType);
 ```
@@ -69,12 +69,12 @@ Change: `IReadOnlyList<ActionResult>` → `IReadOnlyList<RuleActionResult>`. No 
 
 ---
 
-### New Type in `RuleForge.Core`
+### New Type in `RuleLoom.Core`
 
 #### `DirectActionExecutorFactory` (`Actions/DirectActionExecutorFactory.cs`)
 
 ```csharp
-namespace RuleForge.Actions;
+namespace RuleLoom.Actions;
 
 public sealed class DirectActionExecutorFactory : IActionExecutorFactory
 {
@@ -194,7 +194,7 @@ new RuleEngine(conditionEvaluator, new DirectActionExecutorFactory(actions))
 
 ## Testing Plan
 
-### Unit Tests (`RuleForge.Tests`)
+### Unit Tests (`RuleLoom.Tests`)
 
 **`DirectActionExecutorFactoryTests`**
 - `TryGetExecutor_RegisteredType_ReturnsTrueAndExecutor`
@@ -212,7 +212,7 @@ new RuleEngine(conditionEvaluator, new DirectActionExecutorFactory(actions))
 - `ExecuteAsync_MultipleRules_AggregatesAllResults`
 - `ExecuteAsync_CancellationRequested_ThrowsOperationCanceledException`
 
-### Integration Tests (`RuleForge.Tests.Integration`)
+### Integration Tests (`RuleLoom.Tests.Integration`)
 
 - Update `RuleEngineIntegrationTests` constructor: wrap `actions` list in `DirectActionExecutorFactory`
 - Add result assertions to existing tests. At minimum:
@@ -226,7 +226,7 @@ Assert.Equal("Price Equals Test", result.ActionResults[0].RuleName);
 Assert.Equal("test-log", result.ActionResults[0].ActionType);
 ```
 
-### Console Sample (`samples/RuleForge.Samples.Console/Program.cs`)
+### Console Sample (`samples/RuleLoom.Samples.Console/Program.cs`)
 
 - Wrap `actions` in `new DirectActionExecutorFactory(actions)` before passing to `RuleEngine`
 
@@ -244,7 +244,7 @@ Assert.Equal("test-log", result.ActionResults[0].ActionType);
 ## Constraints
 
 - `IActionExecutorFactory` must have zero new dependencies (Abstractions constraint)
-- `DirectActionExecutorFactory` may only depend on `RuleForge.Abstractions`
+- `DirectActionExecutorFactory` may only depend on `RuleLoom.Abstractions`
 - `dotnet build` and `dotnet test` must pass with no regressions
 
 ---

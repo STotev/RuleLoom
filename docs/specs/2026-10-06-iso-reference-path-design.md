@@ -1,7 +1,7 @@
 # Design: ISO 8601 String Dates for Schedule `ReferencePath`
 
-**Issue:** [#33 API hardening: ISO 8601 string dates for schedule ReferencePath](https://github.com/STotev/RuleForge/issues/33) (also closes #19)
-**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (user story 44)
+**Issue:** [#33 API hardening: ISO 8601 string dates for schedule ReferencePath](https://github.com/STotev/RuleLoom/issues/33) (also closes #19)
+**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (user story 44)
 **Date:** 2026-10-06
 **Status:** Approved (AFK)
 

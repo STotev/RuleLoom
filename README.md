@@ -1,8 +1,8 @@
-# RuleForge
+# RuleLoom
 
 > A powerful, extensible .NET library for building event-driven business rule engines with end-user rule authoring capabilities.
 
-[![CI](https://github.com/STotev/RuleForge/actions/workflows/ci.yml/badge.svg)](https://github.com/STotev/RuleForge/actions/workflows/ci.yml)
+[![CI](https://github.com/STotev/RuleLoom/actions/workflows/ci.yml/badge.svg)](https://github.com/STotev/RuleLoom/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-10.0-purple)](https://dotnet.microsoft.com/download)
 
@@ -10,7 +10,7 @@
 
 ## 🎯 Overview
 
-RuleForge is a library-first approach to building configurable rule engines. It allows developers to define **what's possible** (operators, actions, events) and end users to define **business logic** (rules) without code changes.
+RuleLoom is a library-first approach to building configurable rule engines. It allows developers to define **what's possible** (operators, actions, events) and end users to define **business logic** (rules) without code changes.
 
 ### Key Features
 
@@ -30,10 +30,10 @@ RuleForge is a library-first approach to building configurable rule engines. It 
 
 ```bash
 # Clone the repository
-git clone https://github.com/STotev/RuleForge.git
+git clone https://github.com/STotev/RuleLoom.git
 
 # Build the solution
-cd RuleForge
+cd RuleLoom
 dotnet build
 
 # Run tests
@@ -43,13 +43,13 @@ dotnet test
 ### Basic Example
 
 ```csharp
-using RuleForge.Abstractions.Action;
-using RuleForge.Abstractions.Condition;
-using RuleForge.Abstractions.Rule;
-using RuleForge.Actions;
-using RuleForge.Engine;
-using RuleForge.Evaluators;
-using RuleForge.Operators;
+using RuleLoom.Abstractions.Action;
+using RuleLoom.Abstractions.Condition;
+using RuleLoom.Abstractions.Rule;
+using RuleLoom.Actions;
+using RuleLoom.Engine;
+using RuleLoom.Evaluators;
+using RuleLoom.Operators;
 
 // Define a rule
 var rule = new RuleDefinition
@@ -137,7 +137,7 @@ await engine.ExecuteAsync("ProductUpdated", currentData, previousData, [rule]);
 ### With Dependency Injection
 
 ```csharp
-services.AddRuleForge(rules => rules
+services.AddRuleLoom(rules => rules
     .AddAction<SendEmailAction>()          // "send-email"; can inject IEmailService, DbContext, ILogger<T>, ...
     .AddOperator<ContainsOperator>());     // built-in operators are registered automatically
 
@@ -155,8 +155,8 @@ first (`RemoveOperator("eq").AddOperator<MyEquals>()`); `RemoveBuiltInOperators(
 - **[Quick Start Guide](docs/guides/quick-start.md)** - Rules in code and JSON, actions, operators, DI, validation
 - **[JSON Rule Format](docs/guides/json-rules.md)** - JSON format reference
 - **[Upgrading](docs/guides/upgrading.md)** - Breaking changes by version, with before/after examples
-- **[Console Sample](samples/RuleForge.Samples.Console/)** - Runnable examples: basics, scheduling, JSON + validation, DI
-- **[Rules-Service Sample](samples/RuleForge.Samples.RulesService/)** - A central rules service: JSON events per tenant, rules from files, scheduled actions with Quartz.NET
+- **[Console Sample](samples/RuleLoom.Samples.Console/)** - Runnable examples: basics, scheduling, JSON + validation, DI
+- **[Rules-Service Sample](samples/RuleLoom.Samples.RulesService/)** - A central rules service: JSON events per tenant, rules from files, scheduled actions with Quartz.NET
 - **[Roadmap](docs/roadmap.md)** - What's done, what's next, and the backlog
 - **[Changelog](CHANGELOG.md)** - Release notes
 
@@ -166,13 +166,13 @@ first (`RemoveOperator("eq").AddOperator<MyEquals>()`); `RemoveBuiltInOperators(
 
 ```
 ┌─────────────────────────────────────────┐
-│   RuleForge.Abstractions                │ ← Zero dependencies
+│   RuleLoom.Abstractions                │ ← Zero dependencies
 │   - Interfaces & Contracts              │
 │   - RuleDefinition, ConditionNode       │
 └─────────────────────────────────────────┘
                     ↑
 ┌─────────────────────────────────────────┐
-│   RuleForge                             │
+│   RuleLoom                             │
 │   - RuleEngine                          │
 │   - ConditionEvaluator                  │
 │   - Built-in Operators & Actions        │
@@ -296,8 +296,8 @@ var actions = new DirectActionFactory()
 dotnet test
 
 # Run specific test project
-dotnet test --project tests/RuleForge.Tests
-dotnet test --project tests/RuleForge.Tests.Integration
+dotnet test --project tests/RuleLoom.Tests
+dotnet test --project tests/RuleLoom.Tests.Integration
 
 # Run with coverage (Cobertura XML in ./TestResults)
 dotnet test --coverage --coverage-output-format cobertura --results-directory ./TestResults
@@ -308,17 +308,17 @@ dotnet test --coverage --coverage-output-format cobertura --results-directory ./
 ## 📦 Project Structure
 
 ```
-RuleForge/
+RuleLoom/
 ├── src/
-│   ├── RuleForge.Abstractions/     # Core contracts (zero dependencies)
-│   ├── RuleForge/                  # Engine implementation
-│   └── RuleForge.Extensions.DependencyInjection/ # DI registration (planned)
+│   ├── RuleLoom.Abstractions/     # Core contracts (zero dependencies)
+│   ├── RuleLoom/                  # Engine implementation
+│   └── RuleLoom.Extensions.DependencyInjection/ # DI registration (planned)
 ├── tests/
-│   ├── RuleForge.Tests/            # Unit tests
-│   └── RuleForge.Tests.Integration/ # Integration tests
+│   ├── RuleLoom.Tests/            # Unit tests
+│   └── RuleLoom.Tests.Integration/ # Integration tests
 ├── samples/
-│   ├── RuleForge.Samples.Console/  # Example usage
-│   └── RuleForge.Samples.RulesService/ # Central rules service (ASP.NET Core + Quartz.NET)
+│   ├── RuleLoom.Samples.Console/  # Example usage
+│   └── RuleLoom.Samples.RulesService/ # Central rules service (ASP.NET Core + Quartz.NET)
 └── docs/                           # Guides, roadmap and design specs
 ```
 
@@ -330,8 +330,8 @@ RuleForge/
   action factory, schedule calculation (0.2.0); API hardening — value comparison, `OperatorContext`,
   `gt`/`gte`/`lt`/`lte`, complete results, case-insensitive names, typed action parameters,
   `$current`/`$previous`, rule validation (0.3.0)
-- 🎯 **Next**: dependency injection extensions ([#5](https://github.com/STotev/RuleForge/issues/5)),
-  then integration tests, samples and the 0.3.0 migration guide ([#6](https://github.com/STotev/RuleForge/issues/6))
+- 🎯 **Next**: dependency injection extensions ([#5](https://github.com/STotev/RuleLoom/issues/5)),
+  then integration tests, samples and the 0.3.0 migration guide ([#6](https://github.com/STotev/RuleLoom/issues/6))
 - 📋 **Backlog**: benchmarks, time semantics, schema system, event system, NuGet packaging, more operators,
   rule management, persistence, observability
 
@@ -459,8 +459,8 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 ## 📞 Support
 
 - 📖 [Documentation](docs/)
-- 🐛 [Issue Tracker](https://github.com/STotev/RuleForge/issues)
-- 💬 [Discussions](https://github.com/STotev/RuleForge/discussions)
+- 🐛 [Issue Tracker](https://github.com/STotev/RuleLoom/issues)
+- 💬 [Discussions](https://github.com/STotev/RuleLoom/discussions)
 
 ---
 

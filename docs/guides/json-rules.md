@@ -284,7 +284,7 @@ A `JsonValue` created from a .NET value (`JsonValue.Create(19.99m)`) returns tha
 ## Comparing Values
 
 JSON values are parsed as `int`, `long`, `double`, `string`, `bool` or `null`, while domain properties are often
-`decimal`, enums or dates. `eq` compares them with `ValueComparer` (namespace `RuleForge.Abstractions.Values`),
+`decimal`, enums or dates. `eq` compares them with `ValueComparer` (namespace `RuleLoom.Abstractions.Values`),
 so a value matches when it means the same thing:
 
 | Property type | JSON value | Matches when |

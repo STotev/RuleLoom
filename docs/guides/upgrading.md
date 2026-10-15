@@ -1,9 +1,9 @@
-# Upgrading RuleForge
+# Upgrading RuleLoom
 
-RuleForge is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
+RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
+- [0.4 → 0.5](#04--05): RuleForge is now RuleLoom; rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
 - [0.3 → 0.4](#03--04): actions are named by registration, `IAction`, dependency injection
 - [0.2 → 0.3](#02--03): API hardening (results, operators, validation, paths, parameters)
 - [0.1 → 0.2](#01--02): action results, action factory, scheduling, the RuleForge rename
@@ -11,6 +11,20 @@ first, with what to change. Each version's GitHub release notes link the pull re
 ---
 
 ## 0.4 → 0.5
+
+### RuleForge is now RuleLoom
+
+The library is renamed, because the `RuleForge` package name on NuGet belongs to an unrelated project. Only names
+change; behaviour is the same.
+
+| Before | After |
+|---|---|
+| Packages and namespaces `RuleForge`, `RuleForge.Abstractions`, `RuleForge.Extensions.DependencyInjection` | `RuleLoom`, `RuleLoom.Abstractions`, `RuleLoom.Extensions.DependencyInjection` |
+| `services.AddRuleForge(...)` | `services.AddRuleLoom(...)` |
+| `RuleForgeBuilder` | `RuleLoomBuilder` |
+| `github.com/STotev/RuleForge` | `github.com/STotev/RuleLoom` (the old URL redirects) |
+
+What to change: replace `RuleForge` with `RuleLoom` in package references, `using` directives and the DI call.
 
 ### Rules need an `id`
 
@@ -29,15 +43,15 @@ in your logs and job keys.
 ### `LogAction` is now `ConsoleLogAction` (`console-log`)
 
 The built-in action that writes `message` to the console is renamed to say what it does; it's meant for development
-and testing. Its default name follows: `console-log` instead of `log`. It's still not registered by `AddRuleForge`.
+and testing. Its default name follows: `console-log` instead of `log`. It's still not registered by `AddRuleLoom`.
 
 ```csharp
 // 0.4
-services.AddRuleForge(rules => rules.AddAction<LogAction>());            // "log"
+services.AddRuleLoom(rules => rules.AddAction<LogAction>());            // "log"
 
 // 0.5
-services.AddRuleForge(rules => rules.AddAction<ConsoleLogAction>());     // "console-log"
-services.AddRuleForge(rules => rules.AddAction<ConsoleLogAction>("log")); // or keep the old name
+services.AddRuleLoom(rules => rules.AddAction<ConsoleLogAction>());     // "console-log"
+services.AddRuleLoom(rules => rules.AddAction<ConsoleLogAction>("log")); // or keep the old name
 ```
 
 What to change: rename the type, and either change `"action": "log"` to `"console-log"` in your rules or register it
@@ -130,7 +144,7 @@ In code: `ActionDefinition.Type` → `ActionDefinition.Action`, and `ActionResul
 ### New: dependency injection (not breaking)
 
 ```csharp
-services.AddRuleForge(rules => rules.AddAction<SendEmailAction>());
+services.AddRuleLoom(rules => rules.AddAction<SendEmailAction>());
 ```
 
 See the [quick start](quick-start.md#dependency-injection).
@@ -237,6 +251,8 @@ A `ReferencePath` that resolves to a string must be ISO 8601 (`2026-05-01T09:00:
 ## 0.1 → 0.2
 
 ### The library is renamed to RuleForge
+
+(Renamed again to RuleLoom in 0.5; see [0.4 → 0.5](#04--05).)
 
 | Before | After |
 |---|---|

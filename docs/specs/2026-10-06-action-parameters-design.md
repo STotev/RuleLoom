@@ -1,7 +1,7 @@
 # Design: Normalised Action Parameters and `GetParameter<T>`
 
-**Issue:** [#35 API hardening: normalised action parameters and GetParameter<T>](https://github.com/STotev/RuleForge/issues/35)
-**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (module 9 and the parameter part of module 6)
+**Issue:** [#35 API hardening: normalised action parameters and GetParameter<T>](https://github.com/STotev/RuleLoom/issues/35)
+**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (module 9 and the parameter part of module 6)
 **Date:** 2026-10-06
 **Status:** Approved (AFK)
 

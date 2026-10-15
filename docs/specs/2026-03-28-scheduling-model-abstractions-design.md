@@ -1,7 +1,7 @@
 # Design: Phase 1.2A — Scheduling Model & Abstractions
 
-**Issue:** [#2 Phase 1.2A: Scheduling Model & Abstractions](https://github.com/STotev/RuleForge/issues/2)  
-**Parent PRD:** [#1 PRD: Action Scheduling & Dependency Injection Support](https://github.com/STotev/RuleForge/issues/1)  
+**Issue:** [#2 Phase 1.2A: Scheduling Model & Abstractions](https://github.com/STotev/RuleLoom/issues/2)  
+**Parent PRD:** [#1 PRD: Action Scheduling & Dependency Injection Support](https://github.com/STotev/RuleLoom/issues/1)  
 **Date:** 2026-03-28  
 **Status:** Approved
 
@@ -19,7 +19,7 @@ This phase adds the foundational data model and updates the action contract. No 
 
 **Option A — Minimal breaking change (selected)**
 
-Add all new types to `RuleForge.Abstractions`, update `IActionExecutor.ExecuteAsync` to return `Task<ActionResult>`, extend `ActionDefinition` with an optional `Schedule` property, update `RuleJsonParser` to deserialize the schedule block, and update `LogAction` to return `ActionResult.Success()`.
+Add all new types to `RuleLoom.Abstractions`, update `IActionExecutor.ExecuteAsync` to return `Task<ActionResult>`, extend `ActionDefinition` with an optional `Schedule` property, update `RuleJsonParser` to deserialize the schedule block, and update `LogAction` to return `ActionResult.Success()`.
 
 `RuleEngine` is **not changed** in this phase. It continues to return `Task` (void). The engine will be updated in Phase 1.2B when `IActionExecutorFactory` is introduced, enabling collection of `ActionResult`s into a `RuleExecutionResult`.
 
@@ -29,18 +29,18 @@ Add all new types to `RuleForge.Abstractions`, update `IActionExecutor.ExecuteAs
 
 | Type | Namespace | File |
 |---|---|---|
-| `ScheduleMode` | `RuleForge.Abstractions.Scheduling` | `Scheduling/ScheduleMode.cs` |
-| `ScheduleUnit` | `RuleForge.Abstractions.Scheduling` | `Scheduling/ScheduleUnit.cs` |
-| `ScheduleMetadata` | `RuleForge.Abstractions.Scheduling` | `Scheduling/ScheduleMetadata.cs` |
-| `ActionExecutionStatus` | `RuleForge.Abstractions.Action` | `Action/ActionExecutionStatus.cs` |
-| `ActionResult` | `RuleForge.Abstractions.Action` | `Action/ActionResult.cs` |
-| `RuleExecutionResult` | `RuleForge.Abstractions.Rule` | `Rule/RuleExecutionResult.cs` |
+| `ScheduleMode` | `RuleLoom.Abstractions.Scheduling` | `Scheduling/ScheduleMode.cs` |
+| `ScheduleUnit` | `RuleLoom.Abstractions.Scheduling` | `Scheduling/ScheduleUnit.cs` |
+| `ScheduleMetadata` | `RuleLoom.Abstractions.Scheduling` | `Scheduling/ScheduleMetadata.cs` |
+| `ActionExecutionStatus` | `RuleLoom.Abstractions.Action` | `Action/ActionExecutionStatus.cs` |
+| `ActionResult` | `RuleLoom.Abstractions.Action` | `Action/ActionResult.cs` |
+| `RuleExecutionResult` | `RuleLoom.Abstractions.Rule` | `Rule/RuleExecutionResult.cs` |
 
 The `Scheduling` sub-namespace mirrors the existing `Condition` pattern: a cohesive group of related types lives together under a named sub-namespace.
 
-`ActionResult` and `ActionExecutionStatus` are action-scoped results and belong in `RuleForge.Abstractions.Action` alongside `ActionDefinition` and `IActionExecutor`.
+`ActionResult` and `ActionExecutionStatus` are action-scoped results and belong in `RuleLoom.Abstractions.Action` alongside `ActionDefinition` and `IActionExecutor`.
 
-`RuleExecutionResult` wraps the outcome of an entire rule execution and belongs in `RuleForge.Abstractions.Rule` alongside `RuleDefinition`.
+`RuleExecutionResult` wraps the outcome of an entire rule execution and belongs in `RuleLoom.Abstractions.Rule` alongside `RuleDefinition`.
 
 ---
 
@@ -49,7 +49,7 @@ The `Scheduling` sub-namespace mirrors the existing `Condition` pattern: a cohes
 ### `ScheduleMode` (enum)
 
 ```csharp
-namespace RuleForge.Abstractions.Scheduling;
+namespace RuleLoom.Abstractions.Scheduling;
 
 public enum ScheduleMode
 {
@@ -62,7 +62,7 @@ public enum ScheduleMode
 ### `ScheduleUnit` (enum)
 
 ```csharp
-namespace RuleForge.Abstractions.Scheduling;
+namespace RuleLoom.Abstractions.Scheduling;
 
 public enum ScheduleUnit
 {
@@ -76,7 +76,7 @@ public enum ScheduleUnit
 ### `ScheduleMetadata` (sealed record)
 
 ```csharp
-namespace RuleForge.Abstractions.Scheduling;
+namespace RuleLoom.Abstractions.Scheduling;
 
 public sealed record ScheduleMetadata
 {
@@ -102,7 +102,7 @@ public sealed record ScheduleMetadata
 ### `ActionExecutionStatus` (enum)
 
 ```csharp
-namespace RuleForge.Abstractions.Action;
+namespace RuleLoom.Abstractions.Action;
 
 public enum ActionExecutionStatus
 {
@@ -116,7 +116,7 @@ public enum ActionExecutionStatus
 ### `ActionResult` (sealed record)
 
 ```csharp
-namespace RuleForge.Abstractions.Action;
+namespace RuleLoom.Abstractions.Action;
 
 public sealed record ActionResult
 {
@@ -144,7 +144,7 @@ Static factory methods are the only intended construction paths. The parameterle
 ### `RuleExecutionResult` (sealed record)
 
 ```csharp
-namespace RuleForge.Abstractions.Rule;
+namespace RuleLoom.Abstractions.Rule;
 
 public sealed record RuleExecutionResult(IReadOnlyList<ActionResult> ActionResults);
 ```
@@ -158,8 +158,8 @@ A thin wrapper. Provides a named return type for `RuleEngine.ExecuteAsync` when 
 ### `ActionDefinition` — add `Schedule` property
 
 ```csharp
-// In RuleForge.Abstractions.Action.ActionDefinition
-using RuleForge.Abstractions.Scheduling;
+// In RuleLoom.Abstractions.Action.ActionDefinition
+using RuleLoom.Abstractions.Scheduling;
 
 /// <summary>
 /// Optional scheduling metadata. When null, the action executes immediately (default).
@@ -234,7 +234,7 @@ public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContex
 
 ## Tests
 
-### New: `ActionResultTests.cs` (in `RuleForge.Tests`)
+### New: `ActionResultTests.cs` (in `RuleLoom.Tests`)
 
 | Test | Scenario |
 |---|---|
@@ -244,7 +244,7 @@ public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContex
 | `Skipped_ReturnsSkipped` | Status = Skipped |
 | `Skipped_WithReason_SetsMessage` | Status = Skipped, Message = provided reason |
 
-### Updated: `RuleJsonParserTests.cs` (in `RuleForge.Tests`)
+### Updated: `RuleJsonParserTests.cs` (in `RuleLoom.Tests`)
 
 | Test | Scenario |
 |---|---|
@@ -254,7 +254,7 @@ public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContex
 | `Parse_ActionWithAdvanceSchedule_Success` | `mode: Advance`, with `referencePath` round-trip |
 | `Parse_ScheduleEnumCaseInsensitive_Success` | `"mode": "delay"` deserializes to `ScheduleMode.Delay` |
 
-### Updated: `RuleEngineIntegrationTests.cs` (in `RuleForge.Tests.Integration`)
+### Updated: `RuleEngineIntegrationTests.cs` (in `RuleLoom.Tests.Integration`)
 
 `TestLogAction` must be updated to return `Task<ActionResult>` (return `Task.FromResult(ActionResult.Success())`). All existing test assertions remain valid — no behavioral change.
 

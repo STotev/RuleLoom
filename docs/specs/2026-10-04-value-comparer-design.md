@@ -1,7 +1,7 @@
 # Design: Shared Value Comparer, Used by `eq`
 
-**Issue:** [#30 API hardening: shared value comparer, used by `eq`](https://github.com/STotev/RuleForge/issues/30)
-**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (module 1)
+**Issue:** [#30 API hardening: shared value comparer, used by `eq`](https://github.com/STotev/RuleLoom/issues/30)
+**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (module 1)
 **Date:** 2026-10-04
 **Status:** Approved (AFK)
 
@@ -18,8 +18,8 @@ fails; the rule just silently doesn't fire.
 
 | Question | Decision | Rationale |
 |---|---|---|
-| Shape | Two public static classes in a new `RuleForge.Abstractions.Values` namespace: `ValueComparer` (equality, ordering) and `ValueConverter` (conversion) | PRD: one implementation of the rules, public so plugins use the same rules; not pluggable yet, so no interface or instance |
-| Location | `RuleForge.Abstractions` | Operators (#34), parameters (#35) and scheduling (#33) all need it; Abstractions must stay dependency-free, which this is |
+| Shape | Two public static classes in a new `RuleLoom.Abstractions.Values` namespace: `ValueComparer` (equality, ordering) and `ValueConverter` (conversion) | PRD: one implementation of the rules, public so plugins use the same rules; not pluggable yet, so no interface or instance |
+| Location | `RuleLoom.Abstractions` | Operators (#34), parameters (#35) and scheduling (#33) all need it; Abstractions must stay dependency-free, which this is |
 | Ordering API | `TryCompare(left, right, out int)` | "Not comparable" is a normal outcome (e.g. a number vs a non-numeric string), not an exception; ordering operators (#36) evaluate to `false` then |
 | Numbers | Compare by value. If either side is `float`/`double`, compare as `double`; otherwise as `decimal` | `decimal` holds every integer type exactly; `double` covers the range `decimal` can't |
 | Enums | Same enum type: by value. Enum vs string: by name, case-insensitive (including `[Flags]` combinations such as `"Read, Write"`); numeric strings never match. Enum vs number: by underlying value. Different enum types: not equal | PRD case policy: names are case-insensitive; values from JSON are names or numbers |
@@ -33,7 +33,7 @@ fails; the rule just silently doesn't fire.
 ## API
 
 ```csharp
-namespace RuleForge.Abstractions.Values;
+namespace RuleLoom.Abstractions.Values;
 
 public static class ValueComparer
 {

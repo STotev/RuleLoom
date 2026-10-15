@@ -1,4 +1,4 @@
-# RuleForge — Agent Instructions
+# RuleLoom — Agent Instructions
 
 > A .NET 10 / C# 14 library for building event-driven business rule engines with JSON-based rule authoring.
 
@@ -36,11 +36,11 @@ When the implementation diverges from the spec or the issue's acceptance criteri
 ## Build and Test
 
 ```bash
-dotnet build                                             # entire solution (RuleForge.slnx)
+dotnet build                                             # entire solution (RuleLoom.slnx)
 dotnet test                                              # all tests
-dotnet test --project tests/RuleForge.Tests              # unit tests
-dotnet test --project tests/RuleForge.Tests.Integration  # integration tests
-dotnet test --filter-class "RuleForge.Tests.ScheduleCalculatorTests"
+dotnet test --project tests/RuleLoom.Tests              # unit tests
+dotnet test --project tests/RuleLoom.Tests.Integration  # integration tests
+dotnet test --filter-class "RuleLoom.Tests.ScheduleCalculatorTests"
 dotnet test --filter-method "*Resolve_Path*"
 dotnet test --coverage --coverage-output-format cobertura --results-directory ./TestResults
 ```
@@ -75,16 +75,16 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 
 | Project | Path | Role |
 |---|---|---|
-| `RuleForge.Abstractions` | `src/RuleForge.Abstractions` | Contracts and models. **Must have no external package dependencies.** |
-| `RuleForge` | `src/RuleForge` | Default implementation: engine, evaluator, operators, actions, scheduling |
-| `RuleForge.Extensions.DependencyInjection` | `src/RuleForge.Extensions.DependencyInjection` | `services.AddRuleForge(...)`: DI registration of engine, evaluator, actions, operators, validator |
-| `RuleForge.Tests` | `tests/RuleForge.Tests` | xUnit unit tests |
-| `RuleForge.Tests.Integration` | `tests/RuleForge.Tests.Integration` | xUnit end-to-end tests |
-| `RuleForge.Extensions.DependencyInjection.Tests` | `tests/RuleForge.Extensions.DependencyInjection.Tests` | xUnit tests of DI registration (uses the real container) |
-| `RuleForge.Samples.Console` | `samples/RuleForge.Samples.Console` | Usage sample |
+| `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models. **Must have no external package dependencies.** |
+| `RuleLoom` | `src/RuleLoom` | Default implementation: engine, evaluator, operators, actions, scheduling |
+| `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(...)`: DI registration of engine, evaluator, actions, operators, validator |
+| `RuleLoom.Tests` | `tests/RuleLoom.Tests` | xUnit unit tests |
+| `RuleLoom.Tests.Integration` | `tests/RuleLoom.Tests.Integration` | xUnit end-to-end tests |
+| `RuleLoom.Extensions.DependencyInjection.Tests` | `tests/RuleLoom.Extensions.DependencyInjection.Tests` | xUnit tests of DI registration (uses the real container) |
+| `RuleLoom.Samples.Console` | `samples/RuleLoom.Samples.Console` | Usage sample |
 
-Namespaces follow folders: `RuleForge.Abstractions.{Action,Condition,Rule,Scheduling,Values}` and
-`RuleForge.{Engine,Evaluators,Operators,Actions,Scheduling,Validation}` (there is no `RuleForge.Core`).
+Namespaces follow folders: `RuleLoom.Abstractions.{Action,Condition,Rule,Scheduling,Values}` and
+`RuleLoom.{Engine,Evaluators,Operators,Actions,Scheduling,Validation}` (there is no `RuleLoom.Core`).
 
 Versioning is from git tags via MinVer (`Directory.Build.props`); release-please creates the tags.
 
@@ -124,21 +124,21 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 - **Actions** are referenced in rules as `"action": "<name>"` (`ActionDefinition.Action`) and resolved by name through
   `IActionFactory` (`DirectActionFactory` for non-DI use), which also lists its `ActionNames`. Names
   belong to the registration: `ActionNames.GetDefaultName(type)` gives `[ActionName]` or the class name minus an
-  `Action` suffix in kebab-case; `Add(executor, name)` overrides it. Built-in action: `console-log` (`ConsoleLogAction`, for development; not registered by `AddRuleForge`).
-- **DI** (`AddRuleForge`): one shared registry per service collection, so it can be called repeatedly. Operators
+  `Action` suffix in kebab-case; `Add(executor, name)` overrides it. Built-in action: `console-log` (`ConsoleLogAction`, for development; not registered by `AddRuleLoom`).
+- **DI** (`AddRuleLoom`): one shared registry per service collection, so it can be called repeatedly. Operators
   and `IConditionEvaluator` are Singleton (built-ins included; `AddOperator`/`RemoveOperator`/`RemoveBuiltInOperators` apply
   in call order); actions, `IActionFactory` (`ServiceProviderActionFactory`), `RuleEngine` and
   `RuleValidator` are Scoped. `AddAction<T>(name?)` registers under the default or given name.
 - **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
-  `RuleValidator` (`RuleForge.Validation`) checks a rule against the registered operators and actions
+  `RuleValidator` (`RuleLoom.Validation`) checks a rule against the registered operators and actions
   (unknown names, operand counts, incomplete schedules), returning every error with a JSONPath location.
   Property paths aren't validated (needs the Schema System).
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
   in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now. UTC only.
   `ReferencePath` values convert via `ValueConverter` (`DateTime`/`DateTimeOffset`, or strict ISO 8601 strings).
-  RuleForge computes `ScheduledFor`; dispatching scheduled work is the consumer's responsibility.
+  RuleLoom computes `ScheduledFor`; dispatching scheduled work is the consumer's responsibility.
 - **Value comparison**: `ValueComparer` (`AreEqual`, `TryCompare`) and `ValueConverter` (`TryConvert`) in
-  `RuleForge.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
+  `RuleLoom.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
   types, enums by name or number, dates as UTC instants incl. strict ISO 8601 strings (two ISO strings compare as instants; ISO vs other text is
   incomparable), other strings ordinal, JSON objects/arrays by content via `DeepEquals`; `changed` uses `AreEqual` too). Operators
   and other features must use them rather than `object.Equals` or ad-hoc parsing.
@@ -166,7 +166,7 @@ Versioning is from git tags via MinVer (`Directory.Build.props`); release-please
 - File-scoped namespaces, nullable enabled, implicit usings.
 - `var` when the type is evident; collection expressions `[]`; primary constructors where they fit.
 - Seal classes that aren't designed for inheritance; expression-bodied members for simple members.
-- XML doc comments on public API in `RuleForge.Abstractions`.
+- XML doc comments on public API in `RuleLoom.Abstractions`.
 
 ## Testing Conventions
 

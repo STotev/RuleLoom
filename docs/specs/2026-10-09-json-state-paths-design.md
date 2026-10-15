@@ -1,7 +1,7 @@
 # Design: Resolve Paths on JSON State
 
-**Issue:** [#68 Resolve paths on JSON state (JsonElement, JsonNode)](https://github.com/STotev/RuleForge/issues/68)
-**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleForge/issues/66) (user stories 1–12, 16, 19–24)
+**Issue:** [#68 Resolve paths on JSON state (JsonElement, JsonNode)](https://github.com/STotev/RuleLoom/issues/68)
+**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (user stories 1–12, 16, 19–24)
 **Date:** 2026-10-09
 **Status:** Approved (AFK)
 
@@ -33,7 +33,7 @@ The same declared-type limit affects CLR objects: a property declared as `object
 | Empty path | Returns the root unchanged (`$current`/`$previous` alone return the whole JSON state) | Unchanged behaviour |
 | Errors | Data problems never throw (missing keys, wrong kinds, ambiguity → `null`), as today. **Exception:** a `JsonElement` from a disposed `JsonDocument` throws `ObjectDisposedException` | A disposed document is a programming error (the document must outlive `ExecuteAsync`); turning it into `null` would make rules silently not match |
 | Public API | Unchanged: `PathResolver.Resolve(object? root, string path)` and `EvaluationContext.Resolve(path)` | Everything that resolves paths (operators, `ScheduleCalculator`, actions) gets JSON support for free |
-| Dependencies | None added; `System.Text.Json` is part of the shared framework and already used by `RuleForge.Abstractions` | Abstractions stays dependency-free |
+| Dependencies | None added; `System.Text.Json` is part of the shared framework and already used by `RuleLoom.Abstractions` | Abstractions stays dependency-free |
 
 ## Behaviour change
 

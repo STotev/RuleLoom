@@ -1,7 +1,7 @@
 # Design: `$current` and `$previous` Scope Prefixes
 
-**Issue:** [#38 API hardening: $current and $previous scope prefixes](https://github.com/STotev/RuleForge/issues/38) (also closes #16)
-**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (module 5, user stories 49–52)
+**Issue:** [#38 API hardening: $current and $previous scope prefixes](https://github.com/STotev/RuleLoom/issues/38) (also closes #16)
+**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (module 5, user stories 49–52)
 **Date:** 2026-10-06
 **Status:** Approved (AFK)
 

@@ -1,4 +1,4 @@
-# RuleForge Roadmap
+# RuleLoom Roadmap
 
 **Last reviewed**: 2026-10-07
 
@@ -20,10 +20,10 @@ connect to historical docs — they were reused inconsistently between documents
 | Version | Status | Contents |
 |---|---|---|
 | 0.1.0 | Tagged `v0.1.0` (release-please bootstrap; no GitHub release or NuGet package) | Core engine, operators, JSON parser, Phase 1.1 stability fixes |
-| 0.2.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.0) 2026-10-02 | Action results, scheduling model, action factory, schedule calculation |
-| 0.2.1 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.2.1) 2026-10-03 | Nested path fix (#14), shared path cache (#15) |
-| 0.3.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.3.0) 2026-10-06 | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
-| 0.4.0 | [Released](https://github.com/STotev/RuleForge/releases/tag/v0.4.0) 2026-10-06 | Action names by registration, `IAction`, dependency injection, upgrading guide |
+| 0.2.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.2.0) 2026-10-02 | Action results, scheduling model, action factory, schedule calculation |
+| 0.2.1 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.2.1) 2026-10-03 | Nested path fix (#14), shared path cache (#15) |
+| 0.3.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.3.0) 2026-10-06 | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
+| 0.4.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.4.0) 2026-10-06 | Action names by registration, `IAction`, dependency injection, upgrading guide |
 
 ---
 
@@ -38,17 +38,17 @@ Abstractions (`ConditionNode`, `IConditionOperator`, `IAction`), `RuleEngine`, `
 Priority ordering (higher first), operand-count validation, null-safe path resolution, continue-on-error
 per rule, integration test project. Report: [`archive/phase-1-1-summary.md`](archive/phase-1-1-summary.md).
 
-### Action scheduling & DI — PRD [#1](https://github.com/STotev/RuleForge/issues/1) ✅
+### Action scheduling & DI — PRD [#1](https://github.com/STotev/RuleLoom/issues/1) ✅
 
 | Issue | Slice | PR | Spec |
 |---|---|---|---|
-| [#2](https://github.com/STotev/RuleForge/issues/2) | Scheduling model & `ActionResult` | [#7](https://github.com/STotev/RuleForge/pull/7) | [scheduling-model-abstractions](specs/2026-03-28-scheduling-model-abstractions-design.md) |
-| [#3](https://github.com/STotev/RuleForge/issues/3) | Action factory & per-rule results | [#9](https://github.com/STotev/RuleForge/pull/9) | [action-factory-pattern](specs/2026-03-28-action-factory-pattern-design.md) |
-| [#4](https://github.com/STotev/RuleForge/issues/4) | Schedule calculation engine | [#10](https://github.com/STotev/RuleForge/pull/10) | [schedule-calculation-engine](specs/2026-03-29-schedule-calculation-engine-design.md) |
-| [#55](https://github.com/STotev/RuleForge/issues/55) | Action names by registration, `"action"` in rule JSON | [#56](https://github.com/STotev/RuleForge/pull/56) | [action-names](specs/2026-10-06-action-names-design.md) |
-| [#5](https://github.com/STotev/RuleForge/issues/5) | Dependency injection (`AddRuleForge`) | [#54](https://github.com/STotev/RuleForge/pull/54) | [dependency-injection](specs/2026-10-06-dependency-injection-design.md) |
-| [#58](https://github.com/STotev/RuleForge/issues/58) | Rename `IActionExecutor` → `IAction` | [#59](https://github.com/STotev/RuleForge/pull/59) | — |
-| [#6](https://github.com/STotev/RuleForge/issues/6) | Integration tests, samples, [upgrading guide](guides/upgrading.md), quick start rewrite | [#60](https://github.com/STotev/RuleForge/pull/60) | [integration-samples-upgrading](specs/2026-10-07-integration-samples-upgrading-design.md) |
+| [#2](https://github.com/STotev/RuleLoom/issues/2) | Scheduling model & `ActionResult` | [#7](https://github.com/STotev/RuleLoom/pull/7) | [scheduling-model-abstractions](specs/2026-03-28-scheduling-model-abstractions-design.md) |
+| [#3](https://github.com/STotev/RuleLoom/issues/3) | Action factory & per-rule results | [#9](https://github.com/STotev/RuleLoom/pull/9) | [action-factory-pattern](specs/2026-03-28-action-factory-pattern-design.md) |
+| [#4](https://github.com/STotev/RuleLoom/issues/4) | Schedule calculation engine | [#10](https://github.com/STotev/RuleLoom/pull/10) | [schedule-calculation-engine](specs/2026-03-29-schedule-calculation-engine-design.md) |
+| [#55](https://github.com/STotev/RuleLoom/issues/55) | Action names by registration, `"action"` in rule JSON | [#56](https://github.com/STotev/RuleLoom/pull/56) | [action-names](specs/2026-10-06-action-names-design.md) |
+| [#5](https://github.com/STotev/RuleLoom/issues/5) | Dependency injection (`AddRuleLoom`) | [#54](https://github.com/STotev/RuleLoom/pull/54) | [dependency-injection](specs/2026-10-06-dependency-injection-design.md) |
+| [#58](https://github.com/STotev/RuleLoom/issues/58) | Rename `IActionExecutor` → `IAction` | [#59](https://github.com/STotev/RuleLoom/pull/59) | — |
+| [#6](https://github.com/STotev/RuleLoom/issues/6) | Integration tests, samples, [upgrading guide](guides/upgrading.md), quick start rewrite | [#60](https://github.com/STotev/RuleLoom/pull/60) | [integration-samples-upgrading](specs/2026-10-07-integration-samples-upgrading-design.md) |
 
 Actually *dispatching* scheduled actions was out of scope for this PRD; see the vision's "Running scheduled actions
 later".
@@ -56,29 +56,29 @@ later".
 ### Code review bug batch (2026-10-02)
 | Issue | Change | Fixed by |
 |---|---|---|
-| [#14](https://github.com/STotev/RuleForge/issues/14) | Unscoped nested paths (`Address.City`) threw | [#24](https://github.com/STotev/RuleForge/pull/24) |
-| [#15](https://github.com/STotev/RuleForge/issues/15) | Path accessor cache recreated per event (~290× faster now) | [#26](https://github.com/STotev/RuleForge/pull/26) |
-| [#20](https://github.com/STotev/RuleForge/issues/20) | Unit tests for operators, evaluator, path resolution (`RuleForge` coverage 57% → 90%) | [#29](https://github.com/STotev/RuleForge/pull/29) |
-| [#21](https://github.com/STotev/RuleForge/issues/21) | Test packages aligned; xunit v3 on Microsoft.Testing.Platform; coverage in both projects | [#28](https://github.com/STotev/RuleForge/pull/28) |
-| [#16](https://github.com/STotev/RuleForge/issues/16) · [#17](https://github.com/STotev/RuleForge/issues/17) · [#18](https://github.com/STotev/RuleForge/issues/18) · [#19](https://github.com/STotev/RuleForge/issues/19) | `changed` with scoped paths · clearer errors · cancellation checks · ISO-only string dates | folded into #38 · #34 · #32 · #33 |
+| [#14](https://github.com/STotev/RuleLoom/issues/14) | Unscoped nested paths (`Address.City`) threw | [#24](https://github.com/STotev/RuleLoom/pull/24) |
+| [#15](https://github.com/STotev/RuleLoom/issues/15) | Path accessor cache recreated per event (~290× faster now) | [#26](https://github.com/STotev/RuleLoom/pull/26) |
+| [#20](https://github.com/STotev/RuleLoom/issues/20) | Unit tests for operators, evaluator, path resolution (`RuleLoom` coverage 57% → 90%) | [#29](https://github.com/STotev/RuleLoom/pull/29) |
+| [#21](https://github.com/STotev/RuleLoom/issues/21) | Test packages aligned; xunit v3 on Microsoft.Testing.Platform; coverage in both projects | [#28](https://github.com/STotev/RuleLoom/pull/28) |
+| [#16](https://github.com/STotev/RuleLoom/issues/16) · [#17](https://github.com/STotev/RuleLoom/issues/17) · [#18](https://github.com/STotev/RuleLoom/issues/18) · [#19](https://github.com/STotev/RuleLoom/issues/19) | `changed` with scoped paths · clearer errors · cancellation checks · ISO-only string dates | folded into #38 · #34 · #32 · #33 |
 
-### API hardening — PRD [#22](https://github.com/STotev/RuleForge/issues/22) ✅ (ships in 0.3.0)
+### API hardening — PRD [#22](https://github.com/STotev/RuleLoom/issues/22) ✅ (ships in 0.3.0)
 Shared value comparison, `OperatorContext`, ordering operators, complete results, case-insensitive names, typed action
 parameters, `$current`/`$previous`, parse-time and registry-based validation. Every slice has a spec in
 [`specs/`](specs/).
 
 | Issue | Slice | PR |
 |---|---|---|
-| [#30](https://github.com/STotev/RuleForge/issues/30) | Shared value comparer (`ValueComparer`/`ValueConverter`), used by `eq` | [#41](https://github.com/STotev/RuleForge/pull/41) |
-| [#31](https://github.com/STotev/RuleForge/issues/31) | Parse-time structural validation (`RuleParseException`) | [#43](https://github.com/STotev/RuleForge/pull/43) |
-| [#32](https://github.com/STotev/RuleForge/issues/32) | Complete engine results (`RuleEngineResult`, rule status, action identity) — HITL | [#44](https://github.com/STotev/RuleForge/pull/44) |
-| [#33](https://github.com/STotev/RuleForge/issues/33) | ISO 8601 string dates for schedule `ReferencePath` | [#48](https://github.com/STotev/RuleForge/pull/48) |
-| [#34](https://github.com/STotev/RuleForge/issues/34) | `OperatorContext` operator API — HITL | [#45](https://github.com/STotev/RuleForge/pull/45) |
-| [#35](https://github.com/STotev/RuleForge/issues/35) | Action parameters as CLR values, `GetParameter<T>` | [#49](https://github.com/STotev/RuleForge/pull/49) |
-| [#36](https://github.com/STotev/RuleForge/issues/36) | `gt`, `gte`, `lt`, `lte` | [#46](https://github.com/STotev/RuleForge/pull/46) |
-| [#37](https://github.com/STotev/RuleForge/issues/37) | Case-insensitive names | [#47](https://github.com/STotev/RuleForge/pull/47) |
-| [#38](https://github.com/STotev/RuleForge/issues/38) | `$current` / `$previous` scope prefixes (no migration guard: package unpublished) | [#50](https://github.com/STotev/RuleForge/pull/50) |
-| [#39](https://github.com/STotev/RuleForge/issues/39) | `RuleValidator` against registered operators and actions | [#51](https://github.com/STotev/RuleForge/pull/51) |
+| [#30](https://github.com/STotev/RuleLoom/issues/30) | Shared value comparer (`ValueComparer`/`ValueConverter`), used by `eq` | [#41](https://github.com/STotev/RuleLoom/pull/41) |
+| [#31](https://github.com/STotev/RuleLoom/issues/31) | Parse-time structural validation (`RuleParseException`) | [#43](https://github.com/STotev/RuleLoom/pull/43) |
+| [#32](https://github.com/STotev/RuleLoom/issues/32) | Complete engine results (`RuleEngineResult`, rule status, action identity) — HITL | [#44](https://github.com/STotev/RuleLoom/pull/44) |
+| [#33](https://github.com/STotev/RuleLoom/issues/33) | ISO 8601 string dates for schedule `ReferencePath` | [#48](https://github.com/STotev/RuleLoom/pull/48) |
+| [#34](https://github.com/STotev/RuleLoom/issues/34) | `OperatorContext` operator API — HITL | [#45](https://github.com/STotev/RuleLoom/pull/45) |
+| [#35](https://github.com/STotev/RuleLoom/issues/35) | Action parameters as CLR values, `GetParameter<T>` | [#49](https://github.com/STotev/RuleLoom/pull/49) |
+| [#36](https://github.com/STotev/RuleLoom/issues/36) | `gt`, `gte`, `lt`, `lte` | [#46](https://github.com/STotev/RuleLoom/pull/46) |
+| [#37](https://github.com/STotev/RuleLoom/issues/37) | Case-insensitive names | [#47](https://github.com/STotev/RuleLoom/pull/47) |
+| [#38](https://github.com/STotev/RuleLoom/issues/38) | `$current` / `$previous` scope prefixes (no migration guard: package unpublished) | [#50](https://github.com/STotev/RuleLoom/pull/50) |
+| [#39](https://github.com/STotev/RuleLoom/issues/39) | `RuleValidator` against registered operators and actions | [#51](https://github.com/STotev/RuleLoom/pull/51) |
 
 ### Tooling
 CI on PRs (build + test, TRX and Cobertura artifacts), release-please + MinVer versioning with squash-merged PR
@@ -94,23 +94,23 @@ becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66. T
 
 | Milestone | Contents | Notes |
 |---|---|---|
-| **0.5: JSON state & central-service spike** ([PRD #66](https://github.com/STotev/RuleForge/issues/66)) | Path resolution on `JsonElement` and `JsonNode`; ISO date strings compared as instants; `changed` via `ValueComparer`; a central rules-service sample (ASP.NET Core, JSON events with a tenant ID, scheduled actions handed to a scheduler) | The spike decided the **event envelope** (`RuleEvent`) and confirmed the scheduled-action entry point and key; follow-ups #77, #78 |
+| **0.5: JSON state & central-service spike** ([PRD #66](https://github.com/STotev/RuleLoom/issues/66)) | Path resolution on `JsonElement` and `JsonNode`; ISO date strings compared as instants; `changed` via `ValueComparer`; a central rules-service sample (ASP.NET Core, JSON events with a tenant ID, scheduled actions handed to a scheduler); renamed from RuleForge to **RuleLoom** | The spike decided the **event envelope** (`RuleEvent`) and confirmed the scheduled-action entry point and key; follow-ups #77, #78 |
 | **0.6: Schema System & fluent rule builder** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder (including whether a parameter is a value or a path, found in the 0.5 spike); `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator`; **fluent rule builder** that produces `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the expression → path translation with the schema builder | Detail under [Schema & validation](#schema--validation) below |
-| **0.7: Hosting & producer utilities** | `RuleForge.AspNetCore` with `MapRuleForge` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, JSON shape) | Optional packages; no rule CRUD |
+| **0.7: Hosting & producer utilities** | `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, JSON shape) | Optional packages; no rule CRUD |
 | **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
-| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleForge/issues/27)), XML docs, guides, NuGet package metadata, first NuGet publish | Release is cleared; publishing waits for this milestone |
+| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides, NuGet package metadata, first NuGet publish | Release is cleared; publishing waits for this milestone |
 | **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
 
-### 0.5 — PRD [#66](https://github.com/STotev/RuleForge/issues/66)
+### 0.5 — PRD [#66](https://github.com/STotev/RuleLoom/issues/66)
 
 | Issue | Slice | Type | PR | Spec |
 |---|---|---|---|---|
-| [#68](https://github.com/STotev/RuleForge/issues/68) | Resolve paths on JSON state (`JsonElement`, `JsonNode`) | AFK | [#72](https://github.com/STotev/RuleForge/pull/72) | [json-state-paths](specs/2026-10-09-json-state-paths-design.md) |
-| [#69](https://github.com/STotev/RuleForge/issues/69) | ISO date strings compared as instants; `changed` via `ValueComparer` | AFK | [#75](https://github.com/STotev/RuleForge/pull/75) | [json-value-comparison](specs/2026-10-09-json-value-comparison-design.md) |
-| [#70](https://github.com/STotev/RuleForge/issues/70) | Central rules-service sample (spike) | HITL | [#76](https://github.com/STotev/RuleForge/pull/76) | [rules-service-sample](specs/2026-10-14-rules-service-sample-design.md) |
-| [#71](https://github.com/STotev/RuleForge/issues/71) | Spike findings and event envelope decision | HITL | [#82](https://github.com/STotev/RuleForge/pull/82) | [rules-service-sample § Findings](specs/2026-10-14-rules-service-sample-design.md#findings) |
-| [#77](https://github.com/STotev/RuleForge/issues/77) | Require a rule id (spike follow-up) | AFK | [#79](https://github.com/STotev/RuleForge/pull/79) | [required-rule-id](specs/2026-10-14-required-rule-id-design.md) |
-| [#78](https://github.com/STotev/RuleForge/issues/78) | Rename `LogAction` to `ConsoleLogAction` (spike follow-up) | AFK | [#80](https://github.com/STotev/RuleForge/pull/80) | [console-log-action](specs/2026-10-15-console-log-action-design.md) |
+| [#68](https://github.com/STotev/RuleLoom/issues/68) | Resolve paths on JSON state (`JsonElement`, `JsonNode`) | AFK | [#72](https://github.com/STotev/RuleLoom/pull/72) | [json-state-paths](specs/2026-10-09-json-state-paths-design.md) |
+| [#69](https://github.com/STotev/RuleLoom/issues/69) | ISO date strings compared as instants; `changed` via `ValueComparer` | AFK | [#75](https://github.com/STotev/RuleLoom/pull/75) | [json-value-comparison](specs/2026-10-09-json-value-comparison-design.md) |
+| [#70](https://github.com/STotev/RuleLoom/issues/70) | Central rules-service sample (spike) | HITL | [#76](https://github.com/STotev/RuleLoom/pull/76) | [rules-service-sample](specs/2026-10-14-rules-service-sample-design.md) |
+| [#71](https://github.com/STotev/RuleLoom/issues/71) | Spike findings and event envelope decision | HITL | [#82](https://github.com/STotev/RuleLoom/pull/82) | [rules-service-sample § Findings](specs/2026-10-14-rules-service-sample-design.md#findings) |
+| [#77](https://github.com/STotev/RuleLoom/issues/77) | Require a rule id (spike follow-up) | AFK | [#79](https://github.com/STotev/RuleLoom/pull/79) | [required-rule-id](specs/2026-10-14-required-rule-id-design.md) |
+| [#78](https://github.com/STotev/RuleLoom/issues/78) | Rename `LogAction` to `ConsoleLogAction` (spike follow-up) | AFK | [#80](https://github.com/STotev/RuleLoom/pull/80) | [console-log-action](specs/2026-10-15-console-log-action-design.md) |
 
 ---
 
@@ -127,12 +127,12 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 | Separate `EvaluationContext` data from path resolution (`IPathResolver`) | Testability | [analysis §6](archive/business-rules-analysis.md) |
 | Path whitelisting for untrusted rules | Security, when end users author rules; comes with schema-based validation in **0.6** | [analysis §13](archive/business-rules-analysis.md) |
 | Rule indexing by event type | Performance | [analysis §9](archive/business-rules-analysis.md) |
-| Parse rule arrays rule by rule ([#81](https://github.com/STotev/RuleForge/issues/81)) | One malformed rule rejects the whole `ParseMany` array today | 0.5 spike findings |
+| Parse rule arrays rule by rule ([#81](https://github.com/STotev/RuleLoom/issues/81)) | One malformed rule rejects the whole `ParseMany` array today | 0.5 spike findings |
 
 ### Scheduling follow-ups (deferred from PRD #1)
 | Item | Notes | Source |
 |---|---|---|
-| Scheduler backends (`IScheduler`; Hangfire, Quartz, background service) | RuleForge currently only computes `ScheduledFor`; integration packages are post-1.0 | PRD #1 Out of Scope |
+| Scheduler backends (`IScheduler`; Hangfire, Quartz, background service) | RuleLoom currently only computes `ScheduledFor`; integration packages are post-1.0 | PRD #1 Out of Scope |
 | Timezone support | UTC-only today; decide together with the time-semantics review below (**0.8**) | PRD #1 Out of Scope |
 | `BlockPastEvents` flag; validation of zero/negative `Amount` | Past dates are currently returned as-is; **0.8** | [PRD #1 plan](archive/action-scheduling-di-plan.md) |
 | Cron / recurring schedules, business-day calculations | | PRD #1 Out of Scope; old roadmap Phase 4.4 |
@@ -207,16 +207,16 @@ The schema is intended as the single source for:
 ### Event system & configuration (old Phase 1.3)
 `RuleEvent` became the **event envelope**, decided in the 0.5 spike. `IRuleRepository` is dropped: rule storage is the
 consumer's, and the library defines no rule source ([`vision.md`](vision.md#decided)). Still open: an in-process
-`IRuleEventPublisher`, and a fluent `RuleEngineBuilder` (overlaps with #5's `RuleForgeBuilder`; reconcile before
+`IRuleEventPublisher`, and a fluent `RuleEngineBuilder` (overlaps with #5's `RuleLoomBuilder`; reconcile before
 starting). Detail: [old roadmap §1.3](archive/roadmap-2026-03.md).
 
-### Performance & benchmarks — [#27](https://github.com/STotev/RuleForge/issues/27)
+### Performance & benchmarks — [#27](https://github.com/STotev/RuleLoom/issues/27)
 BenchmarkDotNet suite (path resolution, condition evaluation, JSON parsing, engine end-to-end, allocations),
 published results in `docs/benchmarks.md`, a README Performance section, and a manual CI workflow. After #22, before 1.0.
 
 ### Packaging & documentation (old Phase 1.4)
-NuGet package metadata and publishing workflow (packages are now `RuleForge.Abstractions`, `RuleForge`,
-`RuleForge.Extensions.DependencyInjection`), XML docs on all public APIs, concept/operator guides,
+NuGet package metadata and publishing workflow (packages are now `RuleLoom.Abstractions`, `RuleLoom`,
+`RuleLoom.Extensions.DependencyInjection`), XML docs on all public APIs, concept/operator guides,
 scenario samples. Detail: [old roadmap §1.4](archive/roadmap-2026-03.md), [PRD #1 plan Phase 3](archive/action-scheduling-di-plan.md).
 
 ### Developer experience (old Phase 2)

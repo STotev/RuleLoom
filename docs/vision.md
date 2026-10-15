@@ -1,21 +1,21 @@
-# RuleForge Vision
+# RuleLoom Vision
 
 **Status:** Living document — started 2026-10-07; deployment and ownership questions discussed 2026-10-07; event
 envelope decided after the central-service spike 2026-10-15. Add to
 it as ideas come up; decisions move from *Under consideration* to *Decided* once discussed. The
-[roadmap](roadmap.md) orders the work; this page explains what RuleForge is meant to be and who owns what.
+[roadmap](roadmap.md) orders the work; this page explains what RuleLoom is meant to be and who owns what.
 
 ---
 
-## What RuleForge is
+## What RuleLoom is
 
-A **library**, consumed the way [Ocelot](https://github.com/ThreeMammals/Ocelot) is: RuleForge provides the engine
+A **library**, consumed the way [Ocelot](https://github.com/ThreeMammals/Ocelot) is: RuleLoom provides the engine
 and building blocks, and consumers build and host their own service around it. Developers define *what's possible*
 (operators, actions, events, schemas); end users define *business logic* as JSON rules, without code changes.
 
 ## Deployment models
 
-Consumers use RuleForge in one of two ways (or both):
+Consumers use RuleLoom in one of two ways (or both):
 
 **1. A centralised rules service.** The consumer builds a dedicated service that receives events from other services
 and runs the rules for them.
@@ -23,7 +23,7 @@ and runs the rules for them.
 ```
  Orders service ──┐                    ┌──────────────────────────────┐
  Billing service ─┼── events (JSON) ──▶│  Consumer's rules service    │──▶ actions (email, webhooks, …)
- CRM service ─────┘   over HTTP/queue  │  RuleForge + consumer's      │
+ CRM service ─────┘   over HTTP/queue  │  RuleLoom + consumer's      │
                                         │  rule storage, hosting, UI   │
                                         └──────────────────────────────┘
 ```
@@ -33,7 +33,7 @@ and runs the rules for them.
 ```
  ┌───────────────────────────────────────────────┐
  │  Orders service                                │
- │  domain event ──▶ RuleForge engine ──▶ actions │
+ │  domain event ──▶ RuleLoom engine ──▶ actions │
  └───────────────────────────────────────────────┘
 ```
 
@@ -42,7 +42,7 @@ and runs the rules for them.
 | Layer | What belongs here |
 |---|---|
 | **Core library** | Engine, operators, conditions, value comparison, path resolution (on .NET objects *and* JSON), JSON rule format and parsing, validation, results, scheduling *calculation*, action naming, the schema model and builder, the transport-free catalogue, small store contracts (`ISchemaStore`), contracts consumers build on |
-| **Optional packages** | DI (`RuleForge.Extensions.DependencyInjection`, done), ASP.NET Core endpoints for the catalogue (`MapRuleForge`), a producer-side schema registration client, a state snapshotter (EF Core integration later) and, later still, an operations dashboard with storage implementations |
+| **Optional packages** | DI (`RuleLoom.Extensions.DependencyInjection`, done), ASP.NET Core endpoints for the catalogue (`MapRuleLoom`), a producer-side schema registration client, a state snapshotter (EF Core integration later) and, later still, an operations dashboard with storage implementations |
 | **Consumer-built** | The central service and its hosting, transport between services, **rule storage**, **schema storage** (`ISchemaStore` implementation), **multi-tenancy**, auth on the endpoints, dispatching scheduled actions (unless they use an integration package) |
 | **Separate projects** | The **end-user rule-authoring UI**, built by the maintainer as its own project on top of the REST API above |
 
@@ -56,16 +56,17 @@ For schemas the reference is Swagger / Swashbuckle: schemas generated at runtime
 | **Rule storage** | The consumer's responsibility. The engine takes the rules to run as input (`ExecuteAsync(eventType, current, previous, rules)`) | Storage needs differ per system. Example: in a multi-tenant SaaS system, rules are stored per customer organisation and every event carries a tenant ID. Not every integration has tenants, so the library shouldn't assume a storage or tenancy model |
 | **Multi-tenancy** | The consumer's responsibility (which rules apply to which tenant, and how tenant IDs travel with events) | Same reason |
 | **Rule source abstraction** | None. Rules stay an `ExecuteAsync` parameter; an interface is added only if a library feature must load rules itself | Consumers load rules fresh per event anyway (so newly added rules apply on the next trigger). An `IRuleSource` would move the same query into a class and push tenancy into ambient DI, for no gain; procedural callers keep the plain call |
-| **Scheduling dispatch** | The engine computes *when* (`ScheduledFor`) and returns `ScheduledActions` with their definitions; running them later is up to the consumer's scheduler (Hangfire, Quartz, …). Integration packages would help but aren't required | Consumers already run schedulers; RuleForge shouldn't force one |
+| **Scheduling dispatch** | The engine computes *when* (`ScheduledFor`) and returns `ScheduledActions` with their definitions; running them later is up to the consumer's scheduler (Hangfire, Quartz, …). Integration packages would help but aren't required | Consumers already run schedulers; RuleLoom shouldn't force one |
 | **Transport** | Not part of the **core** library: no message-bus code, and no HTTP endpoints in the core packages. Optional hosting packages (dashboard, schema API) may expose HTTP endpoints that consumers map into their own app | Consumers choose their own infrastructure; opt-in endpoints keep the core host-agnostic |
-| **Rule-authoring UI** | A separate project (the maintainer's), not part of the library | Keeps the library UI-free; the UI consumes RuleForge through an API |
+| **Rule-authoring UI** | A separate project (the maintainer's), not part of the library | Keeps the library UI-free; the UI consumes RuleLoom through an API |
+| **Name** | **RuleLoom** (packages `RuleLoom`, `RuleLoom.Abstractions`, `RuleLoom.Extensions.DependencyInjection`; repository `STotev/RuleLoom`). Renamed from RuleForge on 2026-10-15, before the first NuGet release | The `RuleForge` NuGet IDs belong to an unrelated validation library. The library supplies the threads (events, operators, actions) and consumers weave them into rules |
 | **Packaging** | Unpublished until release readiness (0.9/1.0), when the first NuGet packages are published. While unpublished, breaking changes need no compatibility shims | See the roadmap's release notes |
-| **JSON state** | Core path resolution understands `JsonElement` and `JsonNode` (what System.Text.Json produces without a class; JSON has no separate dictionary type), with the same case rules as properties (exact match wins, ambiguous case-insensitive matches resolve to `null`). Values flow into `ValueComparer`/`ValueConverter` | A central service must evaluate rules on events it receives as JSON, without the producers' classes. `System.Text.Json` is part of the BCL, so `RuleForge.Abstractions` stays dependency-free. Schemas add typing and validation on top but aren't required. In-memory .NET dictionaries and legacy dynamic types (`ExpandoObject`) aren't supported |
+| **JSON state** | Core path resolution understands `JsonElement` and `JsonNode` (what System.Text.Json produces without a class; JSON has no separate dictionary type), with the same case rules as properties (exact match wins, ambiguous case-insensitive matches resolve to `null`). Values flow into `ValueComparer`/`ValueConverter` | A central service must evaluate rules on events it receives as JSON, without the producers' classes. `System.Text.Json` is part of the BCL, so `RuleLoom.Abstractions` stays dependency-free. Schemas add typing and validation on top but aren't required. In-memory .NET dictionaries and legacy dynamic types (`ExpandoObject`) aren't supported |
 | **Schemas: source of truth** | **Code-first**, like Swagger: the producer's .NET types (usually DTOs mapped from aggregates) describe the event; schemas are generated from them at **runtime** by reflection, with types inferred from the CLR | The authoring UI needs the fields a user can pick for a path operand, with labels; producers already have those types. Schema-first (generating classes in the rules service) would need a rebuild for every new event and is unnecessary once JSON resolves |
 | **Schemas: configuration** | A **fluent builder** first (`schema.Event<OrderDto>("order.placed", e => e.Field(x => x.Total).Label("Order total"))`), with attributes later as a thin convention layer that calls the same builder. Precedence: CLR inference → attributes → explicit fluent calls | Builders are easier to test and experiment with and scale to more options than attributes; one model underneath (as in EF Core) |
 | **Schemas: delivery and storage** | At runtime. Producers register their schemas with the central service (a registration client in an optional package); the service stores them through an `ISchemaStore` the consumer implements (tenancy inside it) | New events need no redeploy of the rules service; storage stays the consumer's, like rules |
 | **Action parameters** | Actions describe their parameters with the **same builder** as event schemas | The UI renders action forms like event fields, and `RuleValidator` can check required and typed parameters; one description model |
-| **Catalogue and REST API** | Core gets a transport-free **catalogue** (event schemas, operators with operand counts, actions with parameters, validate a rule) and DTOs. An optional ASP.NET Core package maps it: `app.MapRuleForge("/ruleforge")` → `GET schemas`, `GET operators`, `GET actions`, `POST rules/validate`, `POST schemas` (registration), returning the route group so the consumer adds auth and versioning. **No rule CRUD** | The authoring UI needs discovery and validation; rule storage is the consumer's, so the UI saves through the consumer's API, which calls RuleForge to validate |
+| **Catalogue and REST API** | Core gets a transport-free **catalogue** (event schemas, operators with operand counts, actions with parameters, validate a rule) and DTOs. An optional ASP.NET Core package maps it: `app.MapRuleLoom("/ruleloom")` → `GET schemas`, `GET operators`, `GET actions`, `POST rules/validate`, `POST schemas` (registration), returning the route group so the consumer adds auth and versioning. **No rule CRUD** | The authoring UI needs discovery and validation; rule storage is the consumer's, so the UI saves through the consumer's API, which calls RuleLoom to validate |
 | **State snapshotter** | Starts as a small **explicit API** that captures previous and current state (as JSON, optionally through the schema DTO mapping). EF Core change-tracking integration is a later optional package if there's demand | Explicit capture works anywhere; JSON snapshots need no classes on the receiving side |
 | **Execution history** | Near term: a small core **observer hook** (or OpenTelemetry activities/metrics; to choose in its PRD) so consumers can record results wherever they like. The **operations dashboard** and an execution store with optional implementations come later, Hangfire-style | Consumers already get `RuleEngineResult`; a hook covers recording without committing the library to storage yet |
 | **Event envelope** | A `RuleEvent` contract in Abstractions: `EventType`, `Current`, `Previous`, plus optional `EventId`, `Subject`, `Source`, `OccurredAt` and consumer-defined `Metadata` (e.g. a tenant ID). `ExecuteAsync(RuleEvent, rules)` is added beside the existing overloads; actions read it from `EvaluationContext.Event`, and rules reach it with `$event.` paths (`$event.Metadata.region`, `$event.OccurredAt`). The library defines the contract and its JSON shape, never the transport; deduplication by `EventId` stays with the consumer or transport. Planned for 0.7 | Decided after the central-service spike (#70, findings in its [spec](specs/2026-10-14-rules-service-sample-design.md#findings)): tenant and entity ID had no place in the library, actions couldn't see them, and duplicate events re-ran actions without an ID to deduplicate on. `Subject` also gives scheduled-action keys their entity part |
@@ -101,12 +102,12 @@ Raised 2026-10-08, after Quartz.NET's
 `AddQuartz(name, …)` builds a fully separate scheduler per name, resolved as keyed services. Not sure yet whether
 it's useful; kept here to evaluate.
 
-The RuleForge equivalent would be **named configurations**, with tenancy still the consumer's (the library doesn't
+The RuleLoom equivalent would be **named configurations**, with tenancy still the consumer's (the library doesn't
 know what a tenant is; a name could equally be a region or a product line):
 
 ```csharp
 foreach (var tenant in tenants)
-    services.AddRuleForge(tenant, rules => rules.AddAction<SendEmailAction>());
+    services.AddRuleLoom(tenant, rules => rules.AddAction<SendEmailAction>());
 
 var engine = provider.GetRequiredKeyedService<RuleEngine>(tenantId);
 ```
@@ -118,8 +119,8 @@ var engine = provider.GetRequiredKeyedService<RuleEngine>(tenantId);
 - **Today's alternative** (Quartz's "group per tenant"): one shared engine, with the tenant ID in the event's
   metadata (`RuleEvent.Metadata`). The central-service spike worked this way without friction, so it showed no need
   for named instances yet.
-- **Costs:** `AddRuleForge` keeps one shared registry per service collection today, so it would need keyed
-  registrations; the catalogue endpoints would need to know the instance (e.g. `MapRuleForge("/{tenant}/ruleforge")`);
+- **Costs:** `AddRuleLoom` keeps one shared registry per service collection today, so it would need keyed
+  registrations; the catalogue endpoints would need to know the instance (e.g. `MapRuleLoom("/{tenant}/ruleloom")`);
   adding instances at runtime (Quartz's `ISchedulerRuntime`) is a further step.
 - **When to decide:** before the catalogue and endpoints (0.6–0.7) settle their shape.
 

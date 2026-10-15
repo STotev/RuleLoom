@@ -1,7 +1,7 @@
 # Design: `RuleValidator`
 
-**Issue:** [#39 API hardening: RuleValidator against registered operators and actions](https://github.com/STotev/RuleForge/issues/39)
-**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleForge/issues/22) (module 7, user stories 41–43)
+**Issue:** [#39 API hardening: RuleValidator against registered operators and actions](https://github.com/STotev/RuleLoom/issues/39)
+**Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (module 7, user stories 41–43)
 **Date:** 2026-10-06
 **Status:** Approved (AFK)
 
@@ -16,7 +16,7 @@ saved it. Rules built in code skip the parser entirely.
 ## API
 
 ```csharp
-namespace RuleForge.Validation;
+namespace RuleLoom.Validation;
 
 public sealed class RuleValidator
 {
@@ -45,7 +45,7 @@ IReadOnlyCollection<string> ActionTypes { get; }   // the action types this fact
 | Question | Decision | Rationale |
 |---|---|---|
 | Inputs | The same operator list given to `ConditionEvaluator`, and the `IActionFactory` given to `RuleEngine` | No new registry concept; DI (#5) can build all three from one registration |
-| Where | `RuleForge.Validation` in the `RuleForge` package | Validation needs registries; Abstractions only gains the factory member |
+| Where | `RuleLoom.Validation` in the `RuleLoom` package | Validation needs registries; Abstractions only gains the factory member |
 | Location format | JSONPath, as in `RuleParseException.Path`: `$.condition.operands[1]`, `$.actions[0].type` | One format for parse and validation errors (PRD) |
 | Collect or throw | Collect every error; `Validate` never throws for invalid rules | UIs show all problems at once (PRD user story 42) |
 | Checks | Rule `Name`/`EventType` non-empty; rule and action conditions are operators; every operator (recursively, including inside action conditions) is registered and its operand count is within `MinOperands`/`MaxOperands`; every action `Type` is non-empty and registered; `Delay`/`Advance` schedules have `Amount` and `Unit` | Everything that can be checked without knowing the event's data type. The schedule check was deferred here from #31 |

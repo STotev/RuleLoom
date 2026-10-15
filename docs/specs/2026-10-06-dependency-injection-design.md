@@ -1,7 +1,7 @@
 # Design: Dependency Injection Extensions
 
-**Issue:** [#5 Phase 1.2C: Dependency Injection Extensions](https://github.com/STotev/RuleForge/issues/5)
-**Parent PRD:** [#1 Action Scheduling & Dependency Injection Support](https://github.com/STotev/RuleForge/issues/1)
+**Issue:** [#5 Phase 1.2C: Dependency Injection Extensions](https://github.com/STotev/RuleLoom/issues/5)
+**Parent PRD:** [#1 Action Scheduling & Dependency Injection Support](https://github.com/STotev/RuleLoom/issues/1)
 **Date:** 2026-10-06
 **Status:** Approved 2026-10-06 (HITL review; Q1 as recommended, Q2 and Q3 revised — see Resolved questions)
 **Depends on:** #55 (action names by registration, PR #56)
@@ -10,14 +10,14 @@
 
 ## Problem
 
-Wiring RuleForge by hand means constructing the operator list, `ConditionEvaluator`, an `IActionFactory` and
+Wiring RuleLoom by hand means constructing the operator list, `ConditionEvaluator`, an `IActionFactory` and
 `RuleEngine`, and actions can't take constructor dependencies such as an email service or a scoped `DbContext`.
-`RuleForge.Extensions.DependencyInjection` is an empty project.
+`RuleLoom.Extensions.DependencyInjection` is an empty project.
 
 ## Usage
 
 ```csharp
-services.AddRuleForge(rules => rules
+services.AddRuleLoom(rules => rules
     .AddAction<SendEmailAction>()            // "send-email"; may inject IEmailService, DbContext, ILogger<T>, ...
     .AddAction<SendEmailAction>("notify")    // the same action under another name
     .AddAction<LogAction>()                  // "log" (not registered by default)
@@ -40,29 +40,29 @@ var validator = scope.ServiceProvider.GetRequiredService<RuleValidator>();
 ```csharp
 namespace Microsoft.Extensions.DependencyInjection;          // convention for AddXxx extensions
 
-public static class RuleForgeServiceCollectionExtensions
+public static class RuleLoomServiceCollectionExtensions
 {
-    public static IServiceCollection AddRuleForge(this IServiceCollection services, Action<RuleForgeBuilder>? configure = null);
+    public static IServiceCollection AddRuleLoom(this IServiceCollection services, Action<RuleLoomBuilder>? configure = null);
 }
 
-namespace RuleForge.Extensions.DependencyInjection;
+namespace RuleLoom.Extensions.DependencyInjection;
 
-public sealed class RuleForgeBuilder
+public sealed class RuleLoomBuilder
 {
     public IServiceCollection Services { get; }
-    public RuleForgeBuilder AddAction<TAction>(string? name = null) where TAction : class, IAction;
-    public RuleForgeBuilder AddOperator<TOperator>() where TOperator : class, IConditionOperator;
-    public RuleForgeBuilder RemoveOperator(string name);
-    public RuleForgeBuilder RemoveBuiltInOperators();
+    public RuleLoomBuilder AddAction<TAction>(string? name = null) where TAction : class, IAction;
+    public RuleLoomBuilder AddOperator<TOperator>() where TOperator : class, IConditionOperator;
+    public RuleLoomBuilder RemoveOperator(string name);
+    public RuleLoomBuilder RemoveBuiltInOperators();
 }
 
-public sealed class ServiceProviderActionFactory : IActionFactory   // registered by AddRuleForge
+public sealed class ServiceProviderActionFactory : IActionFactory   // registered by AddRuleLoom
 ```
 
-And, in the core `RuleForge` package (useful without DI too, and used by `AddRuleForge`):
+And, in the core `RuleLoom` package (useful without DI too, and used by `AddRuleLoom`):
 
 ```csharp
-namespace RuleForge.Operators;
+namespace RuleLoom.Operators;
 
 public static class BuiltInOperators
 {
@@ -83,7 +83,7 @@ public static class BuiltInOperators
 | `RuleValidator` | `RuleValidator` | Scoped (it reads the factory's action types) |
 | `TimeProvider` | `TimeProvider.System`, only if none is registered (`TryAdd`) | Singleton |
 
-`AddRuleForge` can be called more than once (e.g. by libraries contributing actions); the core services are added
+`AddRuleLoom` can be called more than once (e.g. by libraries contributing actions); the core services are added
 once (`TryAdd`) and every call adds its actions and operators.
 
 ## How the factory finds actions by name
@@ -109,13 +109,13 @@ first built (it's a singleton), the operators are created and:
 
 | Question | Decision | Rationale |
 |---|---|---|
-| Namespace of `AddRuleForge` | `Microsoft.Extensions.DependencyInjection` | Standard convention: discoverable without an extra `using` |
+| Namespace of `AddRuleLoom` | `Microsoft.Extensions.DependencyInjection` | Standard convention: discoverable without an extra `using` |
 | Built-in operator list | New `BuiltInOperators.Create()` in the core package | The one central list the roadmap asked for; the sample, guides and tests can use it too |
 | `LogAction` | **Not** registered by default; `AddAction<LogAction>()` opts in | It writes to the console |
 | Duplicate `AddAction<T>` / `AddOperator<T>` of the same CLR type | Registered once | Idempotent registration |
 | Operator name conflicts | Fail when the evaluator is first resolved, with the existing message (`Operator 'X' conflicts with 'x' …`) | Same rule as without DI |
 | Assembly scanning, keyed services, options/configuration binding | Out of scope | Can be added later without breaking this API |
-| Tests | New `tests/RuleForge.Extensions.DependencyInjection.Tests` project using `Microsoft.Extensions.DependencyInjection` | Keeps the core test project free of DI packages |
+| Tests | New `tests/RuleLoom.Extensions.DependencyInjection.Tests` project using `Microsoft.Extensions.DependencyInjection` | Keeps the core test project free of DI packages |
 
 ## Resolved questions (reviewed 2026-10-06)
 
@@ -136,7 +136,7 @@ None. New package contents and `BuiltInOperators` are additions; the non-DI path
 
 ## Test plan
 
-- `AddRuleForge` registers the expected services with the expected lifetimes; calling it twice adds actions/operators
+- `AddRuleLoom` registers the expected services with the expected lifetimes; calling it twice adds actions/operators
   without duplicating core services.
 - A rule runs end to end through a `RuleEngine` resolved from a scope, using built-in and custom operators.
 - An action with an injected service (a fake `IEmailService`) and an `ILogger<T>` executes; a new action instance per

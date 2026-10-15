@@ -1,38 +1,38 @@
-# RuleForge Quick Start
+# RuleLoom Quick Start
 
-RuleForge runs **rules** against **events**: when something happens to an object in your app (a property is updated,
+RuleLoom runs **rules** against **events**: when something happens to an object in your app (a property is updated,
 an order is placed), the rules for that event check conditions on the object's current and previous state and run or
 schedule **actions**. Rules can be written in code or as JSON, so end users can author them.
 
 > Upgrading from an earlier version? See [Upgrading](upgrading.md). The runnable version of this page is the
-> [console sample](../../samples/RuleForge.Samples.Console/).
+> [console sample](../../samples/RuleLoom.Samples.Console/).
 
 ## Install
 
-RuleForge isn't on NuGet yet. Clone the repository and reference the projects:
+RuleLoom isn't on NuGet yet. Clone the repository and reference the projects:
 
 ```bash
-git clone https://github.com/STotev/RuleForge.git
-cd RuleForge
+git clone https://github.com/STotev/RuleLoom.git
+cd RuleLoom
 dotnet build
 ```
 
 | Project | Use it for |
 |---|---|
-| `RuleForge.Abstractions` | Contracts and models (no dependencies) |
-| `RuleForge` | The engine, built-in operators, `ConsoleLogAction`, `RuleValidator` |
-| `RuleForge.Extensions.DependencyInjection` | `services.AddRuleForge(...)` |
+| `RuleLoom.Abstractions` | Contracts and models (no dependencies) |
+| `RuleLoom` | The engine, built-in operators, `ConsoleLogAction`, `RuleValidator` |
+| `RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(...)` |
 
 ## Your first rule
 
 ```csharp
-using RuleForge.Abstractions.Action;
-using RuleForge.Abstractions.Condition;
-using RuleForge.Abstractions.Rule;
-using RuleForge.Actions;
-using RuleForge.Engine;
-using RuleForge.Evaluators;
-using RuleForge.Operators;
+using RuleLoom.Abstractions.Action;
+using RuleLoom.Abstractions.Condition;
+using RuleLoom.Abstractions.Rule;
+using RuleLoom.Actions;
+using RuleLoom.Engine;
+using RuleLoom.Evaluators;
+using RuleLoom.Operators;
 
 var rule = new RuleDefinition
 {
@@ -154,7 +154,7 @@ var evaluator = new ConditionEvaluator([.. BuiltInOperators.Create(), new Contai
 ## Dependency injection
 
 ```csharp
-services.AddRuleForge(rules => rules
+services.AddRuleLoom(rules => rules
     .AddAction<SendEmailAction>()            // resolved per scope, so it can inject scoped services
     .AddOperator<ContainsOperator>());       // built-in operators are registered automatically
 
@@ -176,5 +176,5 @@ foreach (var error in validator.Validate(rule).Errors)
 ## Next steps
 
 - [JSON rule guide](json-rules.md): the rule format in depth
-- [Console sample](../../samples/RuleForge.Samples.Console/): runnable examples of everything above
+- [Console sample](../../samples/RuleLoom.Samples.Console/): runnable examples of everything above
 - [Roadmap](../roadmap.md): what's next
