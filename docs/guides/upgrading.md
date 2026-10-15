@@ -3,28 +3,14 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.4 → 0.5](#04--05): RuleForge is now RuleLoom; rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
+- [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
 - [0.3 → 0.4](#03--04): actions are named by registration, `IAction`, dependency injection
 - [0.2 → 0.3](#02--03): API hardening (results, operators, validation, paths, parameters)
-- [0.1 → 0.2](#01--02): action results, action factory, scheduling, the RuleForge rename
+- [0.1 → 0.2](#01--02): action results, action factory, scheduling
 
 ---
 
 ## 0.4 → 0.5
-
-### RuleForge is now RuleLoom
-
-The library is renamed, because the `RuleForge` package name on NuGet belongs to an unrelated project. Only names
-change; behaviour is the same.
-
-| Before | After |
-|---|---|
-| Packages and namespaces `RuleForge`, `RuleForge.Abstractions`, `RuleForge.Extensions.DependencyInjection` | `RuleLoom`, `RuleLoom.Abstractions`, `RuleLoom.Extensions.DependencyInjection` |
-| `services.AddRuleForge(...)` | `services.AddRuleLoom(...)` |
-| `RuleForgeBuilder` | `RuleLoomBuilder` |
-| `github.com/STotev/RuleForge` | `github.com/STotev/RuleLoom` (the old URL redirects) |
-
-What to change: replace `RuleForge` with `RuleLoom` in package references, `using` directives and the DI call.
 
 ### Rules need an `id`
 
@@ -249,15 +235,6 @@ A `ReferencePath` that resolves to a string must be ISO 8601 (`2026-05-01T09:00:
 ---
 
 ## 0.1 → 0.2
-
-### The library is renamed to RuleForge
-
-(Renamed again to RuleLoom in 0.5; see [0.4 → 0.5](#04--05).)
-
-| Before | After |
-|---|---|
-| `BusinessRules.Abstractions.*` | `RuleForge.Abstractions.*` |
-| `BusinessRules.Core.*` | `RuleForge.*` (e.g. `RuleForge.Engine`, `RuleForge.Operators`) |
 
 ### Actions return a result
 
