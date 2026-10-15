@@ -1,7 +1,9 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
-    <img src="docs/assets/logo.svg" alt="RuleLoom" width="360">
+    <!-- Absolute URLs: GitHub doesn't rewrite relative paths in <source srcset>. -->
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/STotev/RuleLoom/main/docs/assets/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/STotev/RuleLoom/main/docs/assets/logo.svg">
+    <img src="https://raw.githubusercontent.com/STotev/RuleLoom/main/docs/assets/logo.svg" alt="RuleLoom" width="360">
   </picture>
 </p>
 
