@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Historical planning documents, kept locally only
+docs/archive/

@@ -36,7 +36,7 @@ Abstractions (`ConditionNode`, `IConditionOperator`, `IAction`), `RuleEngine`, `
 
 ### Stability fixes (old Phase 1.1)
 Priority ordering (higher first), operand-count validation, null-safe path resolution, continue-on-error
-per rule, integration test project. Report: [`archive/phase-1-1-summary.md`](archive/phase-1-1-summary.md).
+per rule, integration test project.
 
 ### Action scheduling & DI — PRD [#1](https://github.com/STotev/RuleLoom/issues/1) ✅
 
@@ -123,10 +123,10 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 | Item | Notes | Source |
 |---|---|---|
 | Pluggable value comparer (`IValueComparer`) | Deferred from #22; built-in rules are fixed for now | PRD #22 Out of Scope |
-| `StopOnFirstMatch` option | Stop after the first matching rule | [old roadmap §1.1.1](archive/roadmap-2026-03.md) |
-| Separate `EvaluationContext` data from path resolution (`IPathResolver`) | Testability | [analysis §6](archive/business-rules-analysis.md) |
-| Path whitelisting for untrusted rules | Security, when end users author rules; comes with schema-based validation in **0.6** | [analysis §13](archive/business-rules-analysis.md) |
-| Rule indexing by event type | Performance | [analysis §9](archive/business-rules-analysis.md) |
+| `StopOnFirstMatch` option | Stop after the first matching rule | old roadmap §1.1.1 |
+| Separate `EvaluationContext` data from path resolution (`IPathResolver`) | Testability | analysis §6 |
+| Path whitelisting for untrusted rules | Security, when end users author rules; comes with schema-based validation in **0.6** | analysis §13 |
+| Rule indexing by event type | Performance | analysis §9 |
 | Parse rule arrays rule by rule ([#81](https://github.com/STotev/RuleLoom/issues/81)) | One malformed rule rejects the whole `ParseMany` array today | 0.5 spike findings |
 
 ### Scheduling follow-ups (deferred from PRD #1)
@@ -134,7 +134,7 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 |---|---|---|
 | Scheduler backends (`IScheduler`; Hangfire, Quartz, background service) | RuleLoom currently only computes `ScheduledFor`; integration packages are post-1.0 | PRD #1 Out of Scope |
 | Timezone support | UTC-only today; decide together with the time-semantics review below (**0.8**) | PRD #1 Out of Scope |
-| `BlockPastEvents` flag; validation of zero/negative `Amount` | Past dates are currently returned as-is; **0.8** | [PRD #1 plan](archive/action-scheduling-di-plan.md) |
+| `BlockPastEvents` flag; validation of zero/negative `Amount` | Past dates are currently returned as-is; **0.8** | PRD #1 plan |
 | Cron / recurring schedules, business-day calculations | | PRD #1 Out of Scope; old roadmap Phase 4.4 |
 
 ### Time semantics review (needs a proper breakdown)
@@ -188,11 +188,11 @@ parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variab
   `RuleValidator` and rule-authoring UIs (Schema System) can check and offer them?
 - Safety: what custom functions may do when end users write rules, and whether results are cached per event.
 - Overlap with **expression support** (e.g. `Price * 1.2 > 100`), which the March analysis also suggested
-  ([analysis §7](archive/business-rules-analysis.md)); functions could be its first step or a separate feature.
+  (analysis §7); functions could be its first step or a separate feature.
 
 ### Schema & validation
 Scheduled for **0.6**; the design decisions (code-first, fluent builder, runtime registration, `ISchemaStore`,
-catalogue) are in [`vision.md`](vision.md#decided). Earlier sketch: [old roadmap §1.2](archive/roadmap-2026-03.md).
+catalogue) are in [`vision.md`](vision.md#decided). Earlier sketch: old roadmap §1.2.
 
 The schema is intended as the single source for:
 - **UI form generation**: fields, types and labels for rule-authoring UIs.
@@ -208,7 +208,7 @@ The schema is intended as the single source for:
 `RuleEvent` became the **event envelope**, decided in the 0.5 spike. `IRuleRepository` is dropped: rule storage is the
 consumer's, and the library defines no rule source ([`vision.md`](vision.md#decided)). Still open: an in-process
 `IRuleEventPublisher`, and a fluent `RuleEngineBuilder` (overlaps with #5's `RuleLoomBuilder`; reconcile before
-starting). Detail: [old roadmap §1.3](archive/roadmap-2026-03.md).
+starting). Detail: old roadmap §1.3.
 
 ### Performance & benchmarks — [#27](https://github.com/STotev/RuleLoom/issues/27)
 BenchmarkDotNet suite (path resolution, condition evaluation, JSON parsing, engine end-to-end, allocations),
@@ -217,12 +217,12 @@ published results in `docs/benchmarks.md`, a README Performance section, and a m
 ### Packaging & documentation (old Phase 1.4)
 NuGet package metadata and publishing workflow (packages are now `RuleLoom.Abstractions`, `RuleLoom`,
 `RuleLoom.Extensions.DependencyInjection`), XML docs on all public APIs, concept/operator guides,
-scenario samples. Detail: [old roadmap §1.4](archive/roadmap-2026-03.md), [PRD #1 plan Phase 3](archive/action-scheduling-di-plan.md).
+scenario samples. Detail: old roadmap §1.4, PRD #1 plan Phase 3.
 
 ### Developer experience (old Phase 2)
 Fluent rule builder API (scheduled for **0.6**; post-1.0 typed rule consumers build on it); more operators — comparison (`between` `in`; `gt` `gte` `lt` `lte` are in #22), string
 (`contains` `startsWith` `endsWith` `matches`), collection (`any` `all` `count`), date. DI moved to #5.
-Detail: [old roadmap Phase 2](archive/roadmap-2026-03.md).
+Detail: old roadmap Phase 2.
 
 A **test-helpers package** for consumers (builders for `OperatorContext`, rules and fake actions) — raised when
 reviewing #34; reconsider once plugin authors exist. Source: [OperatorContext spec](specs/2026-10-05-operator-context-design.md) Q3.
@@ -230,12 +230,12 @@ reviewing #34; reconsider once plugin authors exist. Source: [OperatorContext sp
 ### Rule management (old Phase 3)
 Rule CRUD and multi-tenancy are the consumer's ([`vision.md`](vision.md#decided)). Still open for the library:
 rule versioning and lifecycle (draft/active/archived) as data in the rule model, a rule simulator and an evaluation
-trace. Detail: [old roadmap Phase 3](archive/roadmap-2026-03.md).
+trace. Detail: old roadmap Phase 3.
 
 ### Infrastructure & scale (old Phase 4)
 Persistence and distributed events (MassTransit/RabbitMQ) are the consumer's. The execution observer hook is in
 **0.8**, the catalogue REST API in **0.7**, and the operations dashboard is post-1.0. Still open: structured `ILogger`
-logging (the engine reports failures only in its results today). Detail: [old roadmap Phase 4](archive/roadmap-2026-03.md).
+logging (the engine reports failures only in its results today). Detail: old roadmap Phase 4.
 
 ---
 

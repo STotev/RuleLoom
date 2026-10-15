@@ -2,7 +2,7 @@
 
 **Issue:** [#34 API hardening: OperatorContext operator API](https://github.com/STotev/RuleLoom/issues/34) (also closes #17)
 **Parent PRD:** [#22 API hardening before 1.0](https://github.com/STotev/RuleLoom/issues/22) (modules 2–4)
-**Supersedes:** `docs/archive/operator-context-api-redesign.md` (March 2026 proposal), with the revisions agreed in PRD #22
+**Supersedes:** the March 2026 operator-context proposal (no longer in the repository), with the revisions agreed in PRD #22
 **Date:** 2026-10-05
 **Status:** Approved 2026-10-05 (HITL review; Q1–Q4 resolved as recommended)
 
@@ -130,7 +130,7 @@ public void Evaluate_TextContainsPart_ReturnsTrue()
 | Duplicate operator names (#17) | `ArgumentException` naming the duplicate, e.g. `Operator 'eq' is registered more than once.` | |
 | Non-operator node passed to `ConditionEvaluator.Evaluate` (#17) | `InvalidOperationException` naming the node type, e.g. `Expected an operator condition but got PathOperand.`; no mention of "root" | The parser (#31) already rejects non-operator roots, so this is mostly reached via `Test(i)` |
 | `changed` | Same semantics; `GetPath(0)` gives a clear error for non-path operands | `$current`/`$previous` and scoped paths are #38 (folds in #16) |
-| The March proposal | Moved to `docs/archive/` with a pointer to this spec | Superseded |
+| The March proposal | Archived (no longer in the repository) | Superseded |
 
 ## Resolved questions
 

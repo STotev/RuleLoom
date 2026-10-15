@@ -14,7 +14,7 @@ All notable changes to this project are documented in this file. It is generated
 
 ### Features
 
-* add AddRuleForge dependency injection extensions ([#54](https://github.com/STotev/RuleLoom/issues/54)) ([48401a3](https://github.com/STotev/RuleLoom/commit/48401a37d30a5638f23362d3bd39cba9f6e394fe))
+* add AddRuleLoom dependency injection extensions ([#54](https://github.com/STotev/RuleLoom/issues/54)) ([48401a3](https://github.com/STotev/RuleLoom/commit/48401a37d30a5638f23362d3bd39cba9f6e394fe))
 * name actions by registration and reference them as "action" ([#56](https://github.com/STotev/RuleLoom/issues/56)) ([3eea391](https://github.com/STotev/RuleLoom/commit/3eea391f096da47778392c8f7c5ef250f31e7c1e))
 
 
@@ -66,7 +66,7 @@ All notable changes to this project are documented in this file. It is generated
 
 ### ⚠ BREAKING CHANGES
 
-* the library is renamed from BusinessRules to RuleForge: projects and namespaces `BusinessRules.Abstractions.*` → `RuleForge.Abstractions.*` and `BusinessRules.Core.*` → `RuleForge.*` (e.g. `RuleForge.Engine`, `RuleForge.Operators`) ([8f842b4](https://github.com/STotev/RuleLoom/commit/8f842b4), [f53f86c](https://github.com/STotev/RuleLoom/commit/f53f86c))
+* the library is renamed from BusinessRules to RuleLoom: projects and namespaces `BusinessRules.Abstractions.*` → `RuleLoom.Abstractions.*` and `BusinessRules.Core.*` → `RuleLoom.*` (e.g. `RuleLoom.Engine`, `RuleLoom.Operators`) ([8f842b4](https://github.com/STotev/RuleLoom/commit/8f842b4), [f53f86c](https://github.com/STotev/RuleLoom/commit/f53f86c))
 * `IActionExecutor.ExecuteAsync` now returns `Task<ActionResult>` and accepts a `CancellationToken`. Migration: add the token parameter and return `ActionResult.Success()` ([#7](https://github.com/STotev/RuleLoom/pull/7))
 * `RuleEngine` takes an `IActionExecutorFactory` instead of `IEnumerable<IActionExecutor>`. Migration: wrap existing actions in `new DirectActionExecutorFactory(actions)` ([#9](https://github.com/STotev/RuleLoom/pull/9))
 * `RuleEngine.ExecuteAsync` returns `Task<IReadOnlyList<RuleExecutionResult>>` (one entry per matched rule) instead of `Task` ([#9](https://github.com/STotev/RuleLoom/pull/9))
