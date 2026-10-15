@@ -1,0 +1,31 @@
+<Project>
+  <!-- Shared settings for the published packages; imports the repository-wide props first. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Authors>Stefan Totev</Authors>
+    <Copyright>Copyright (c) Stefan Totev</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/STotev/RuleLoom</PackageProjectUrl>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>https://github.com/STotev/RuleLoom/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageTags>rules;rule-engine;business-rules;json;events</PackageTags>
+
+    <!-- XML docs ship with the packages; missing docs outside Abstractions are tracked for release readiness. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <!-- SourceLink (built into the SDK) maps symbols to the GitHub sources; symbols ship as .snupkg. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../docs/assets/icon.png" Pack="true" PackagePath="/" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)PACKAGE.md" Pack="true" PackagePath="/README.md" Visible="false" />
+  </ItemGroup>
+</Project>
