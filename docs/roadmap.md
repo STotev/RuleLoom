@@ -24,7 +24,7 @@ connect to historical docs — they were reused inconsistently between documents
 | 0.2.1 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.2.1) 2026-10-03 | Nested path fix (#14), shared path cache (#15) |
 | 0.3.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.3.0) 2026-10-06 | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
 | 0.4.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.4.0) 2026-10-06 | Action names by registration, `IAction`, dependency injection, upgrading guide |
-| 0.5.0 | Next: the first release published to NuGet | JSON state, ISO date comparison, required rule ids, `ConsoleLogAction`, central rules-service sample |
+| 0.5.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.5.0) 2026-10-15; the first release on [NuGet](https://www.nuget.org/packages/RuleLoom) | JSON state, ISO date comparison, required rule ids, `ConsoleLogAction`, central rules-service sample |
 
 ---
 
@@ -81,28 +81,11 @@ parameters, `$current`/`$previous`, parse-time and registry-based validation. Ev
 | [#38](https://github.com/STotev/RuleLoom/issues/38) | `$current` / `$previous` scope prefixes (no migration guard: package unpublished) | [#50](https://github.com/STotev/RuleLoom/pull/50) |
 | [#39](https://github.com/STotev/RuleLoom/issues/39) | `RuleValidator` against registered operators and actions | [#51](https://github.com/STotev/RuleLoom/pull/51) |
 
-### Tooling
-CI on PRs (build + test, TRX and Cobertura artifacts), release-please + MinVer versioning with squash-merged PR
-titles, central package management, issue/PR templates, Claude Code setup (`AGENTS.md`, `.claude/settings.json`).
-
----
-
-## 🎯 Milestones
-
-Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
-becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66. The 0.5 spike's
-[findings](specs/2026-10-14-rules-service-sample-design.md#findings) shaped 0.6–0.8 below.
-
-| Milestone | Contents | Notes |
-|---|---|---|
-| **0.5: JSON state & central-service spike** ([PRD #66](https://github.com/STotev/RuleLoom/issues/66)) | Path resolution on `JsonElement` and `JsonNode`; ISO date strings compared as instants; `changed` via `ValueComparer`; a central rules-service sample (ASP.NET Core, JSON events with a tenant ID, scheduled actions handed to a scheduler) | The spike decided the **event envelope** (`RuleEvent`) and confirmed the scheduled-action entry point and key; follow-ups #77, #78 |
-| **0.6: Schema System & fluent rule builder** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder (including whether a parameter is a value or a path, found in the 0.5 spike); `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator`; **fluent rule builder** that produces `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the expression → path translation with the schema builder | Detail under [Schema & validation](#schema--validation) below |
-| **0.7: Hosting & producer utilities** | `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, JSON shape) | Optional packages; no rule CRUD |
-| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
-| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides | Release is cleared; publishing waits for this milestone |
-| **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
-
-### 0.5 — PRD [#66](https://github.com/STotev/RuleLoom/issues/66)
+### JSON state & central-service spike — PRD [#66](https://github.com/STotev/RuleLoom/issues/66) ✅ (ships in 0.5.0)
+Rules run on JSON state (`JsonElement`, `JsonNode`), ISO 8601 strings compare as dates, `changed` uses the shared
+comparer, rule ids are required, and the console action is `ConsoleLogAction`. A central rules-service sample tried
+the library as intended; its [findings](specs/2026-10-14-rules-service-sample-design.md#findings) decided the event
+envelope and shaped 0.6–0.8.
 
 | Issue | Slice | Type | PR | Spec |
 |---|---|---|---|---|
@@ -112,6 +95,28 @@ becomes a PRD (or a few issues) when it starts; **0.5** is planned in PRD #66. T
 | [#71](https://github.com/STotev/RuleLoom/issues/71) | Spike findings and event envelope decision | HITL | [#82](https://github.com/STotev/RuleLoom/pull/82) | [rules-service-sample § Findings](specs/2026-10-14-rules-service-sample-design.md#findings) |
 | [#77](https://github.com/STotev/RuleLoom/issues/77) | Require a rule id (spike follow-up) | AFK | [#79](https://github.com/STotev/RuleLoom/pull/79) | [required-rule-id](specs/2026-10-14-required-rule-id-design.md) |
 | [#78](https://github.com/STotev/RuleLoom/issues/78) | Rename `LogAction` to `ConsoleLogAction` (spike follow-up) | AFK | [#80](https://github.com/STotev/RuleLoom/pull/80) | [console-log-action](specs/2026-10-15-console-log-action-design.md) |
+
+### Tooling
+CI on PRs (build + test, TRX and Cobertura artifacts), release-please + MinVer versioning with squash-merged PR
+titles, central package management, issue/PR templates, Claude Code setup (`AGENTS.md`, `.claude/settings.json`).
+From 0.5.0: NuGet packages published by the release workflow with trusted publishing, packed on every PR; protected
+`main` (PRs and the CI check required).
+
+---
+
+## 🎯 Milestones
+
+Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
+becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *Done*); its spike's
+[findings](specs/2026-10-14-rules-service-sample-design.md#findings) shaped 0.6–0.8 below.
+
+| Milestone | Contents | Notes |
+|---|---|---|
+| **0.6: Schema System & fluent rule builder** | Schema model in Abstractions; fluent builder with reflection-based generation from DTOs (attributes as a convention on the builder); action parameters described with the same builder (including whether a parameter is a value or a path, found in the 0.5 spike); `ISchemaStore`; transport-free catalogue; schema-based path validation in `RuleValidator`; **fluent rule builder** that produces `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the expression → path translation with the schema builder | Detail under [Schema & validation](#schema--validation) below |
+| **0.7: Hosting & producer utilities** | `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration); producer-side registration client; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, JSON shape) | Optional packages; no rule CRUD |
+| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
+| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides | 1.0 marks a stable API; packages are already published from 0.5.0 |
+| **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
 
 ---
 
