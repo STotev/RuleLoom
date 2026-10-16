@@ -1,8 +1,9 @@
 # RuleLoom
 
-An event-driven business rule engine for .NET. When something happens in your application (an order is placed, a
-price changes), RuleLoom runs the rules for that event against the current and previous state and runs or schedules
-their actions. Rules are written as JSON, so they can be stored and edited without a deployment, or built in code.
+Let your users weave their own business rules. You provide the threads (events, operators and actions); rules
+written as JSON, or built in code, combine them without a deployment. When something happens in your application (an
+order is placed, a price changes), RuleLoom runs the rules for that event against the current and previous state and
+runs or schedules their actions.
 
 - Conditions with `eq`, `gt`, `gte`, `lt`, `lte`, `changed`, `and`, `or`, `not`, plus your own operators
 - Paths on .NET objects or JSON state (`JsonElement`, `JsonNode`), including the previous state (`$previous.Price`)

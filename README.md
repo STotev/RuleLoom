@@ -3,7 +3,8 @@
 </p>
 
 <p align="center">
-  Event-driven business rules for .NET, written as JSON and run against your objects or JSON events.
+  <b>Let your users weave their own business rules.</b><br>
+  Event-driven rules for .NET, written as JSON and run against your objects or JSON events.
 </p>
 
 <p align="center">
@@ -14,10 +15,10 @@
 
 ---
 
-RuleLoom lets developers define **what's possible** (events, operators, actions) and lets users define **business
-logic** as rules, without a deployment. When something happens in your application (an order is placed, a price
-changes), the engine runs that event's rules against the current and previous state and runs or schedules their
-actions.
+You provide the threads: the **events** your application raises, the **operators** rules can use and the **actions**
+they can take. Your users weave them into **rules**, without a deployment. When something happens (an order is
+placed, a price changes), RuleLoom runs that event's rules against the current and previous state and runs or
+schedules their actions.
 
 - **Rules as data**: JSON rules you can store per customer, edit in a UI and validate before saving, or rules built in code.
 - **Any state**: paths resolve on .NET objects and on JSON (`JsonElement`, `JsonNode`), so a central service can run
@@ -47,7 +48,7 @@ Requires .NET 10.
 
 ## Example
 
-A rule, as JSON:
+A rule, woven in JSON:
 
 ```json
 {
