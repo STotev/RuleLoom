@@ -11,6 +11,7 @@ namespace RuleLoom.Extensions.DependencyInjection;
 internal sealed class RuleLoomRegistry
 {
     private readonly Dictionary<string, Type> _actions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Type> _contextProviders = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<OperatorChange> _operatorChanges = [];
 
     public IReadOnlyCollection<string> ActionNames => _actions.Keys;
@@ -33,6 +34,28 @@ internal sealed class RuleLoomRegistry
     }
 
     public bool TryGetActionType(string name, out Type? actionType) => _actions.TryGetValue(name, out actionType);
+
+    public IReadOnlyCollection<string> ContextProviderNames => _contextProviders.Keys;
+
+    public void AddContextProvider(string name, Type providerType)
+    {
+        if (_contextProviders.Keys.FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase)) is { } existing)
+        {
+            if (existing == name && _contextProviders[existing] == providerType)
+                return;
+
+            throw new ArgumentException(
+                existing == name
+                    ? $"Context name '{name}' is already registered for {_contextProviders[existing].Name}; can't register {providerType.Name} under it."
+                    : $"Context name '{name}' conflicts with '{existing}' (names are case-insensitive).",
+                nameof(name));
+        }
+
+        _contextProviders.Add(name, providerType);
+    }
+
+    public bool TryGetContextProviderType(string name, out Type? providerType) =>
+        _contextProviders.TryGetValue(name, out providerType);
 
     public void AddOperator(Type operatorType)
     {

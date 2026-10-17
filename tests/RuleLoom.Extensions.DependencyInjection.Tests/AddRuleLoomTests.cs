@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
+using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Engine;
 using RuleLoom.Extensions.DependencyInjection;
@@ -80,6 +81,61 @@ public class AddRuleLoomTests
 
         Assert.False(result.HasFailures);
         Assert.Equal(["vip-welcome"], outbox.Sent);
+    }
+
+    [Fact]
+    public async Task RuleEngine_FromScope_LoadsContextsFromScopedProviders()
+    {
+        var services = new ServiceCollection()
+            .AddSingleton<IEmailSender, Outbox>()
+            .AddRuleLoom(rules => rules
+                .AddAction<SendEmailAction>()
+                .AddContextProvider<CustomerProvider>("customer"));
+
+        using var provider = Build(services);
+        using var scope = provider.CreateScope();
+        var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
+        var rule = RuleJsonParser.Parse(Json.Replace("\"path\": \"Tier\"", "\"path\": \"@customer.Tier\""));
+
+        var result = await engine.ExecuteAsync("UserCreated", new { CustomerId = "c-1" }, [rule], TestContext.Current.CancellationToken);
+
+        Assert.False(result.HasFailures);
+        Assert.Equal(RuleExecutionStatus.Matched, result.Rules[0].Status);
+    }
+
+    [Fact]
+    public void ContextProviders_AreScopedAndNamesIgnoreCase()
+    {
+        var services = new ServiceCollection().AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("customer"));
+
+        using var provider = Build(services);
+        IContextProvider? first, again, other;
+
+        using (var scope = provider.CreateScope())
+        {
+            var factory = scope.ServiceProvider.GetRequiredService<IContextProviderFactory>();
+            factory.TryGetProvider("customer", out first);
+            factory.TryGetProvider("CUSTOMER", out again);
+            Assert.Equal(["customer"], factory.ProviderNames);
+        }
+
+        using (var scope = provider.CreateScope())
+            scope.ServiceProvider.GetRequiredService<IContextProviderFactory>().TryGetProvider("customer", out other);
+
+        Assert.NotNull(first);
+        Assert.Same(first, again);
+        Assert.NotSame(first, other);
+        Assert.Equal(ServiceLifetime.Scoped, Lifetime<CustomerProvider>(services));
+    }
+
+    [Fact]
+    public void AddContextProvider_NameTakenByAnotherType_Throws()
+    {
+        var services = new ServiceCollection();
+
+        services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("customer"));
+
+        Assert.Throws<ArgumentException>(() => services.AddRuleLoom(rules => rules.AddContextProvider<OtherProvider>("Customer")));
     }
 
     [Fact]
@@ -192,6 +248,18 @@ public sealed class SendEmailAction(IEmailSender sender) : IAction
         sender.Send(action.GetParameter<string>("template"));
         return Task.FromResult(ActionResult.Success());
     }
+}
+
+public sealed class CustomerProvider : IContextProvider
+{
+    public ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<object?>(new { Id = request.Resolve("CustomerId"), Tier = "vip" });
+}
+
+public sealed class OtherProvider : IContextProvider
+{
+    public ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<object?>(null);
 }
 
 public sealed class AuditAction : IAction

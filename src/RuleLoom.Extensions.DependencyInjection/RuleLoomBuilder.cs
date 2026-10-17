@@ -2,11 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
+using RuleLoom.Abstractions.Context;
 
 namespace RuleLoom.Extensions.DependencyInjection;
 
 /// <summary>
-/// Registers actions and operators for <c>AddRuleLoom</c>. The built-in operators are registered automatically;
+/// Registers actions, operators and context providers for <c>AddRuleLoom</c>. The built-in operators are registered automatically;
 /// operator additions and removals apply in call order.
 /// </summary>
 public sealed class RuleLoomBuilder
@@ -34,6 +35,19 @@ public sealed class RuleLoomBuilder
     {
         _registry.AddAction(name ?? Abstractions.Action.ActionNames.GetDefaultName(typeof(TAction)), typeof(TAction));
         Services.TryAddScoped<TAction>();
+        return this;
+    }
+
+    /// <summary>
+    /// Registers <typeparamref name="TProvider"/> (Scoped) as the provider of the context <paramref name="name"/>,
+    /// which rules use as <c>@name</c>. The same type may provide several contexts.
+    /// </summary>
+    /// <exception cref="ArgumentException">The name is already used by another provider (names are case-insensitive).</exception>
+    public RuleLoomBuilder AddContextProvider<TProvider>(string name) where TProvider : class, IContextProvider
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        _registry.AddContextProvider(name, typeof(TProvider));
+        Services.TryAddScoped<TProvider>();
         return this;
     }
 
