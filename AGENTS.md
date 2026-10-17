@@ -123,7 +123,9 @@ environment `nuget`) and attaches the packages to the GitHub release.
   Missing properties resolve to `null`. A cached entry compiles the longest prefix resolvable on declared types; the
   rest continues on the runtime value: JSON state (`JsonElement`/`JsonNode`, walked by the internal `JsonPathWalker`,
   leaves mapped to `string`/`bool`/`long`/`decimal`/`double`, objects and arrays returned as JSON) or a more specific
-  CLR type (properties declared as `object`/interfaces/base types).
+  CLR type (properties declared as `object`/interfaces/base types). A `PreviousState.FromChanges(current, changes)` passed
+  as the previous state is an overlay: paths are looked up in the JSON `changes` (old values of changed fields) first,
+  then in `current`.
 - **Actions** are referenced in rules as `"action": "<name>"` (`ActionDefinition.Action`) and resolved by name through
   `IActionFactory` (`DirectActionFactory` for non-DI use), which also lists its `ActionNames`. Names
   belong to the registration: `ActionNames.GetDefaultName(type)` gives `[ActionName]` or the class name minus an

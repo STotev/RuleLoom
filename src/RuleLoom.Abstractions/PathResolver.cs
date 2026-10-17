@@ -12,7 +12,8 @@ namespace RuleLoom.Abstractions;
 /// Path segments match property names ignoring case; an exact-case match takes precedence.
 /// Paths continue through the runtime value where the declared type ends: into JSON state
 /// (<see cref="JsonElement"/>, <see cref="JsonNode"/>) and into properties declared as <see cref="object"/>,
-/// an interface or a base type. JSON values are returned as plain CLR values.
+/// an interface or a base type. JSON values are returned as plain CLR values. A <see cref="PreviousState"/> root is
+/// resolved through its changes first, then its current state.
 /// Accessors are cached per (type, path), including paths that don't exist. Instances are thread-safe.
 /// </summary>
 public class PathResolver
@@ -34,6 +35,7 @@ public class PathResolver
     {
         if (root == null) return null;
         if (string.IsNullOrWhiteSpace(path)) return root;
+        if (root is PreviousState previous) return previous.Resolve(path, this);
 
         var current = root;
 

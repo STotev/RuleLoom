@@ -281,6 +281,34 @@ A `JsonValue` created from a .NET value (`JsonValue.Create(19.99m)`) returns tha
 - Keep the `JsonDocument` alive until `ExecuteAsync` returns. A `JsonElement` from a disposed document throws
   `ObjectDisposedException` instead of resolving to `null`.
 
+### Sending only the changed fields
+
+`changed` and `$previous` need the previous state, but a producer doesn't have to send a second full copy. Send the
+current state plus the changed fields with their **old** values, nested like the state, and wrap them in a
+`PreviousState`:
+
+```json
+{
+  "current": { "Status": "Paid", "Total": 640.5, "Customer": { "Email": "ada@example.com" } },
+  "changes": { "Status": "AwaitingPayment" }
+}
+```
+
+```csharp
+var previous = PreviousState.FromChanges(request.Current, request.Changes);
+var result = await engine.ExecuteAsync("OrderUpdated", request.Current, previous, rules);
+```
+
+Rules behave as if the full previous state had been sent: `$previous.Status` is `"AwaitingPayment"`,
+`$previous.Total` comes from the current state, `changed Status` is true and `changed Total` is false.
+
+- `changes` must be a JSON object (`JsonElement` or `JsonObject`); `current` can be JSON or a .NET object.
+- An explicit `null` means the field was null; a missing key means it didn't change.
+- A changed parent covers everything below it: with `"Customer": null`, `$previous.Customer.Email` is `null`.
+- A path that ends at an object listed in `changes` (`changed Customer`) sees that partial object, so `changed`
+  reports it as changed; don't compare such objects with `eq`.
+- `$previous` alone returns the `PreviousState` (with `Current` and `Changes`), not a merged copy.
+
 ## Comparing Values
 
 JSON values are parsed as `int`, `long`, `double`, `string`, `bool` or `null`, while domain properties are often
