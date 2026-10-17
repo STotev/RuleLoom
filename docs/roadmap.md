@@ -124,7 +124,7 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 | Issue | Slice | Type | Blocked by | PR | Spec |
 |---|---|---|---|---|---|
 | [#90](https://github.com/STotev/RuleLoom/issues/90) | Rebuild the previous state from changed fields | AFK | — | [#97](https://github.com/STotev/RuleLoom/pull/97) | [previous-from-changes](specs/2026-10-18-previous-from-changes-design.md) |
-| [#91](https://github.com/STotev/RuleLoom/issues/91) | Contexts: related data loaded by context providers (`@` paths) | AFK | — | — | — |
+| [#91](https://github.com/STotev/RuleLoom/issues/91) | Contexts: related data loaded by context providers (`@` paths) | AFK | — | [#99](https://github.com/STotev/RuleLoom/pull/99) | [contexts](specs/2026-10-18-contexts-design.md) |
 | [#92](https://github.com/STotev/RuleLoom/issues/92) | Schema builder and JSON Schema export (`RuleLoom.Schemas`) | HITL | — | — | — |
 | [#93](https://github.com/STotev/RuleLoom/issues/93) | Schema store and registration in `AddRuleLoom` | AFK | #92 | — | — |
 | [#94](https://github.com/STotev/RuleLoom/issues/94) | Schema-aware rule validation with severities | AFK | #91, #92 | — | — |

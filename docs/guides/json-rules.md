@@ -237,13 +237,50 @@ A `path` names a property, with `.` for nested properties (`"Address.City"`). Na
 | `"Price"`, `"Address.City"` | the current state |
 | `"$current.Price"` | the current state (explicit) |
 | `"$previous.Price"` | the previous state (`null` if there is none) |
+| `"@customer.Tier"` | a [context](#contexts): related data loaded by a provider you register |
 
-Other names starting with `$` are reserved and rejected. Without the `$`, `current` and `previous` are ordinary
+Other names starting with `$` are reserved and rejected, and so are paths starting with `#` (reserved for functions). Without the `$`, `current` and `previous` are ordinary
 property names, so a property called `Previous` is simply `"Previous.X"`. `changed` compares current with previous
 whichever way its path is written: `Price`, `$current.Price` and `$previous.Price` are equivalent.
 
 Paths follow the **runtime** value: a property declared as `object`, an interface or a base type is read through
 whatever it holds, including JSON.
+
+## Contexts
+
+A rule often needs data beyond the event's subject: the order's customer, the warehouse, the people watching an ad.
+Instead of sending it with every event, give each kind of related data a name and register a **context provider** that
+loads it. Rules use it with `@name`:
+
+```json
+{ "operator": "eq", "operands": [{ "path": "@customer.Tier" }, { "value": "Gold" }] }
+```
+
+```csharp
+public sealed class CustomerProvider(ICustomersClient customers) : ContextProvider<CustomerDto>
+{
+    protected override async ValueTask<CustomerDto?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
+        request.Resolve("CustomerId") is string id ? await customers.FindAsync(id, cancellationToken) : null;
+}
+
+services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("customer"));   // Scoped
+// without DI: new RuleEngine(evaluator, actions, contextProviders: new DirectContextProviderFactory().Add(provider, "customer"))
+```
+
+- **The provider decides how to find the data.** It gets the context name and the event (type, current and previous
+  state; `request.Resolve(path)` reads the subject), and returns a .NET object, JSON, a collection, or `null` when there
+  is none. `ContextProvider<T>` is a typed base class; implement `IContextProvider` directly to return untyped data
+  such as JSON from another service.
+- **Loaded only when used, once per event.** Before evaluating, the engine loads the contexts that the event's rules
+  use (in conditions, action conditions and schedule `referencePath`s), in parallel. Contexts no rule uses aren't loaded.
+- **Actions** can load any registered context on demand, e.g. a collection to email:
+  `var watchers = await context.GetContextAsync<WatcherDto[]>("watchers", ct);` (JSON is deserialized; the untyped
+  `GetContextAsync(name)` returns the value as loaded). It shares the same per-event cache.
+- **Failures stay local.** If a provider throws, only the rules (or actions) that use that context fail, with a
+  `ContextLoadException`; other rules run. A context name without a provider fails the rules that use it.
+- **No previous state.** Contexts are read as they are now: `$previous.@customer` is rejected and `changed` on a context
+  fails the rule.
+- Names ignore case. A collection comes back as is; paths into it (`@watchers.Email`) resolve to `null`.
 
 ## Rules on JSON State
 

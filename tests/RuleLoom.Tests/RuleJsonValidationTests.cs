@@ -49,7 +49,14 @@ public class RuleJsonValidationTests
         // Path variables: only $current and $previous
         { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$now" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
         { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$cur.Price" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
-        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "schedule": { "mode": "Delay", "amount": 1, "unit": "Hours", "referencePath": "$due" } }] }""", "$.actions[0].schedule.referencePath" }
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "schedule": { "mode": "Delay", "amount": 1, "unit": "Hours", "referencePath": "$due" } }] }""", "$.actions[0].schedule.referencePath" },
+        // Contexts (@name) and reserved functions (#)
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "#now" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "@" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "@.Tier" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$current.@customer" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$previous.@customer.Tier" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "schedule": { "mode": "Delay", "amount": 1, "unit": "Hours", "referencePath": "#today" } }] }""", "$.actions[0].schedule.referencePath" }
     };
 
     [Theory]
@@ -71,6 +78,9 @@ public class RuleJsonValidationTests
     [InlineData("current.Price")]
     [InlineData("Previous.Order.Status")]
     [InlineData("Currently.Price")]
+    [InlineData("@customer")]
+    [InlineData("@customer.Tier")]
+    [InlineData("Payload.@type")]
     public void Parse_ValidPaths_AreAccepted(string path)
     {
         var json = $$"""{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "{{path}}" }, { "value": 1 }] } }""";

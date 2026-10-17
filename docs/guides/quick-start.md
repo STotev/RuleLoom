@@ -162,6 +162,20 @@ var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
 `RemoveOperator("name")` and `RemoveBuiltInOperators()` adjust the operator set; `AddAction<T>("name")` registers an
 action under another name.
 
+## Contexts: related data
+
+Rules can use data related to the event's subject, loaded only when a rule needs it:
+
+```csharp
+services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("customer"));
+```
+
+```json
+{ "operator": "eq", "operands": [{ "path": "@customer.Tier" }, { "value": "Gold" }] }
+```
+
+See [Contexts](json-rules.md#contexts) for writing providers and how loading works.
+
 ## Validating rules before saving them
 
 ```csharp

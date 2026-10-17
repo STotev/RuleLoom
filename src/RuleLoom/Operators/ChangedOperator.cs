@@ -13,6 +13,9 @@ public class ChangedOperator : IConditionOperator
     {
         var property = WithoutScope(context.GetPath(0));
 
+        if (property.StartsWith('@'))
+            throw new InvalidOperationException($"'changed' can't be used on context '{property}': contexts have no previous state.");
+
         return !ValueComparer.AreEqual(context.Resolve($"$current.{property}"), context.Resolve($"$previous.{property}"));
     }
 

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
+using RuleLoom.Abstractions.Context;
 using RuleLoom.Engine;
 using RuleLoom.Evaluators;
 using RuleLoom.Extensions.DependencyInjection;
@@ -19,8 +20,9 @@ public static class RuleLoomServiceCollectionExtensions
     /// and each call adds its actions and operators.
     /// </summary>
     /// <remarks>
-    /// Lifetimes: operators and <see cref="IConditionEvaluator"/> are Singleton; actions,
-    /// <see cref="IActionFactory"/>, <see cref="RuleEngine"/> and <see cref="RuleValidator"/> are Scoped.
+    /// Lifetimes: operators and <see cref="IConditionEvaluator"/> are Singleton; actions, context providers,
+    /// <see cref="IActionFactory"/>, <see cref="IContextProviderFactory"/>, <see cref="RuleEngine"/> and
+    /// <see cref="RuleValidator"/> are Scoped.
     /// <see cref="TimeProvider.System"/> is registered if no <see cref="TimeProvider"/> is.
     /// </remarks>
     public static IServiceCollection AddRuleLoom(this IServiceCollection services, Action<RuleLoomBuilder>? configure = null)
@@ -33,10 +35,12 @@ public static class RuleLoomServiceCollectionExtensions
         services.TryAddSingleton(sp => new RuleLoomOperators(registry.BuildOperators(sp)));
         services.TryAddSingleton<IConditionEvaluator>(sp => new ConditionEvaluator(sp.GetRequiredService<RuleLoomOperators>().All));
         services.TryAddScoped<IActionFactory>(sp => new ServiceProviderActionFactory(sp, registry));
+        services.TryAddScoped<IContextProviderFactory>(sp => new ServiceProviderContextProviderFactory(sp, registry));
         services.TryAddScoped(sp => new RuleEngine(
             sp.GetRequiredService<IConditionEvaluator>(),
             sp.GetRequiredService<IActionFactory>(),
-            sp.GetRequiredService<TimeProvider>()));
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<IContextProviderFactory>()));
         services.TryAddScoped(sp => new RuleValidator(
             sp.GetRequiredService<RuleLoomOperators>().All,
             sp.GetRequiredService<IActionFactory>()));
