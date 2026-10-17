@@ -119,6 +119,17 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 | **After 0.7** | **Fluent rule builder** producing `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the schema builder's expression → path translation | Mainly for in-process users; placed once 0.7 settles |
 | **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
 
+### 0.6 — PRD [#87](https://github.com/STotev/RuleLoom/issues/87)
+
+| Issue | Slice | Type | Blocked by | PR | Spec |
+|---|---|---|---|---|---|
+| [#90](https://github.com/STotev/RuleLoom/issues/90) | Rebuild the previous state from changed fields | AFK | — | — | — |
+| [#91](https://github.com/STotev/RuleLoom/issues/91) | Contexts: related data loaded by context providers (`@` paths) | AFK | — | — | — |
+| [#92](https://github.com/STotev/RuleLoom/issues/92) | Schema builder and JSON Schema export (`RuleLoom.Schemas`) | HITL | — | — | — |
+| [#93](https://github.com/STotev/RuleLoom/issues/93) | Schema store and registration in `AddRuleLoom` | AFK | #92 | — | — |
+| [#94](https://github.com/STotev/RuleLoom/issues/94) | Schema-aware rule validation with severities | AFK | #91, #92 | — | — |
+| [#95](https://github.com/STotev/RuleLoom/issues/95) | Rules-service sample and guide for schemas and contexts | HITL | #91, #93, #94 | — | — |
+
 ---
 
 ## 📋 Backlog — not yet scheduled
