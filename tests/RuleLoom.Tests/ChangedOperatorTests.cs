@@ -114,6 +114,21 @@ public class ChangedOperatorTests
     }
 
     [Theory]
+    [InlineData("""{ "Status": "AwaitingPayment" }""", "Status", true)]
+    [InlineData("""{ "Status": "AwaitingPayment" }""", "Total", false)]
+    [InlineData("""{ "Status": null }""", "Status", true)]
+    [InlineData("""{ "Customer": { "Email": "old@example.com" } }""", "Customer.Email", true)]
+    [InlineData("""{ "Customer": { "Email": "old@example.com" } }""", "Customer.Name", false)]
+    [InlineData("""{ "Customer": { "Email": "old@example.com" } }""", "Customer", true)]
+    public void Evaluate_PreviousStateFromChanges_DetectsChange(string changes, string path, bool expected)
+    {
+        var current = JsonNode.Parse("""{ "Status": "Paid", "Total": 640.5, "Customer": { "Name": "Ada", "Email": "ada@example.com" } }""")!;
+        var context = new EvaluationContext(current, PreviousState.FromChanges(current, JsonNode.Parse(changes)!));
+
+        Assert.Equal(expected, Evaluator().Evaluate(context, Op("changed", Path(path))));
+    }
+
+    [Theory]
     [InlineData(100, 90, true)]
     [InlineData(100, 100, false)]
     public void Evaluate_DirectlyWithOperatorContext_DetectsChange(int current, int previous, bool expected)

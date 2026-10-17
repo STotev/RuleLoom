@@ -20,6 +20,53 @@ internal static class JsonPathWalker
             : ResolveNode((JsonNode)json, segments);
     }
 
+    /// <summary>
+    /// Like <see cref="Resolve"/>, but tells a missing key (returns <c>false</c>) from a present value. A walk that
+    /// reaches a value that isn't an object before the path ends is present, with a <c>null</c> value.
+    /// </summary>
+    public static bool TryResolvePresent(object json, string path, out object? value)
+    {
+        var segments = path.Split('.');
+
+        return json is JsonElement element
+            ? TryResolveElementPresent(element, segments, out value)
+            : TryResolveNodePresent((JsonNode)json, segments, out value);
+    }
+
+    private static bool TryResolveNodePresent(JsonNode? node, string[] segments, out object? value)
+    {
+        value = null;
+
+        foreach (var segment in segments)
+        {
+            if (node is not JsonObject obj)
+                return true;
+
+            if (!TryFind(obj, segment, out node))
+                return false;
+        }
+
+        value = ToClrValue(node);
+        return true;
+    }
+
+    private static bool TryResolveElementPresent(JsonElement element, string[] segments, out object? value)
+    {
+        value = null;
+
+        foreach (var segment in segments)
+        {
+            if (element.ValueKind != JsonValueKind.Object)
+                return true;
+
+            if (!TryFind(element.EnumerateObject().Select(p => KeyValuePair.Create(p.Name, p.Value)), segment, out element))
+                return false;
+        }
+
+        value = ToClrValue(element);
+        return true;
+    }
+
     private static object? ResolveNode(JsonNode? node, string[] segments)
     {
         foreach (var segment in segments)

@@ -946,6 +946,40 @@ public class RuleEngineIntegrationTests
         Assert.Equal(["Matched"], _logMessages);
     }
 
+    [Theory]
+    [MemberData(nameof(JsonStateKinds))]
+    public async Task RuleEngine_PreviousStateFromChanges_EvaluatesLikeFullPreviousState(string kind)
+    {
+        // Arrange: only the changed field is sent with its old value
+        var json = """
+        {
+          "id": "paid",
+          "name": "Paid",
+          "eventType": "OrderUpdated",
+          "condition": {
+            "operator": "and",
+            "operands": [
+              { "operator": "changed", "operands": [{ "path": "Status" }] },
+              { "operator": "eq", "operands": [{ "path": "$previous.Status" }, { "value": "AwaitingPayment" }] },
+              { "operator": "not", "operands": [{ "operator": "changed", "operands": [{ "path": "Total" }] }] }
+            ]
+          },
+          "actions": [{ "action": "test-log", "parameters": { "message": "Paid" } }]
+        }
+        """;
+
+        var current = ParseState(kind, """{ "Status": "Paid", "Total": 640.5 }""");
+        var changes = ParseState(kind, """{ "Status": "AwaitingPayment" }""");
+
+        // Act
+        await _engine.ExecuteAsync(
+            "OrderUpdated", current, PreviousState.FromChanges(current, changes), [RuleJsonParser.Parse(json)],
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["Paid"], _logMessages);
+    }
+
     private static object ParseState(string kind, string json) => kind switch
     {
         "JsonElement" => JsonSerializer.Deserialize<object>(json)!,
