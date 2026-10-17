@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.ExceptionServices;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using RuleLoom.Abstractions.Context;
 
 namespace RuleLoom.Abstractions;
@@ -10,6 +12,9 @@ namespace RuleLoom.Abstractions;
 /// </summary>
 public class EvaluationContext
 {
+    // Context JSON is read like paths: property names ignore case.
+    private static readonly JsonSerializerOptions ContextJsonOptions = new(JsonSerializerDefaults.Web);
+
     private readonly string? _eventType;
     private readonly IContextProviderFactory? _contextProviders;
     private readonly ConcurrentDictionary<string, Lazy<Task<object?>>> _contexts = new(StringComparer.OrdinalIgnoreCase);
@@ -114,6 +119,31 @@ public class EvaluationContext
         var load = _contexts.GetOrAdd(name, _ => new Lazy<Task<object?>>(() => LoadAsync(provider, name, cancellationToken)));
 
         return await load.Value.ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the context <paramref name="name"/> as <typeparamref name="T"/>, loading it like
+    /// <see cref="GetContextAsync(string, CancellationToken)"/>. A value that already is a <typeparamref name="T"/> is
+    /// returned as is; JSON (<see cref="JsonElement"/>, <see cref="JsonNode"/>) is deserialized, matching property
+    /// names ignoring case.
+    /// </summary>
+    /// <returns>The context, or the default of <typeparamref name="T"/> if the provider found none.</returns>
+    /// <exception cref="InvalidOperationException">No provider is registered under <paramref name="name"/>.</exception>
+    /// <exception cref="ContextLoadException">The provider failed.</exception>
+    /// <exception cref="InvalidCastException">The context is neither a <typeparamref name="T"/> nor JSON.</exception>
+    /// <exception cref="JsonException">The context's JSON can't be read as <typeparamref name="T"/>.</exception>
+    public async ValueTask<T?> GetContextAsync<T>(string name, CancellationToken cancellationToken = default)
+    {
+        var value = await GetContextAsync(name, cancellationToken).ConfigureAwait(false);
+
+        return value switch
+        {
+            null => default,
+            T typed => typed,
+            JsonElement element => element.Deserialize<T>(ContextJsonOptions),
+            JsonNode node => node.Deserialize<T>(ContextJsonOptions),
+            _ => throw new InvalidCastException($"Context '@{name}' is a {value.GetType().Name}, not a {typeof(T).Name}.")
+        };
     }
 
     private async Task<object?> LoadAsync(IContextProvider provider, string name, CancellationToken cancellationToken)

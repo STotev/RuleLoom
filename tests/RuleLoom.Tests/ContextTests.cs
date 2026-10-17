@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Context;
@@ -122,6 +123,48 @@ public class ContextTests
     }
 
     [Fact]
+    public async Task ContextProviderBaseClass_LoadsTypedContext()
+    {
+        var context = Context(("customer", new CustomerProvider()));
+
+        var customer = await context.GetContextAsync<Customer>("customer", TestContext.Current.CancellationToken);
+
+        Assert.Equal(new Customer("c-1", "Gold"), customer);
+        Assert.Equal("Gold", context.Resolve("@customer.Tier"));
+    }
+
+    [Fact]
+    public async Task GetContextAsyncOfT_JsonContext_IsDeserializedIgnoringCase()
+    {
+        var context = Context(
+            ("element", new FakeContextProvider(JsonDocument.Parse("""{ "id": "c-1", "TIER": "Gold" }""").RootElement)),
+            ("node", new FakeContextProvider(JsonNode.Parse("""[{ "Id": "c-2", "Tier": "Basic" }]"""))));
+
+        var customer = await context.GetContextAsync<Customer>("element", TestContext.Current.CancellationToken);
+        var customers = await context.GetContextAsync<Customer[]>("node", TestContext.Current.CancellationToken);
+
+        Assert.Equal(new Customer("c-1", "Gold"), customer);
+        Assert.Equal([new Customer("c-2", "Basic")], customers!);
+    }
+
+    [Fact]
+    public async Task GetContextAsyncOfT_NotFound_ReturnsDefault()
+    {
+        var context = Context(("customer", new FakeContextProvider((object?)null)));
+
+        Assert.Null(await context.GetContextAsync<Customer>("customer", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetContextAsyncOfT_OtherType_ThrowsInvalidCast()
+    {
+        var context = Context(("customer", new FakeContextProvider(new { Tier = "Gold" })));
+
+        await Assert.ThrowsAsync<InvalidCastException>(
+            async () => await context.GetContextAsync<Customer>("customer", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public void DirectContextProviderFactory_NamesIgnoreCaseAndDuplicatesThrow()
     {
         var provider = new FakeContextProvider(new { });
@@ -140,5 +183,13 @@ public class ContextTests
             factory.Add(provider, name);
 
         return new EvaluationContext(Order, null, "OrderPlaced", factory);
+    }
+
+    private sealed record Customer(string Id, string Tier);
+
+    private sealed class CustomerProvider : ContextProvider<Customer>
+    {
+        protected override ValueTask<Customer?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
+            ValueTask.FromResult<Customer?>(new Customer((string)request.Resolve("CustomerId")!, "Gold"));
     }
 }
