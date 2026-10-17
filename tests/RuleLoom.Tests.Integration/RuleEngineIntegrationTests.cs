@@ -3,8 +3,10 @@ using System.Text.Json.Nodes;
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
+using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Actions;
+using RuleLoom.Contexts;
 using RuleLoom.Engine;
 using RuleLoom.Evaluators;
 using RuleLoom.Operators;
@@ -978,6 +980,62 @@ public class RuleEngineIntegrationTests
 
         // Assert
         Assert.Equal(["Paid"], _logMessages);
+    }
+
+    [Theory]
+    [MemberData(nameof(JsonStateKinds))]
+    public async Task RuleEngine_Contexts_LoadRelatedDataForConditionsAndActions(string kind)
+    {
+        // Arrange: the customer comes from a provider; the action emails the ad's watchers (a collection context)
+        var json = """
+        {
+          "id": "gold-order",
+          "name": "Gold order",
+          "eventType": "OrderPlaced",
+          "condition": {
+            "operator": "and",
+            "operands": [
+              { "operator": "gte", "operands": [{ "path": "Total" }, { "value": 500 }] },
+              { "operator": "eq", "operands": [{ "path": "@customer.Tier" }, { "value": "Gold" }] }
+            ]
+          },
+          "actions": [{ "action": "notify-watchers" }]
+        }
+        """;
+
+        var customers = new Dictionary<string, object> { ["c-1"] = ParseState(kind, """{ "Tier": "Gold" }""") };
+        var contexts = new DirectContextProviderFactory()
+            .Add(new LookupProvider(request => customers.GetValueOrDefault((string)request.Resolve("CustomerId")!)), "customer")
+            .Add(new LookupProvider(_ => new[] { "a@example.com", "b@example.com" }), "watchers");
+        var notified = new List<string>();
+        var engine = new RuleEngine(
+            new ConditionEvaluator(BuiltInOperators.Create()),
+            new DirectActionFactory().Add(new NotifyWatchersAction(notified), "notify-watchers"),
+            contextProviders: contexts);
+
+        var order = ParseState(kind, """{ "CustomerId": "c-1", "Total": 640.5 }""");
+
+        // Act
+        var result = await engine.ExecuteAsync("OrderPlaced", order, [RuleJsonParser.Parse(json)], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.HasFailures);
+        Assert.Equal(["a@example.com", "b@example.com"], notified);
+    }
+
+    private sealed class LookupProvider(Func<ContextRequest, object?> load) : IContextProvider
+    {
+        public ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(load(request));
+    }
+
+    private sealed class NotifyWatchersAction(List<string> notified) : IAction
+    {
+        public async Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
+        {
+            notified.AddRange((string[])(await context.GetContextAsync("watchers", cancellationToken))!);
+            return ActionResult.Success();
+        }
     }
 
     private static object ParseState(string kind, string json) => kind switch

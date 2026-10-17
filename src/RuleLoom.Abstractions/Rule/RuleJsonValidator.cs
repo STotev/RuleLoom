@@ -112,18 +112,35 @@ internal static class RuleJsonValidator
     }
 
     /// <summary>
-    /// Only <c>$current</c> and <c>$previous</c> are known variables; other <c>$</c> names are reserved.
+    /// Only <c>$current</c> and <c>$previous</c> are known variables; other <c>$</c> names are reserved. <c>@name</c>
+    /// starts a context path (not after a state: contexts have no previous state); <c>#</c> is reserved for functions.
     /// </summary>
     private static void ValidatePathVariables(string value, string path)
     {
-        var first = value.Split('.', 2)[0];
+        var segments = value.Split('.', 3);
+        var first = segments[0];
 
-        if (first.StartsWith('$') &&
-            !first.Equals("$current", StringComparison.OrdinalIgnoreCase) &&
+        if (first.StartsWith('#'))
+            throw new RuleParseException($"Paths starting with '#' are reserved for functions: '{value}'.", path);
+
+        if (first == "@")
+            throw new RuleParseException($"A context path needs a name after '@', e.g. '@customer.Tier': '{value}'.", path);
+
+        if (!first.StartsWith('$'))
+            return;
+
+        if (!first.Equals("$current", StringComparison.OrdinalIgnoreCase) &&
             !first.Equals("$previous", StringComparison.OrdinalIgnoreCase))
         {
             throw new RuleParseException(
                 $"Unknown variable '{first}' in path '{value}'. Use $current or $previous.",
+                path);
+        }
+
+        if (segments.Length > 1 && segments[1].StartsWith('@'))
+        {
+            throw new RuleParseException(
+                $"Contexts have no current or previous state; use '{string.Join('.', segments[1..])}' instead of '{value}'.",
                 path);
         }
     }

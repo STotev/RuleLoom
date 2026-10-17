@@ -1,6 +1,7 @@
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
+using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
 using RuleLoom.Scheduling;
@@ -10,7 +11,8 @@ namespace RuleLoom.Engine;
 public sealed class RuleEngine(
     IConditionEvaluator conditionEvaluator,
     IActionFactory actionFactory,
-    TimeProvider? timeProvider = null)
+    TimeProvider? timeProvider = null,
+    IContextProviderFactory? contextProviders = null)
 {
     private readonly IConditionEvaluator _conditionEvaluator =
         conditionEvaluator ?? throw new ArgumentNullException(nameof(conditionEvaluator));
@@ -33,13 +35,19 @@ public sealed class RuleEngine(
         IEnumerable<RuleDefinition> rules,
         CancellationToken cancellationToken = default)
     {
-        var context = new EvaluationContext(current, previous);
         var ruleResults = new List<RuleExecutionResult>();
         var scheduledActions = new List<ScheduledAction>();
 
         var matchingRules = rules
             .Where(r => string.Equals(r.EventType, eventType, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(r => r.Priority);
+            .OrderByDescending(r => r.Priority)
+            .ToList();
+
+        var context = contextProviders is null
+            ? new EvaluationContext(current, previous)
+            : new EvaluationContext(current, previous, eventType, contextProviders);
+
+        await PrefetchContextsAsync(context, matchingRules, cancellationToken);
 
         foreach (var rule in matchingRules)
         {
@@ -94,6 +102,33 @@ public sealed class RuleEngine(
         CancellationToken cancellationToken = default)
     {
         return ExecuteAsync(eventType, data, null, rules, cancellationToken);
+    }
+
+    /// <summary>
+    /// Loads the contexts the rules use, in parallel. Failures stay cached in the context, so only the rules that
+    /// resolve a failed context fail.
+    /// </summary>
+    private async Task PrefetchContextsAsync(
+        EvaluationContext context,
+        IReadOnlyList<RuleDefinition> rules,
+        CancellationToken cancellationToken)
+    {
+        if (contextProviders is null)
+            return;
+
+        var names = ContextReferences.Collect(rules).Where(name => contextProviders.TryGetProvider(name, out _));
+
+        await Task.WhenAll(names.Select(async name =>
+        {
+            try
+            {
+                await context.GetContextAsync(name, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Reported by the rules that use the context.
+            }
+        }));
     }
 
     private async Task<ActionResult> ProcessActionAsync(
