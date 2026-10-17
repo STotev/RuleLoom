@@ -3,10 +3,27 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
+- [0.5 → 0.6](#05--06): paths starting with `@` or `#` are no longer property names
 - [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
 - [0.3 → 0.4](#03--04): actions are named by registration, `IAction`, dependency injection
 - [0.2 → 0.3](#02--03): API hardening (results, operators, validation, paths, parameters)
 - [0.1 → 0.2](#01--02): action results, action factory, scheduling
+
+---
+
+## 0.5 → 0.6
+
+### Paths starting with `@` or `#` are no longer property names
+
+`@name` now reads a [context](json-rules.md#contexts) (related data loaded by a provider), and `#` is reserved for
+functions. Before, `"@type"` or `"#tag"` at the start of a path read a property with that name.
+
+- `@name...` at the start of a path, without a provider registered for `name`, now fails the rule.
+- Paths starting with `#`, and `@` right after `$current.`/`$previous.`, are rejected when the rule is parsed.
+- `@` and `#` later in a path (`Payload.@type`) still read properties.
+
+What to change: rules whose first path segment is a property starting with `@` or `#` must reach it from a parent
+property, or the property must be renamed.
 
 ---
 

@@ -125,7 +125,13 @@ environment `nuget`) and attaches the packages to the GitHub release.
   leaves mapped to `string`/`bool`/`long`/`decimal`/`double`, objects and arrays returned as JSON) or a more specific
   CLR type (properties declared as `object`/interfaces/base types). A `PreviousState.FromChanges(current, changes)` passed
   as the previous state is an overlay: paths are looked up in the JSON `changes` (old values of changed fields) first,
-  then in `current`.
+  then in `current`. `#` paths are reserved for functions.
+- **Contexts**: `@name.Path` reads related data loaded by an `IContextProvider` registered under `name`
+  (`IContextProviderFactory`: `DirectContextProviderFactory` or DI's `AddContextProvider<T>(name)`, Scoped). The
+  engine prefetches the contexts its rules use (conditions, action conditions, schedule reference paths; collected by
+  `ContextReferences`) once per event, in parallel, into the `EvaluationContext` cache; actions use
+  `GetContextAsync(name)`. A failed load throws `ContextLoadException` when resolved, failing only the rules that use it.
+  Contexts have no previous state (`$previous.@x` is a parse error; `changed` on a context throws).
 - **Actions** are referenced in rules as `"action": "<name>"` (`ActionDefinition.Action`) and resolved by name through
   `IActionFactory` (`DirectActionFactory` for non-DI use), which also lists its `ActionNames`. Names
   belong to the registration: `ActionNames.GetDefaultName(type)` gives `[ActionName]` or the class name minus an
@@ -164,6 +170,8 @@ environment `nuget`) and attaches the packages to the GitHub release.
   (`SendEmailAction` → `send-email`) or `[ActionName("...")]`; read parameters with
   `action.GetParameter<T>(name)` / `TryGetParameter<T>` (plain CLR values, converted via `ValueConverter`);
   return `ActionResult.Success()` or `ActionResult.Failed(...)`.
+- **Context provider**: implement `IContextProvider` — `ValueTask<object?> GetAsync(ContextRequest, CancellationToken)`;
+  read the subject with `request.Resolve(path)`; return the context, a collection, or `null` (not found).
 
 ## Code Style
 

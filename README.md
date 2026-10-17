@@ -23,7 +23,9 @@ schedules their actions.
 - **Rules as data**: JSON rules you can store per customer, edit in a UI and validate before saving, or rules built in code.
 - **Any state**: paths resolve on .NET objects and on JSON (`JsonElement`, `JsonNode`), so a central service can run
   rules on events from other services without their classes.
-- **Change-aware**: compare with the previous state (`changed`, `$previous.Price`).
+- **Change-aware**: compare with the previous state (`changed`, `$previous.Price`), sent in full or as just the
+  changed fields.
+- **Related data on demand**: `@customer.Tier` is loaded by a provider you register, only when a rule uses it.
 - **Comparison by meaning**: `100` equals `100.0`, enums match by name, ISO 8601 strings compare as dates.
 - **Your actions, your scheduler**: actions are classes you write; delayed actions come back with their due time for
   Hangfire, Quartz.NET or any scheduler you use.
