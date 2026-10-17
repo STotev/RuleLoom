@@ -170,8 +170,9 @@ environment `nuget`) and attaches the packages to the GitHub release.
   (`SendEmailAction` → `send-email`) or `[ActionName("...")]`; read parameters with
   `action.GetParameter<T>(name)` / `TryGetParameter<T>` (plain CLR values, converted via `ValueConverter`);
   return `ActionResult.Success()` or `ActionResult.Failed(...)`.
-- **Context provider**: implement `IContextProvider` — `ValueTask<object?> GetAsync(ContextRequest, CancellationToken)`;
-  read the subject with `request.Resolve(path)`; return the context, a collection, or `null` (not found).
+- **Context provider**: derive from `ContextProvider<TContext>` (typed `LoadAsync`) or implement `IContextProvider`
+  (`ValueTask<object?> GetAsync(ContextRequest, CancellationToken)`); read the subject with `request.Resolve(path)`;
+  return the context, a collection, or `null` (not found). Actions read contexts with `GetContextAsync<T>(name)`.
 
 ## Code Style
 

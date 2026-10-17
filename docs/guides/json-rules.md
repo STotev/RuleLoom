@@ -257,9 +257,9 @@ loads it. Rules use it with `@name`:
 ```
 
 ```csharp
-public sealed class CustomerProvider(ICustomersClient customers) : IContextProvider
+public sealed class CustomerProvider(ICustomersClient customers) : ContextProvider<CustomerDto>
 {
-    public async ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken) =>
+    protected override async ValueTask<CustomerDto?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
         request.Resolve("CustomerId") is string id ? await customers.FindAsync(id, cancellationToken) : null;
 }
 
@@ -269,11 +269,13 @@ services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("custom
 
 - **The provider decides how to find the data.** It gets the context name and the event (type, current and previous
   state; `request.Resolve(path)` reads the subject), and returns a .NET object, JSON, a collection, or `null` when there
-  is none.
+  is none. `ContextProvider<T>` is a typed base class; implement `IContextProvider` directly to return untyped data
+  such as JSON from another service.
 - **Loaded only when used, once per event.** Before evaluating, the engine loads the contexts that the event's rules
   use (in conditions, action conditions and schedule `referencePath`s), in parallel. Contexts no rule uses aren't loaded.
 - **Actions** can load any registered context on demand, e.g. a collection to email:
-  `var watchers = await context.GetContextAsync("watchers", ct);`. It shares the same per-event cache.
+  `var watchers = await context.GetContextAsync<WatcherDto[]>("watchers", ct);` (JSON is deserialized; the untyped
+  `GetContextAsync(name)` returns the value as loaded). It shares the same per-event cache.
 - **Failures stay local.** If a provider throws, only the rules (or actions) that use that context fail, with a
   `ContextLoadException`; other rules run. A context name without a provider fails the rules that use it.
 - **No previous state.** Contexts are read as they are now: `$previous.@customer` is rejected and `changed` on a context
