@@ -51,14 +51,13 @@ public class AddSchemasTests
     }
 
     [Fact]
-    public async Task RuleEngine_WithSchemas_PassesEachContextsReferenceToItsProvider()
+    public async Task RuleEngine_WithSchemas_LoadsBothContextsWithOneProvider()
     {
         var services = new ServiceCollection()
             .AddSingleton<Accounts>()
             .AddRuleLoom(r => r
                 .AddSchemas(s => s.Add<TransferMadeSchema>())
-                .AddContextProvider<AccountProvider>("fromAccount")
-                .AddContextProvider<AccountProvider>("toAccount"));
+                .AddContextProvider<AccountProvider>("account"));
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
@@ -89,8 +88,8 @@ public class AddSchemasTests
         public TransferMadeSchema()
         {
             Event("TransferMade");
-            Context("fromAccount").ReferencedBy(t => t.FromAccountId);
-            Context("toAccount").ReferencedBy(t => t.ToAccountId);
+            Context("fromAccount").LoadedBy("account").ReferencedBy(t => t.FromAccountId).Label("From account");
+            Context("toAccount").LoadedBy("account").ReferencedBy(t => t.ToAccountId).Label("To account");
         }
     }
 

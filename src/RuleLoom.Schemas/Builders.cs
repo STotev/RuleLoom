@@ -76,6 +76,7 @@ public sealed class ContextBuilder<T>
     internal string? ConfiguredLabel { get; private set; }
     internal string? ConfiguredDescription { get; private set; }
     internal LambdaExpression? Reference { get; private set; }
+    internal string? Provider { get; private set; }
 
     /// <summary>A readable name for authoring UIs (written as <c>title</c>).</summary>
     public ContextBuilder<T> Label(string label)
@@ -90,6 +91,18 @@ public sealed class ContextBuilder<T>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
         ConfiguredDescription = description;
+        return this;
+    }
+
+    /// <summary>
+    /// Which registered context provider loads this context, when it isn't the one registered under the context's own
+    /// name. Lets one provider serve several contexts, e.g. <c>Context("fromAccount").LoadedBy("account")</c> and
+    /// <c>Context("toAccount").LoadedBy("account")</c>.
+    /// </summary>
+    public ContextBuilder<T> LoadedBy(string providerName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
+        Provider = providerName;
         return this;
     }
 

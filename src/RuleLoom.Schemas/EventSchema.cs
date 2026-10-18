@@ -76,7 +76,7 @@ public abstract class EventSchema<T> : IEventSchema
             throw new InvalidOperationException($"{GetType().Name} doesn't name its event; call Event(\"...\") in its constructor.");
 
         return SchemaGenerator.Generate(_event, typeof(T), _fields,
-            _contexts.Select(c => new ContextDeclaration(c.Name, c.ConfiguredLabel, c.ConfiguredDescription, c.Reference)).ToList(),
+            _contexts.Select(c => new ContextDeclaration(c.Name, c.ConfiguredLabel, c.ConfiguredDescription, c.Reference, c.Provider)).ToList(),
             options);
     }
 }

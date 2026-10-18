@@ -19,6 +19,7 @@ internal static class SchemaGenerator
     public const string EventKeyword = "x-ruleloom-event";
     public const string ContextsKeyword = "x-ruleloom-contexts";
     public const string ReferencedByKeyword = "x-ruleloom-referenced-by";
+    public const string ProviderKeyword = "x-ruleloom-provider";
 
     private static readonly JsonSerializerOptions WebDefaults = Freeze(new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
@@ -84,6 +85,8 @@ internal static class SchemaGenerator
             node["title"] = label;
         if (context.Description is { } description)
             node["description"] = description;
+        if (context.Provider is { } provider)
+            node[ProviderKeyword] = provider;
 
         if (context.Reference is { } reference)
         {
@@ -314,6 +317,6 @@ internal static class SchemaGenerator
 }
 
 /// <summary>
-/// A context declared by an event schema: its name, label, description and reference expression.
+/// A context declared by an event schema: its name, label, description, reference expression and provider name.
 /// </summary>
-internal sealed record ContextDeclaration(string Name, string? Label, string? Description, LambdaExpression? Reference);
+internal sealed record ContextDeclaration(string Name, string? Label, string? Description, LambdaExpression? Reference, string? Provider);

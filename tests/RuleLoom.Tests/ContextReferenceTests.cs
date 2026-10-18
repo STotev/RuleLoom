@@ -20,7 +20,10 @@ public class ContextReferenceTests
             "fromAccount": { "x-ruleloom-referenced-by": "fromAccountId" },
             "toAccount": { "x-ruleloom-referenced-by": "toAccountId" },
             "zone": { "x-ruleloom-referenced-by": { "country": "address.country", "postcode": "address.postcode" } },
-            "calendar": {} } }
+            "calendar": {},
+            "payer": { "x-ruleloom-provider": "account", "x-ruleloom-referenced-by": "fromAccountId" },
+            "payee": { "x-ruleloom-provider": "account", "x-ruleloom-referenced-by": "toAccountId" },
+            "auditor": { "x-ruleloom-provider": "audit" } } }
         """)]);
 
     public static TheoryData<string> StateKinds() => ["object", "json"];
@@ -54,6 +57,36 @@ public class ContextReferenceTests
         Assert.Equal(RuleExecutionStatus.Matched, result.Rules[0].Status);
         var parts = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(zones.Requests.Single().Reference);
         Assert.Equal(("GB", "EH1 1AA"), ((string?)parts["COUNTRY"], (string?)parts["postcode"]));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ContextsLoadedByOneProvider_UseItWithEachReference()
+    {
+        var accounts = new FakeContextProvider(request => new { Id = request.GetReference<string>() });
+        var engine = Engine(Schemas, ("account", accounts));
+
+        var result = await engine.ExecuteAsync("TransferMade", Transfer("object"),
+            [Rule("TransferMade", Op("and", Op("eq", Path("@payer.Id"), Value("A-1")), Op("eq", Path("@payee.Id"), Value("A-2"))))],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(RuleExecutionStatus.Matched, result.Rules[0].Status);
+        Assert.Equal(new Dictionary<string, object?> { ["payer"] = "A-1", ["payee"] = "A-2" },
+            accounts.Requests.ToDictionary(r => r.Name, r => r.Reference));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ContextWhoseProviderIsNotRegistered_FailsOnlyItsRules()
+    {
+        var engine = Engine(Schemas, ("account", new FakeContextProvider(new { Id = "A-1" })));
+
+        var result = await engine.ExecuteAsync("TransferMade", Transfer("object"),
+            [Rule("TransferMade", Op("eq", Path("@auditor.Name"), Value("x")), "audited"), Rule("TransferMade", Op("eq", Path("@payer.Id"), Value("A-1")), "paid")],
+            TestContext.Current.CancellationToken);
+
+        var audited = result.Rules.Single(r => r.RuleId == "audited");
+        Assert.Equal(RuleExecutionStatus.Failed, audited.Status);
+        Assert.Contains("'audit' for '@auditor'", audited.Error!.Message);
+        Assert.Equal(RuleExecutionStatus.Matched, result.Rules.Single(r => r.RuleId == "paid").Status);
     }
 
     [Fact]
@@ -128,8 +161,8 @@ public class ContextReferenceTests
         return new RuleEngine(Evaluator(), new DirectActionFactory().Add(new NoOpAction(), "record"), null, factory, schemas);
     }
 
-    private static RuleDefinition Rule(string eventType, Abstractions.Condition.ConditionNode condition) =>
-        new() { Id = "r", Name = "r", EventType = eventType, Condition = condition, Actions = [new ActionDefinition { Action = "record" }] };
+    private static RuleDefinition Rule(string eventType, Abstractions.Condition.ConditionNode condition, string id = "r") =>
+        new() { Id = id, Name = id, EventType = eventType, Condition = condition, Actions = [new ActionDefinition { Action = "record" }] };
 
     private sealed record ZoneKey(string Country, string Postcode);
 

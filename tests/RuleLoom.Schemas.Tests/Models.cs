@@ -65,6 +65,7 @@ public sealed class OrderPlacedSchema : EventSchema<OrderDto>
         Context("customer").ReferencedBy(o => o.CustomerId).Label("Customer").Description("The customer who placed the order.");
         Context("shipping-zone").ReferencedBy(o => new { o.Address.Country, o.Address.Postcode });
         Context("calendar");
+        Context("billingAccount").LoadedBy("account").ReferencedBy(o => o.CustomerId);
     }
 }
 

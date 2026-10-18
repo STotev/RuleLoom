@@ -127,6 +127,15 @@ public class EventSchemaTests
     }
 
     [Fact]
+    public void Build_ContextProvider_IsTheConfiguredOneOrTheContextName()
+    {
+        Assert.Equal("account", Order.Contexts.Single(c => c.Name == "billingAccount").Provider);
+        Assert.Equal("customer", Order.Contexts.Single(c => c.Name == "customer").Provider);
+        Assert.Contains("\"x-ruleloom-provider\": \"account\"", Order.ToJson());
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(Order.ToJson(), "x-ruleloom-provider"));
+    }
+
+    [Fact]
     public void Build_ReferenceToAnIgnoredField_IsAllowed()
     {
         Assert.DoesNotContain(Order.Fields, f => f.Name == "customerId");
