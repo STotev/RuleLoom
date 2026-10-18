@@ -3,7 +3,7 @@
 **Issue:** [#92 Schema builder and JSON Schema export (RuleLoom.Schemas)](https://github.com/STotev/RuleLoom/issues/92)
 **Parent PRD:** [#87 Schemas and contexts (0.6)](https://github.com/STotev/RuleLoom/issues/87) (user stories 1–17, 22)
 **Date:** 2026-10-18
-**Status:** Draft (HITL: open questions below)
+**Status:** Approved (HITL, decisions below)
 
 ---
 
@@ -32,24 +32,38 @@ public sealed class OrderPlacedSchema : EventSchema<OrderDto>
         Field(o => o.Customer.Tier).Description("Loyalty tier at the time of the order.");
         Field(o => o.InternalNotes).Ignore();
 
-        Context<CustomerDto>("customer").Label("Customer");
+        Context<CustomerDto>("customer", c =>
+        {
+            c.Field(x => x.Tier).Label("Loyalty tier");
+            c.Field(x => x.InternalId).Ignore();
+        }).Label("Customer");
         Context<UserDto>("watchers").Many().Label("Watchers");
     }
 }
 
+EventSchemaDefinition schema = new OrderPlacedSchema().Build();
+
 var schemas = new EventSchemaCollection().AddFromAssemblyOf<OrderPlacedSchema>();
-string json = schemas.ToJson();
+string json = schemas.ToJson();                                        // a JSON array of event documents
+IReadOnlyList<EventSchemaDefinition> parsed = EventSchemaDefinition.ParseMany(json);
 ```
 
 - **`Event(name)`** is required; building without it throws. `Label`/`Description` describe the event.
 - **`Field(expression)`** points at a property, at any depth (`o => o.Customer.Tier`), and configures `Label`,
   `Description` or `Ignore()`. Configuring the same field twice merges (the last value wins). An expression that isn't a
   property chain throws.
-- **`Context<T>(name)`** declares a context (names ignore case; duplicates throw). Its fields are inferred from `T`;
-  `.Many()` marks a collection of `T`; `Label`/`Description` describe it. Contexts are descriptions only: the engine
+- **`Context<T>(name, configure?)`** declares a context (names ignore case; duplicates throw). Its fields are inferred
+  from `T` and can be configured with the same `Field(...)` API in `configure`; `.Many()` marks a collection of `T`;
+  `Label`/`Description` describe it. Contexts are descriptions only: the engine
   loads them through context providers (#91).
-- The configuration runs in the constructor (FluentValidation style). The class is turned into a schema by `Build()`
-  (used by the collection), which runs inference and applies the configuration.
+- The configuration runs in the constructor (FluentValidation style). `Build()` (also used by the collection) runs
+  inference, applies the configuration and returns an `EventSchemaDefinition`. Configuring a field that inference didn't
+  produce (e.g. below a cycle or inside a dictionary) throws.
+- **`EventSchemaCollection`** gathers schema classes (`Add<TSchema>()`, `Add(schema)`, `AddFromAssemblyOf<T>()` /
+  `AddFromAssembly(assembly)`: public non-abstract classes with a parameterless constructor), builds them (duplicate
+  event types throw) and writes them as JSON.
+- Default labels: the event label comes from the event type (`OrderPlaced` → "Order placed"), a context label from its
+  name (`customer` → "Customer").
 
 ## Inference
 
@@ -72,17 +86,18 @@ For the subject type and each context type, from public instance properties with
 - **Labels** from property names: `CustomerTier` → "Customer tier", `VatNumber` → "Vat number", `VATNumber` →
   "VAT number". Explicit `Label(...)` wins.
 - **Cycles** (a type that contains itself, directly or through other types): the repeated type becomes an object without
-  fields, so schemas stay finite. *(See open question 4.)*
+  fields, so schemas stay finite. Producers can `Ignore()` the property instead.
 - Property names keep their CLR spelling; rule paths match them ignoring case.
 
 ## Model
 
 Immutable records built by the builder and read back from JSON:
 
-- **`EventSchema`**: `EventType`, `Label`, `Description`, `Fields`, `Contexts`. *(Name: see open question 1.)*
-- **`FieldSchema`**: `Name`, `Type` (`FieldType`), `IsNullable`, `Label`, `Description`, `EnumValues`, `Fields` (objects),
-  `Items` (arrays).
-- **`ContextSchema`**: `Name`, `Label`, `Description`, `IsMany`, `Fields`.
+- **`EventSchemaDefinition`**: `EventType`, `Label`, `Description`, `Fields`, `Contexts`; `ToJson()`, `Parse(json)`,
+  `ParseMany(json)`.
+- **`FieldDefinition`**: `Name`, `Type` (`FieldType`), `IsNullable`, `Label`, `Description`, `EnumValues`, `Fields`
+  (objects), `Items` (arrays: the element's definition).
+- **`ContextDefinition`**: `Name`, `Label`, `Description`, `IsMany`, `Fields`.
 
 ## JSON format
 
@@ -113,9 +128,10 @@ cover. Labels use the standard `title`, descriptions `description`.
 
 - A context is itself a JSON Schema (an object, or an array of objects for `Many()`).
 - Ignored fields are left out.
-- Reading JSON back accepts what the serializer writes; other keywords are ignored, and `$ref` isn't supported. A schema
-  round-trips without loss: `Parse(ToJson(schema))` equals `schema`.
-- *(Several events in one document: see open question 2.)*
+- Reading JSON back accepts what the serializer writes; other keywords are ignored, and `$ref` isn't supported. A
+  schema round-trips without loss: `Parse(schema.ToJson()).ToJson()` equals `schema.ToJson()`. Invalid documents (no
+  `x-ruleloom-event`, unknown `type`) throw `JsonException`.
+- **One document per event.** A collection writes a JSON array of event documents; `ParseMany` reads it back.
 
 ## Test plan
 
@@ -126,10 +142,11 @@ cover. Labels use the standard `title`, descriptions `description`.
 - **JSON:** the output shape (keywords, `title`, `format`, nullable types, contexts), lossless round trip, parsing ignores
   unknown keywords.
 
-## Open questions (for review)
+## Decisions from review
 
-1. **Names of the builder base class and the model.** `EventSchema<T>` (builder) and `EventSchema` (model) differ only in
-   arity, which may confuse.
-2. **Several events in one JSON document.** One document per event, or one file with all events?
-3. **Configuring a context's fields** (labels, ignore) in 0.6, or inference only for contexts?
-4. **Cycles**: stop at the repeated type (object without fields), or fail the build so the producer decides?
+| Question | Decision |
+|---|---|
+| Names | `EventSchema<T>` is the producer's base class; the built model is `EventSchemaDefinition` (`FieldDefinition`, `ContextDefinition`) |
+| Several events | One JSON Schema document per event; a collection is a JSON array of documents |
+| Context fields | Configurable with a nested builder: `Context<T>(name, c => c.Field(...))` |
+| Cycles | Stop at the repeated type (object without fields) |
