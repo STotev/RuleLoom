@@ -95,8 +95,11 @@ policy, `[JsonIgnore]`, enum converters, nullability, formats (`date-time`, `dat
 - **Nullable string enums** are written as `"enum": [..., null]` without `type`; the `null` makes the field nullable.
 - **Numbers written as strings** (`JsonNumberHandling.WriteAsString`) are typed `["string","number"]`; they're read as
   strings, which is what is sent.
-- Serializer options are prepared once per options instance (cached), so System.Text.Json's metadata is shared by every
-  schema built with them.
+- Serializer options are prepared once per **read-only** options instance (cached), so System.Text.Json's metadata is
+  shared by every schema built with them; options that can still change are prepared on each build. A collection makes
+  one read-only copy for all its schemas.
+- **Named floating-point literals** (`AllowNamedFloatingPointLiterals`) come out as `anyOf` (number or `NaN`/`Infinity`);
+  the `anyOf` branches' types are read, so they stay numbers.
 - Field names in the model are the **JSON names**; rule paths match them ignoring case.
 
 ## Model
@@ -142,8 +145,8 @@ cover. Labels use the standard `title`, descriptions `description`.
 - Ignored fields are left out.
 - Reading JSON back accepts what the serializer writes; other keywords are ignored. A schema round-trips without loss:
   `Parse(schema.ToJson())` gives equal definitions (the records compare their lists and dictionaries by content). Every
-  malformed document (no `x-ruleloom-event`, unknown or non-string `type`, a `$ref` outside the document, duplicate keys)
-  throws `JsonException`.
+  malformed document (no or an empty `x-ruleloom-event`, unknown or non-string `type`, a `$ref` outside the document,
+  duplicate keys, context names differing only in case) throws `JsonException`.
 - **One document per event.** A collection writes a JSON array of event documents; `ParseMany` reads it back.
 
 ## Test plan
@@ -187,3 +190,13 @@ Fixes from the code review of PR #100 (before merge):
 - Assembly scans skip open generic schema classes.
 - `FieldDefinition` and `ContextReference` have structural equality.
 - Prepared serializer options are cached per options instance.
+
+Fixes from the second review:
+
+- A labelled untyped field stays nullable; named floating-point literals stay numbers.
+- Only read-only serializer options are cached (later changes to mutable options are followed).
+- Composite reference parts that collide after the naming policy throw a clear error naming the context.
+- No limit on inlined repeats (they're bounded by the type graph, since cycles aren't inlined).
+- `Parse` enforces the builder's rules: a non-empty event type, unique context names (ignoring case).
+- Cleanups: one helper formats property paths, one set of write options, collections are read and written without copying
+  each document.
