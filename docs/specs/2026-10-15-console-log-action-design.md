@@ -1,7 +1,7 @@
 # Design: Rename LogAction to ConsoleLogAction
 
 **Issue:** [#78 Rename LogAction to ConsoleLogAction (console-log)](https://github.com/STotev/RuleLoom/issues/78)
-**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (spike follow-up)
+**Parent PRD:** [#66 JSON state and ASP.NET Core spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (spike follow-up)
 **Date:** 2026-10-15
 **Status:** Approved (AFK)
 
@@ -10,7 +10,7 @@
 ## Problem
 
 The built-in `LogAction` (`log`) writes its `message` parameter to the console. It exists for development and testing,
-but its name reads like a general logging action, so in the rules-service spike (#70) it looked like something
+but its name reads like a general logging action, so in the ASP.NET Core spike (#70) it looked like something
 `AddRuleLoom` should register.
 
 ## Decisions

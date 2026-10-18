@@ -3,7 +3,7 @@ using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Rule;
 
-namespace RuleLoom.Samples.RulesService;
+namespace RuleLoom.Samples.AspNetCore;
 
 /// <summary>
 /// Runs a scheduled action when it's due, with the state of the event that scheduled it. Rule and action conditions

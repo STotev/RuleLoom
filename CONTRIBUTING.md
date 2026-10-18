@@ -80,7 +80,7 @@ tests/RuleLoom.Tests/               # Unit tests
 tests/RuleLoom.Tests.Integration/   # End-to-end tests
 tests/RuleLoom.Extensions.DependencyInjection.Tests/  # DI registration tests
 samples/RuleLoom.Samples.Console/   # Usage examples
-samples/RuleLoom.Samples.RulesService/  # Central rules service (ASP.NET Core, Quartz.NET)
+samples/RuleLoom.Samples.AspNetCore/  # ASP.NET Core host: JSON events per tenant, Quartz.NET
 docs/                               # Guides, roadmap, vision and design specs
 ```
 

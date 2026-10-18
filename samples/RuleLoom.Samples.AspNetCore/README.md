@@ -1,7 +1,7 @@
-# Rules-Service Sample
+# ASP.NET Core Sample
 
-A central rules service: other services post their events as JSON, and this service runs each tenant's rules against
-them. It shows RuleLoom used as intended in that setup:
+RuleLoom hosted in ASP.NET Core: other services post their events as JSON, and this service runs each tenant's rules
+against them. It shows:
 
 - **JSON state**: the event's `current` and `previous` stay `JsonElement`s; the service has no producer classes.
 - **Tenancy and storage are yours**: each tenant's rules are JSON files in `Rules/{tenantId}/`, read for every event, so
@@ -11,15 +11,15 @@ them. It shows RuleLoom used as intended in that setup:
 - **Scheduled actions** are handed to Quartz.NET (in-memory store) and run when due.
 
 It's also a spike: what was awkward while building it is recorded in the
-[spec's findings](../../docs/specs/2026-10-14-rules-service-sample-design.md#findings).
+[spec's findings](../../docs/specs/2026-10-14-aspnetcore-sample-design.md#findings).
 
 ## Run it
 
 ```bash
-dotnet run --project samples/RuleLoom.Samples.RulesService
+dotnet run --project samples/RuleLoom.Samples.AspNetCore
 ```
 
-The service listens on `http://localhost:5080`. Send the requests in [`RulesService.http`](RulesService.http) from
+The service listens on `http://localhost:5080`. Send the requests in [`AspNetCore.http`](AspNetCore.http) from
 Rider (its pre-request script sets a payment due time two minutes from now), and watch the console: emails are
 logged by `SendEmailAction`, and scheduled actions log a line when they run.
 

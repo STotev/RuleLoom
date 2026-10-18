@@ -9,9 +9,9 @@
 
 ## Problem
 
-A central rules service doesn't know the events it handles: their fields, types and meaning. Producers already have
+A service that runs rules on events from other services doesn't know those events: their fields, types and meaning. Producers already have
 DTOs for their events, so they should describe each event in a few lines, with everything else inferred, and ship the
-description as a standard document that the central service (and later a UI) can read.
+description as a standard document that the service running the rules (and later a UI) can read.
 
 ## Package
 

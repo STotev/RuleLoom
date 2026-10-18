@@ -1,7 +1,7 @@
 using Quartz;
 using RuleLoom.Abstractions.Rule;
 
-namespace RuleLoom.Samples.RulesService;
+namespace RuleLoom.Samples.AspNetCore;
 
 /// <summary>
 /// Hands the engine's scheduled actions to Quartz: one job per action, fired at its <c>ScheduledFor</c>.

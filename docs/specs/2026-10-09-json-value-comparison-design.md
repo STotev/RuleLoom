@@ -1,7 +1,7 @@
 # Design: Compare JSON Dates and Values by Meaning
 
 **Issue:** [#69 Compare ISO date strings as instants; changed via ValueComparer](https://github.com/STotev/RuleLoom/issues/69)
-**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (user stories 13–18)
+**Parent PRD:** [#66 JSON state and ASP.NET Core spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (user stories 13–18)
 **Date:** 2026-10-09
 **Status:** Approved (AFK)
 

@@ -1,7 +1,7 @@
 # Design: Resolve Paths on JSON State
 
 **Issue:** [#68 Resolve paths on JSON state (JsonElement, JsonNode)](https://github.com/STotev/RuleLoom/issues/68)
-**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (user stories 1–12, 16, 19–24)
+**Parent PRD:** [#66 JSON state and ASP.NET Core spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (user stories 1–12, 16, 19–24)
 **Date:** 2026-10-09
 **Status:** Approved (AFK)
 
@@ -12,7 +12,7 @@
 Paths resolve only through CLR properties, using one compiled accessor per (root type, path) built from **declared**
 property types. Without a class, System.Text.Json produces a `JsonElement` (`JsonSerializer.Deserialize<object>`,
 ASP.NET Core model binding) or a `JsonNode`. Both hold fields as data, not as C# properties, so every path silently
-resolves to `null`. A central rules service can't evaluate rules on the events it receives.
+resolves to `null`. A service can't evaluate rules on JSON events it receives from other services.
 
 The same declared-type limit affects CLR objects: a property declared as `object` or an interface (e.g. an envelope's
 `object Payload`) can't be traversed, even when the runtime value has the property.
