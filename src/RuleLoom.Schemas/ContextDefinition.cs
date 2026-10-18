@@ -1,3 +1,5 @@
+using RuleLoom.Abstractions.Context;
+
 namespace RuleLoom.Schemas;
 
 /// <summary>
