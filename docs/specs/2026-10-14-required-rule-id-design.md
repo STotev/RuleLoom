@@ -1,7 +1,7 @@
 # Design: Require a Rule ID
 
 **Issue:** [#77 Require a rule id](https://github.com/STotev/RuleLoom/issues/77)
-**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (spike follow-up)
+**Parent PRD:** [#66 JSON state and ASP.NET Core spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (spike follow-up)
 **Date:** 2026-10-14
 **Status:** Approved (AFK)
 
@@ -10,7 +10,7 @@
 ## Problem
 
 `RuleDefinition.Id` defaults to a new GUID, so a rule without an `id` gets a different identity every time it's parsed
-or constructed. The rules-service spike (#70) re-reads rules for every event, so such a rule can't be used to key
+or constructed. The ASP.NET Core spike (#70) re-reads rules for every event, so such a rule can't be used to key
 scheduled jobs, and results can't be traced back to the stored rule. A rule's identity belongs to where it's stored (a
 file, a database key), so the author or the store must supply it.
 

@@ -1,7 +1,7 @@
-# Design: Central Rules-Service Sample (Spike)
+# Design: ASP.NET Core Sample (Spike)
 
-**Issue:** [#70 Central rules-service sample (spike)](https://github.com/STotev/RuleLoom/issues/70)
-**Parent PRD:** [#66 JSON state and central-service spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (user stories 25–31)
+**Issue:** [#70 ASP.NET Core sample (spike)](https://github.com/STotev/RuleLoom/issues/70)
+**Parent PRD:** [#66 JSON state and ASP.NET Core spike (0.5)](https://github.com/STotev/RuleLoom/issues/66) (user stories 25–31)
 **Date:** 2026-10-14
 **Status:** Approved (HITL)
 
@@ -9,7 +9,7 @@
 
 ## Problem
 
-RuleLoom is meant to run inside a central rules service that receives events from other services as JSON
+One way to use RuleLoom is a service that receives events from other services as JSON and runs rules on them
 (`docs/vision.md`). Since #68 and #69 rules run on JSON state, but nobody has built such a service with the library
 yet. The open questions (the event envelope, how a consumer runs scheduled actions later, keys and cancellation) can't
 be settled on paper. This sample uses the library *as intended* and records what hurts; the findings go to #71.
@@ -18,7 +18,7 @@ be settled on paper. This sample uses the library *as intended* and records what
 
 | Question | Decision | Rationale |
 |---|---|---|
-| Project | `samples/RuleLoom.Samples.RulesService`: an ASP.NET Core minimal API in the solution, referencing `RuleLoom` and `RuleLoom.Extensions.DependencyInjection` | Mirrors a real central service; packages it needs (Quartz) stay out of the libraries |
+| Project | `samples/RuleLoom.Samples.AspNetCore`: an ASP.NET Core minimal API in the solution, referencing `RuleLoom` and `RuleLoom.Extensions.DependencyInjection` | Mirrors a real service that receives events from others; packages it needs (Quartz) stay out of the libraries |
 | Wire format | `POST /events` with `{ eventType, tenantId, entityId, current, previous? }`; `current`/`previous` bind as `JsonElement` | Minimal; `entityId` is needed for job keys. It's the sample's own format, not a library contract: what's missing becomes a finding |
 | Tenants | `acme-shop` (orders) and `wheels-market` (car ads), one folder of rule files each | Two tenants with different rules and event types; reuses the console sample's domains |
 | Rule loading | Every request reads `Rules/{tenantId}/*.json`, parses with `RuleJsonParser.ParseMany`, validates with `RuleValidator`; invalid files and rules are reported in the response and skipped. Unknown tenant → 404 | Storage and tenancy stay with the consumer; shows the recommended validate-then-run flow |

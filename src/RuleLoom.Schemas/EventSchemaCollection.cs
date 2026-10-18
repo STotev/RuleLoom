@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace RuleLoom.Schemas;
 
 /// <summary>
-/// Gathers a producer's event schemas, builds them and writes them as JSON for a central rules service.
+/// Gathers a producer's event schemas, builds them and writes them as JSON for the service that runs the rules.
 /// </summary>
 /// <param name="options">The serializer options the producer sends events with; <see cref="JsonSerializerDefaults.Web"/>
 /// when omitted.</param>

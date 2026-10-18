@@ -21,8 +21,8 @@ placed, a price changes), RuleLoom runs that event's rules against the current a
 schedules their actions.
 
 - **Rules as data**: JSON rules you can store per customer, edit in a UI and validate before saving, or rules built in code.
-- **Any state**: paths resolve on .NET objects and on JSON (`JsonElement`, `JsonNode`), so a central service can run
-  rules on events from other services without their classes.
+- **Any state**: paths resolve on .NET objects and on JSON (`JsonElement`, `JsonNode`), so a service can run rules on
+  events it receives from other services without their classes.
 - **Change-aware**: compare with the previous state (`changed`, `$previous.Price`), sent in full or as just the
   changed fields.
 - **Related data on demand**: `@customer.Tier` is loaded by a provider you register, only when a rule uses it.
@@ -45,7 +45,7 @@ dotnet add package RuleLoom.Extensions.DependencyInjection   # optional: service
 | `RuleLoom` | The engine, built-in operators, validation |
 | `RuleLoom.Abstractions` | Contracts and models only, e.g. for projects that write actions or operators |
 | `RuleLoom.Extensions.DependencyInjection` | Registration with `Microsoft.Extensions.DependencyInjection` |
-| `RuleLoom.Schemas` | Describing events (fields, labels, contexts) as JSON Schema, for producers and central rules services |
+| `RuleLoom.Schemas` | Describing events (fields, labels, contexts) as JSON Schema, for the services that raise events and those that run rules |
 
 Requires .NET 10.
 
@@ -119,7 +119,7 @@ Add your own by implementing `IConditionOperator`; see the [quick start](docs/gu
 - [JSON rule format](docs/guides/json-rules.md): the format, paths, rules on JSON state, comparison rules, scheduling
 - [Upgrading](docs/guides/upgrading.md): breaking changes by version, with before/after examples
 - Samples: a [console sample](samples/RuleLoom.Samples.Console/) and a
-  [central rules service](samples/RuleLoom.Samples.RulesService/) (ASP.NET Core, rules per tenant, Quartz.NET)
+  [ASP.NET Core sample](samples/RuleLoom.Samples.AspNetCore/) (JSON events over HTTP, rules per tenant, Quartz.NET)
 - [Vision](docs/vision.md) and [roadmap](docs/roadmap.md): where RuleLoom is going and why
 - [Changelog](CHANGELOG.md)
 

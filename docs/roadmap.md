@@ -24,7 +24,7 @@ connect to historical docs — they were reused inconsistently between documents
 | 0.2.1 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.2.1) 2026-10-03 | Nested path fix (#14), shared path cache (#15) |
 | 0.3.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.3.0) 2026-10-06 | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
 | 0.4.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.4.0) 2026-10-06 | Action names by registration, `IAction`, dependency injection, upgrading guide |
-| 0.5.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.5.0) 2026-10-15; the first release on [NuGet](https://www.nuget.org/packages/RuleLoom) | JSON state, ISO date comparison, required rule ids, `ConsoleLogAction`, central rules-service sample |
+| 0.5.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.5.0) 2026-10-15; the first release on [NuGet](https://www.nuget.org/packages/RuleLoom) | JSON state, ISO date comparison, required rule ids, `ConsoleLogAction`, ASP.NET Core sample |
 
 ---
 
@@ -81,18 +81,18 @@ parameters, `$current`/`$previous`, parse-time and registry-based validation. Ev
 | [#38](https://github.com/STotev/RuleLoom/issues/38) | `$current` / `$previous` scope prefixes (no migration guard: package unpublished) | [#50](https://github.com/STotev/RuleLoom/pull/50) |
 | [#39](https://github.com/STotev/RuleLoom/issues/39) | `RuleValidator` against registered operators and actions | [#51](https://github.com/STotev/RuleLoom/pull/51) |
 
-### JSON state & central-service spike — PRD [#66](https://github.com/STotev/RuleLoom/issues/66) ✅ (ships in 0.5.0)
+### JSON state & ASP.NET Core spike — PRD [#66](https://github.com/STotev/RuleLoom/issues/66) ✅ (ships in 0.5.0)
 Rules run on JSON state (`JsonElement`, `JsonNode`), ISO 8601 strings compare as dates, `changed` uses the shared
-comparer, rule ids are required, and the console action is `ConsoleLogAction`. A central rules-service sample tried
-the library as intended; its [findings](specs/2026-10-14-rules-service-sample-design.md#findings) decided the event
+comparer, rule ids are required, and the console action is `ConsoleLogAction`. An ASP.NET Core sample receiving JSON events
+from other services tried the library as intended; its [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings) decided the event
 envelope and shaped 0.6–0.8.
 
 | Issue | Slice | Type | PR | Spec |
 |---|---|---|---|---|
 | [#68](https://github.com/STotev/RuleLoom/issues/68) | Resolve paths on JSON state (`JsonElement`, `JsonNode`) | AFK | [#72](https://github.com/STotev/RuleLoom/pull/72) | [json-state-paths](specs/2026-10-09-json-state-paths-design.md) |
 | [#69](https://github.com/STotev/RuleLoom/issues/69) | ISO date strings compared as instants; `changed` via `ValueComparer` | AFK | [#75](https://github.com/STotev/RuleLoom/pull/75) | [json-value-comparison](specs/2026-10-09-json-value-comparison-design.md) |
-| [#70](https://github.com/STotev/RuleLoom/issues/70) | Central rules-service sample (spike) | HITL | [#76](https://github.com/STotev/RuleLoom/pull/76) | [rules-service-sample](specs/2026-10-14-rules-service-sample-design.md) |
-| [#71](https://github.com/STotev/RuleLoom/issues/71) | Spike findings and event envelope decision | HITL | [#82](https://github.com/STotev/RuleLoom/pull/82) | [rules-service-sample § Findings](specs/2026-10-14-rules-service-sample-design.md#findings) |
+| [#70](https://github.com/STotev/RuleLoom/issues/70) | ASP.NET Core sample (spike) | HITL | [#76](https://github.com/STotev/RuleLoom/pull/76) | [aspnetcore-sample](specs/2026-10-14-aspnetcore-sample-design.md) |
+| [#71](https://github.com/STotev/RuleLoom/issues/71) | Spike findings and event envelope decision | HITL | [#82](https://github.com/STotev/RuleLoom/pull/82) | [aspnetcore-sample § Findings](specs/2026-10-14-aspnetcore-sample-design.md#findings) |
 | [#77](https://github.com/STotev/RuleLoom/issues/77) | Require a rule id (spike follow-up) | AFK | [#79](https://github.com/STotev/RuleLoom/pull/79) | [required-rule-id](specs/2026-10-14-required-rule-id-design.md) |
 | [#78](https://github.com/STotev/RuleLoom/issues/78) | Rename `LogAction` to `ConsoleLogAction` (spike follow-up) | AFK | [#80](https://github.com/STotev/RuleLoom/pull/80) | [console-log-action](specs/2026-10-15-console-log-action-design.md) |
 
@@ -108,7 +108,7 @@ From 0.5.0: NuGet packages published by the release workflow with trusted publis
 
 Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
 becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *Done*); its spike's
-[findings](specs/2026-10-14-rules-service-sample-design.md#findings) shaped 0.6–0.8 below.
+[findings](specs/2026-10-14-aspnetcore-sample-design.md#findings) shaped 0.6–0.8 below.
 
 | Milestone | Contents | Notes |
 |---|---|---|
@@ -129,7 +129,7 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 | [#93](https://github.com/STotev/RuleLoom/issues/93) | Schema store and registration in `AddRuleLoom`; context references passed to providers | AFK | #92 | — | — |
 | [#101](https://github.com/STotev/RuleLoom/issues/101) | Context schemas described with their providers | AFK | #93 | — | — |
 | [#94](https://github.com/STotev/RuleLoom/issues/94) | Schema-aware rule validation with severities | AFK | #91, #92, #101 | — | — |
-| [#95](https://github.com/STotev/RuleLoom/issues/95) | Rules-service sample and guide for schemas and contexts | HITL | #91, #93, #94, #101 | — | — |
+| [#95](https://github.com/STotev/RuleLoom/issues/95) | Sample and guide for schemas and contexts | HITL | #91, #93, #94, #101 | — | — |
 
 ---
 
