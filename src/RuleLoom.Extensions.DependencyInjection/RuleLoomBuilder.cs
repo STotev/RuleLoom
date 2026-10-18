@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
+using RuleLoom.Schemas;
 
 namespace RuleLoom.Extensions.DependencyInjection;
 
@@ -48,6 +49,35 @@ public sealed class RuleLoomBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         _registry.AddContextProvider(name, typeof(TProvider));
         Services.TryAddScoped<TProvider>();
+        return this;
+    }
+
+    /// <summary>
+    /// Registers event schemas: an <see cref="ISchemaStore"/> (the in-memory store seeded with the schemas configured here,
+    /// Singleton, or your own with <see cref="SchemaRegistration.UseStore{TStore}"/>, Scoped) and the engine's source of
+    /// context references, so providers receive each event's resolved reference. Call it once; a later call replaces the
+    /// store.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Schemas were added together with your own store.</exception>
+    public RuleLoomBuilder AddSchemas(Action<SchemaRegistration>? configure = null)
+    {
+        var registration = new SchemaRegistration();
+        configure?.Invoke(registration);
+
+        if (registration.StoreType is { } storeType)
+        {
+            if (registration.HasSeeds)
+                throw new InvalidOperationException($"Schemas can't be added together with {storeType.Name}; save them to your store instead.");
+
+            Services.Replace(ServiceDescriptor.Scoped(typeof(ISchemaStore), storeType));
+        }
+        else
+        {
+            var seeds = registration.BuildSeeds();
+            Services.Replace(ServiceDescriptor.Singleton<ISchemaStore>(new InMemorySchemaStore(seeds)));
+        }
+
+        Services.TryAddScoped<IContextReferenceSource>(sp => new SchemaStoreContextReferences(sp.GetRequiredService<ISchemaStore>()));
         return this;
     }
 
