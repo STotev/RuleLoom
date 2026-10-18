@@ -77,9 +77,11 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 |---|---|---|
 | `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models. **Must have no external package dependencies.** |
 | `RuleLoom` | `src/RuleLoom` | Default implementation: engine, evaluator, operators, actions, scheduling |
+| `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Event schemas: `EventSchema<T>` classes, generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`). **No external dependencies**; producers use it without the engine |
 | `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(...)`: DI registration of engine, evaluator, actions, operators, validator |
 | `RuleLoom.Tests` | `tests/RuleLoom.Tests` | xUnit unit tests |
 | `RuleLoom.Tests.Integration` | `tests/RuleLoom.Tests.Integration` | xUnit end-to-end tests |
+| `RuleLoom.Schemas.Tests` | `tests/RuleLoom.Schemas.Tests` | xUnit tests of schema building and JSON |
 | `RuleLoom.Extensions.DependencyInjection.Tests` | `tests/RuleLoom.Extensions.DependencyInjection.Tests` | xUnit tests of DI registration (uses the real container) |
 | `RuleLoom.Samples.Console` | `samples/RuleLoom.Samples.Console` | Usage sample |
 
@@ -153,6 +155,13 @@ environment `nuget`) and attaches the packages to the GitHub release.
   types, enums by name or number, dates as UTC instants incl. strict ISO 8601 strings (two ISO strings compare as instants; ISO vs other text is
   incomparable), other strings ordinal, JSON objects/arrays by content via `DeepEquals`; `changed` uses `AreEqual` too). Operators
   and other features must use them rather than `object.Equals` or ad-hoc parsing.
+- **Schemas** (`RuleLoom.Schemas`): `class XSchema : EventSchema<TDto>` configures `Event(name)` (required),
+  `Field(o => o.A.B)` (`Label`/`Description`/`Ignore`) and `Context(name)` (a relation: `ReferencedBy(o => o.Id)` or
+  `o => new { o.A, o.B }`; context fields are described with their provider); `Build(options)`
+  generates an `EventSchemaDefinition` from how `TDto` is serialized (Web defaults unless options are given; numbers
+  not typed as strings; null-oblivious types non-nullable), adds configured titles and descriptions (no automatic labels) and
+  `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`). `ToJson()`/`Parse`/`ParseMany` round-trip;
+  field names are JSON names. `EventSchemaCollection` gathers schemas (assembly scan) and writes a JSON array.
 - **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is
   validated before deserialization (`RuleJsonValidator`); invalid rules throw `RuleParseException` (a `JsonException`)
   whose `Path` is the JSONPath of the problem. `Id`, `Name`, `EventType` and `Condition` are required, and every condition
