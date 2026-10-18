@@ -275,8 +275,13 @@ services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("custom
   (`Context("toAccount").ReferencedBy(t => t.ToAccountId)`, see `RuleLoom.Schemas`) and schemas are registered with
   `AddSchemas`, the engine resolves the reference from the event and passes it as `request.Reference`; read it with
   `request.GetReference<string>()` (a single value) or `GetReference<ZoneKey>()` (a composite reference mapped onto a
-  record by part name). One provider can then serve several contexts and events, e.g. `fromAccount` and `toAccount`.
-  Without a declared reference, `Reference` is `null` and the provider reads the subject itself.
+  record by part name). Without a declared reference, `Reference` is `null` and the provider reads the subject itself.
+- **One provider, several contexts.** A schema can say which provider loads a context:
+  `Context("fromAccount").LoadedBy("account").ReferencedBy(t => t.FromAccountId)` and
+  `Context("toAccount").LoadedBy("account").ReferencedBy(t => t.ToAccountId)`, with one
+  `AddContextProvider<AccountProvider>("account")`. Rules still use the context names (`@fromAccount.balance`); the
+  provider gets the context name in `request.Name`. Without `LoadedBy`, the provider registered under the context's name
+  loads it.
 - **Loaded only when used, once per event.** Before evaluating, the engine loads the contexts that the event's rules
   use (in conditions, action conditions and schedule `referencePath`s), in parallel. Contexts no rule uses aren't loaded.
 - **Actions** can load any registered context on demand, e.g. a collection to email:

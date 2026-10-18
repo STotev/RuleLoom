@@ -24,6 +24,7 @@ events (e.g. `fromAccount` and `toAccount`) without knowing each event's shape.
 | Registration | `AddRuleLoom(r => r.AddSchemas(s => s.Add<OrderPlacedSchema>().AddFromAssemblyOf<T>().AddJson(json)))` registers an `InMemorySchemaStore` (Singleton) seeded with the built and imported schemas; they're built when `AddSchemas` runs, so mistakes surface at startup. Your own store is chosen explicitly with `s.UseStore<MyStore>()` (Scoped); combining it with schemas added in `AddSchemas` throws (save them to your store instead). `SerializerOptions` sets the options for building classes. A later `AddSchemas` call replaces the store | One place to configure RuleLoom, with no dependence on registration order; the DI package references `RuleLoom.Schemas` |
 | How the engine gets references | **The engine (`RuleLoom`) references `RuleLoom.Schemas`** and takes an optional `ISchemaStore`. It wraps the context providers it hands to `EvaluationContext`; before calling a provider, the wrapper reads the event's schema, resolves the context's `ReferencedBy` and passes the request on with `Reference` set. Abstractions only gains `ContextRequest.Reference` and `GetReference<T>()`; `ContextReference` stays in Schemas, which stays dependency-free | Decided in review: a seam interface in Abstractions (tried first) existed only to avoid a dependency that should exist. `RuleLoom.Schemas` still ships separately and comes with `RuleLoom` transitively |
 | Passing the reference | When a context is loaded (prefetch or `GetContextAsync`), the engine asks the source for the context's reference and resolves its paths from the event's current state: a single path gives its value, a composite reference gives an `IReadOnlyDictionary<string, object?>` (part name → value). It's set on `ContextRequest.Reference`. Without a source, a schema or a reference, `Reference` is `null` and the provider reads the subject as before | |
+| Provider names | A schema context can name the provider that loads it: `Context("fromAccount").LoadedBy("account")` (`x-ruleloom-provider`, `ContextDefinition.Provider`, defaulting to the context's name). With schemas, the engine finds the provider through the event's schema when the context loads; a context whose provider isn't registered fails its rules with a clear error. Without schemas, the context name is the provider name | Added in review: register a provider once per kind of entity (`account`) instead of once per usage; rules keep distinct context names (`@fromAccount`, `@toAccount`); #101 describes shapes per provider, so both share `account`'s fields |
 | Typed access | `ContextRequest.GetReference<T>()`: the value converted with `ValueConverter` (single), or the parts mapped onto `T`'s properties by name, ignoring case (composite, e.g. `record ZoneKey(string Country, string Postcode)`) | Providers work with typed keys |
 | Wiring | `RuleEngine` takes an optional `ISchemaStore`; `AddRuleLoom`'s engine factory resolves it if registered (`AddSchemas`). Manual use: `new RuleEngine(evaluator, actions, contextProviders: providers, schemas: store)` | Existing constructions keep working; no DI or ASP.NET Core needed |
 
@@ -35,8 +36,8 @@ public sealed class TransferSchema : EventSchema<TransferDto>
     public TransferSchema()
     {
         Event("TransferMade");
-        Context("fromAccount").ReferencedBy(t => t.FromAccountId);
-        Context("toAccount").ReferencedBy(t => t.ToAccountId);
+        Context("fromAccount").LoadedBy("account").ReferencedBy(t => t.FromAccountId);
+        Context("toAccount").LoadedBy("account").ReferencedBy(t => t.ToAccountId);
     }
 }
 
@@ -48,8 +49,7 @@ public sealed class AccountProvider(IAccounts accounts) : ContextProvider<Accoun
 
 services.AddRuleLoom(r => r
     .AddSchemas(s => s.Add<TransferSchema>())
-    .AddContextProvider<AccountProvider>("fromAccount")
-    .AddContextProvider<AccountProvider>("toAccount"));
+    .AddContextProvider<AccountProvider>("account"));
 ```
 
 ## Test plan
@@ -76,5 +76,6 @@ services.AddRuleLoom(r => r
   providers), and `ContextReference` stays in Schemas.
 - The wider storage model (sources / storage / publishing; RuleLoom-provided storage) was decided in review and recorded in
   the vision; publishing, registration endpoints, startup saving into persistent stores and storage packages are 0.7.
+- Context names and provider names were separated (`LoadedBy`), so one provider serves several contexts.
 - `GetReference<string>()` converts any value to its invariant text and `GetReference<Guid>()` parses GUID text, beyond
   the shared value converter (common for IDs).

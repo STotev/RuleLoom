@@ -58,7 +58,8 @@ IReadOnlyList<EventSchemaDefinition> parsed = EventSchemaDefinition.ParseMany(js
   for a composite reference, an anonymous object of properties (`o => new { o.Address.Country, o.Address.Postcode }`,
   EF Core style). Paths are mapped to JSON names; part names follow the naming policy. The engine resolves the
   reference from the event and passes it to the provider (#93), so one provider can serve several contexts and events
-  (e.g. `fromAccount`/`toAccount`). It's optional: contexts like a business calendar need none. A reference may point at
+  (e.g. `fromAccount`/`toAccount`, both `LoadedBy("account")`, added in #93). It's optional: contexts like a business
+  calendar need none. A reference may point at
   an ignored field (keys are often technical); a property that isn't serialized throws.
 - The configuration runs in the constructor (FluentValidation style). `Build()` (also used by the collection) runs
   inference, applies the configuration and returns an `EventSchemaDefinition`. Configuring a field that inference didn't

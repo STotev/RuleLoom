@@ -164,8 +164,9 @@ environment `nuget`) and attaches the packages to the GitHub release.
   field names are JSON names. `EventSchemaCollection` gathers schemas (assembly scan) and writes a JSON array.
   `ISchemaStore` (+ `InMemorySchemaStore`) keeps schemas where the engine runs; DI's `AddSchemas(s => s.Add<T>() /
   AddFromAssemblyOf<T>() / AddJson(json) / UseStore<T>())` registers the store. `RuleLoom` references `RuleLoom.Schemas`:
-  `RuleEngine` takes an optional `ISchemaStore` and wraps the context providers (`SchemaReferencingProviders`) so each
-  receives the event's declared reference, resolved on the current state, as `ContextRequest.Reference`
+  `RuleEngine` takes an optional `ISchemaStore` and wraps the context providers (`SchemaReferencingProviders`): the
+  event's schema picks the provider (`Context("toAccount").LoadedBy("account")`, else the context name) and its declared
+  reference is resolved on the current state and passed as `ContextRequest.Reference`
   (`GetReference<T>()`); null without one. Storage is RuleLoom-provided (in-memory now; publishing and storage packages
   in 0.7).
 - **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is

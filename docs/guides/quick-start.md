@@ -189,15 +189,14 @@ public sealed class TransferMadeSchema : EventSchema<TransferDto>
     {
         Event("TransferMade");
         Field(t => t.Amount).Label("Amount");
-        Context("fromAccount").ReferencedBy(t => t.FromAccountId);
-        Context("toAccount").ReferencedBy(t => t.ToAccountId);
+        Context("fromAccount").LoadedBy("account").ReferencedBy(t => t.FromAccountId).Label("From account");
+        Context("toAccount").LoadedBy("account").ReferencedBy(t => t.ToAccountId).Label("To account");
     }
 }
 
 services.AddRuleLoom(rules => rules
     .AddSchemas(s => s.AddFromAssemblyOf<TransferMadeSchema>())     // or .AddJson(exportedJson), or .UseStore<MyStore>()
-    .AddContextProvider<AccountProvider>("fromAccount")
-    .AddContextProvider<AccountProvider>("toAccount"));
+    .AddContextProvider<AccountProvider>("account"));                // loads both accounts, each with its own reference
 ```
 
 `new EventSchemaCollection().AddFromAssemblyOf<TransferMadeSchema>().ToJson()` exports the schemas as JSON Schema, for
