@@ -62,9 +62,9 @@ IReadOnlyList<EventSchemaDefinition> parsed = EventSchemaDefinition.ParseMany(js
   an ignored field (keys are often technical); a property that isn't serialized throws.
 - The configuration runs in the constructor (FluentValidation style). `Build()` (also used by the collection) runs
   inference, applies the configuration and returns an `EventSchemaDefinition`. Configuring a field that inference didn't
-  produce throws (see Generation).
+  produce throws (see Generation), and so does configuring a field inside an ignored one, whatever the call order.
 - **`EventSchemaCollection`** gathers schema classes (`Add<TSchema>()`, `Add(schema)`, `AddFromAssemblyOf<T>()` /
-  `AddFromAssembly(assembly)`: public non-abstract classes with a parameterless constructor), builds them (duplicate
+  `AddFromAssembly(assembly)`: public, non-abstract, non-generic classes with a parameterless constructor), builds them (duplicate
   event types throw) and writes them as JSON.
 - **Labels are only what the developer configures** (no labels derived from names): a `title` is written only where
   `Label(...)` is set, and the model's `Label` is `null` otherwise. UIs fall back to the JSON name.
@@ -86,7 +86,17 @@ policy, `[JsonIgnore]`, enum converters, nullability, formats (`date-time`, `dat
 - **`Field(o => o.Customer.Tier)`** is mapped to the JSON path through the serializer's type info (so it follows the
   naming policy). Configuring a property the serializer doesn't write (`[JsonIgnore]`) or that has no place in the
   schema (inside a dictionary, below a cycle) throws when building.
-- **Cycles** come out as `$ref` pointers (standard JSON Schema). When reading, a `$ref` becomes an object without fields.
+- **Repeated types**: the exporter writes a `$ref` for every repeat of a type, also to a *sibling* property. Sibling
+  references are copied in place after generation, so the only `$ref`s left point at an ancestor (a real cycle).
+  Removing an ignored field therefore can't leave a dangling reference. When reading, a cycle `$ref` takes its type from
+  its target, without fields.
+- **Untyped values** (`object`, `JsonElement`, `JsonNode`) are the schema `true` (or `{}` once labelled) and read as
+  `FieldType.Any`; an array without `items` (`List<object>`) has items of any value.
+- **Nullable string enums** are written as `"enum": [..., null]` without `type`; the `null` makes the field nullable.
+- **Numbers written as strings** (`JsonNumberHandling.WriteAsString`) are typed `["string","number"]`; they're read as
+  strings, which is what is sent.
+- Serializer options are prepared once per options instance (cached), so System.Text.Json's metadata is shared by every
+  schema built with them.
 - Field names in the model are the **JSON names**; rule paths match them ignoring case.
 
 ## Model
@@ -130,9 +140,10 @@ cover. Labels use the standard `title`, descriptions `description`.
 
 - A context entry describes the relation only (title, description, reference); context fields aren't in event schemas.
 - Ignored fields are left out.
-- Reading JSON back accepts what the serializer writes; other keywords are ignored, and `$ref` isn't supported. A
-  schema round-trips without loss: `Parse(schema.ToJson()).ToJson()` equals `schema.ToJson()`. Invalid documents (no
-  `x-ruleloom-event`, unknown `type`) throw `JsonException`.
+- Reading JSON back accepts what the serializer writes; other keywords are ignored. A schema round-trips without loss:
+  `Parse(schema.ToJson())` gives equal definitions (the records compare their lists and dictionaries by content). Every
+  malformed document (no `x-ruleloom-event`, unknown or non-string `type`, a `$ref` outside the document, duplicate keys)
+  throws `JsonException`.
 - **One document per event.** A collection writes a JSON array of event documents; `ParseMany` reads it back.
 
 ## Test plan
@@ -161,3 +172,18 @@ cover. Labels use the standard `title`, descriptions `description`.
 | json-everything (JsonSchema.Net) | Evaluated and not used: its NuGet binaries come with an "Open Source Maintenance Fee" agreement (a monthly fee for revenue-generating organisations above US$10,000), which RuleLoom's users would inherit; its generator doesn't follow System.Text.Json's contract; and the part it would replace (reading JSON back) is about 80 lines. Worth revisiting (or Corvus.JsonSchema, Apache-2.0) when incoming events are validated against schemas |
 | Labels | Only configured labels; no automatic labels from names (and no Humanizer): a guessed label rarely matches the business term, and it was code to maintain |
 | Typed model vs document lookup | Keep the typed field tree (`FieldDefinition` with nested `Fields`/`Items`), which C# consumers can iterate. A document-only design with a path lookup was tried: it didn't reduce code and dropped the tree |
+
+## Deviations
+
+Fixes from the code review of PR #100 (before merge):
+
+- Sibling `$ref`s from the exporter are inlined (only cycle references remain), fixing list fields reached through a
+  second property being read as objects and ignored fields leaving dangling references.
+- Untyped properties (`object`, `JsonElement`, `JsonNode`) no longer make `Build()` throw: new `FieldType.Any`; arrays
+  without `items` have items of any value.
+- Nullable string enums are nullable; numbers written as strings are strings.
+- Every malformed document throws `JsonException`.
+- Configuring a field inside an ignored one throws a clear error regardless of order.
+- Assembly scans skip open generic schema classes.
+- `FieldDefinition` and `ContextReference` have structural equality.
+- Prepared serializer options are cached per options instance.
