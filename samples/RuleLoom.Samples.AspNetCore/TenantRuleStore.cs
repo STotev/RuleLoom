@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Validation;
 
-namespace RuleLoom.Samples.RulesService;
+namespace RuleLoom.Samples.AspNetCore;
 
 public sealed record TenantRules(IReadOnlyList<RuleDefinition> Valid, IReadOnlyList<InvalidRule> Invalid);
 

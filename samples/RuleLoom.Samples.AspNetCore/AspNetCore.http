@@ -1,5 +1,5 @@
-### Requests for the central rules-service sample. Start it with:
-###   dotnet run --project samples/RuleLoom.Samples.RulesService
+### Requests for the ASP.NET Core sample. Start it with:
+###   dotnet run --project samples/RuleLoom.Samples.AspNetCore
 ### Written for the JetBrains (Rider) HTTP client: the pre-request scripts set due times relative to now.
 
 @baseUrl = http://localhost:5080

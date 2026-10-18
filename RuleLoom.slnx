@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/samples/">
     <Project Path="samples/RuleLoom.Samples.Console/RuleLoom.Samples.Console.csproj" />
-    <Project Path="samples/RuleLoom.Samples.RulesService/RuleLoom.Samples.RulesService.csproj" />
+    <Project Path="samples/RuleLoom.Samples.AspNetCore/RuleLoom.Samples.AspNetCore.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />

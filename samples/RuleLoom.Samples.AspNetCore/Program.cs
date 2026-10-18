@@ -1,7 +1,7 @@
 using Quartz;
 using RuleLoom.Actions;
 using RuleLoom.Engine;
-using RuleLoom.Samples.RulesService;
+using RuleLoom.Samples.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 

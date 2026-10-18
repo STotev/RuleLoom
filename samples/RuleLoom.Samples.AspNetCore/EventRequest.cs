@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace RuleLoom.Samples.RulesService;
+namespace RuleLoom.Samples.AspNetCore;
 
 /// <summary>
 /// The sample's wire format for <c>POST /events</c>. The state stays JSON: the service has no producer classes.

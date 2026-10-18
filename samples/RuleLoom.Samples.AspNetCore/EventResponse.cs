@@ -1,6 +1,6 @@
 using RuleLoom.Abstractions.Rule;
 
-namespace RuleLoom.Samples.RulesService;
+namespace RuleLoom.Samples.AspNetCore;
 
 /// <summary>
 /// What happened to an event: the engine result (errors as messages, since exceptions don't serialize usefully),

@@ -1,7 +1,7 @@
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 
-namespace RuleLoom.Samples.RulesService;
+namespace RuleLoom.Samples.AspNetCore;
 
 /// <summary>
 /// Registered as "send-email". Pretends to send an email by logging it. Parameters: <c>to</c>, a path to the
