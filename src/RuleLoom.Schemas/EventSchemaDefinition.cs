@@ -52,9 +52,9 @@ public sealed class EventSchemaDefinition
     {
         ArgumentNullException.ThrowIfNull(json);
 
-        return JsonNode.Parse(json) is JsonObject document
+        return Read(() => JsonNode.Parse(json) is JsonObject document
             ? new EventSchemaDefinition(document)
-            : throw new JsonException("An event schema must be a JSON object.");
+            : throw new JsonException("An event schema must be a JSON object."));
     }
 
     /// <summary>
@@ -65,14 +65,30 @@ public sealed class EventSchemaDefinition
     {
         ArgumentNullException.ThrowIfNull(json);
 
-        if (JsonNode.Parse(json) is not JsonArray documents)
-            throw new JsonException("Expected a JSON array of event schemas.");
+        return Read(() =>
+        {
+            if (JsonNode.Parse(json) is not JsonArray documents)
+                throw new JsonException("Expected a JSON array of event schemas.");
 
-        return documents
-            .Select((node, index) => node is JsonObject document
-                ? new EventSchemaDefinition((JsonObject)document.DeepClone())
-                : throw new JsonException($"Item {index} isn't an event schema."))
-            .ToList();
+            return documents
+                .Select((node, index) => node is JsonObject document
+                    ? new EventSchemaDefinition((JsonObject)document.DeepClone())
+                    : throw new JsonException($"Item {index} isn't an event schema."))
+                .ToList();
+        });
+    }
+
+    // JsonNode reports some malformed documents (duplicate keys, values of the wrong kind) with other exceptions.
+    private static T Read<T>(Func<T> read)
+    {
+        try
+        {
+            return read();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or FormatException)
+        {
+            throw new JsonException($"The JSON isn't a valid event schema: {ex.Message}", ex);
+        }
     }
 
     internal JsonObject CloneDocument() => (JsonObject)_document.DeepClone();

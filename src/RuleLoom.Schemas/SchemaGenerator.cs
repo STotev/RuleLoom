@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
@@ -21,6 +22,9 @@ internal static class SchemaGenerator
 
     private static readonly JsonSerializerOptions WebDefaults = new(JsonSerializerDefaults.Web);
 
+    // Prepared once per options instance, so System.Text.Json's metadata cache is shared by every schema built with them.
+    private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> Prepared = new();
+
     public static EventSchemaDefinition Generate(
         EventBuilder @event,
         Type subjectType,
@@ -28,7 +32,7 @@ internal static class SchemaGenerator
         IReadOnlyList<ContextDeclaration> contexts,
         JsonSerializerOptions? options)
     {
-        var serializer = PrepareOptions(options ?? WebDefaults);
+        var serializer = Prepared.GetValue(options ?? WebDefaults, PrepareOptions);
 
         var document = new JsonObject
         {
@@ -90,11 +94,104 @@ internal static class SchemaGenerator
             throw new InvalidOperationException($"{type.Name} ({owner}) must serialize as a JSON object.");
 
         schema["type"] = "object";
+        InlineSiblingReferences(schema);
 
-        foreach (var (properties, configuration) in fields.All)
-            Apply(schema, JsonPath(type, properties, serializer, owner), configuration, properties, owner);
+        var configured = fields.All
+            .Select(entry => (Path: JsonPath(type, entry.Properties, serializer, owner), entry.Properties, entry.Configuration))
+            .ToList();
+
+        var ignored = configured.Where(entry => entry.Configuration.Ignored).ToList();
+        foreach (var entry in configured)
+        {
+            var parent = ignored.FirstOrDefault(i => i.Path.Count < entry.Path.Count && i.Path.SequenceEqual(entry.Path.Take(i.Path.Count)));
+            if (parent.Path is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Field '{Describe(entry.Properties)}' of {owner} is inside ignored field '{Describe(parent.Properties)}'.");
+            }
+        }
+
+        // Labels and descriptions first, then removals, so the order of configuration calls doesn't matter.
+        foreach (var entry in configured.OrderBy(entry => entry.Configuration.Ignored))
+            Apply(schema, entry.Path, entry.Configuration, entry.Properties, owner);
 
         return schema;
+    }
+
+    private static string Describe(IReadOnlyList<PropertyInfo> properties) => string.Join('.', properties.Select(p => p.Name));
+
+    /// <summary>
+    /// The exporter writes a <c>$ref</c> for every repeat of a type, also to a sibling property. Copies those targets in
+    /// place, so the only references left point at an ancestor (a real cycle): removing an ignored field can't leave a
+    /// reference to it, and readers only meet references for cycles.
+    /// </summary>
+    private static void InlineSiblingReferences(JsonObject root)
+    {
+        var copies = 0;
+        Visit(root, "#");
+
+        void Visit(JsonNode? node, string pointer)
+        {
+            switch (node)
+            {
+                case JsonObject obj:
+                    if (obj["$ref"] is JsonValue reference && reference.TryGetValue<string>(out var target) &&
+                        !IsAncestor(target, pointer) && Resolve(root, target) is JsonObject resolved)
+                    {
+                        if (++copies > 256)
+                            throw new InvalidOperationException("The type's schema has too many repeated parts to inline.");
+
+                        var copy = (JsonObject)resolved.DeepClone();
+                        Rebase(copy, target, pointer);
+                        obj.Remove("$ref");
+                        foreach (var (name, value) in copy.ToList())
+                        {
+                            copy.Remove(name);
+                            obj[name] ??= value;
+                        }
+                    }
+
+                    foreach (var (name, value) in obj.ToList())
+                        Visit(value, $"{pointer}/{name.Replace("~", "~0").Replace("/", "~1")}");
+                    break;
+                case JsonArray array:
+                    for (var i = 0; i < array.Count; i++)
+                        Visit(array[i], $"{pointer}/{i}");
+                    break;
+            }
+        }
+
+        static bool IsAncestor(string target, string pointer) => pointer == target || pointer.StartsWith(target + "/", StringComparison.Ordinal);
+
+        // References inside the copied part that pointed into it now point into the copy.
+        static void Rebase(JsonNode? node, string from, string to)
+        {
+            switch (node)
+            {
+                case JsonObject obj:
+                    if (obj["$ref"] is JsonValue value && value.TryGetValue<string>(out var target) && IsAncestor(from, target))
+                        obj["$ref"] = to + target[from.Length..];
+                    foreach (var (_, child) in obj)
+                        Rebase(child, from, to);
+                    break;
+                case JsonArray array:
+                    foreach (var child in array)
+                        Rebase(child, from, to);
+                    break;
+            }
+        }
+    }
+
+    internal static JsonNode? Resolve(JsonNode root, string pointer)
+    {
+        if (!pointer.StartsWith('#'))
+            return null;
+
+        JsonNode? node = root;
+        foreach (var segment in pointer[1..].Split('/', StringSplitOptions.RemoveEmptyEntries))
+            node = node is JsonObject obj ? obj[segment.Replace("~1", "/").Replace("~0", "~")] : null;
+
+        return node;
     }
 
     private static void Apply(JsonObject schema, IReadOnlyList<string> path, FieldConfiguration configuration,
@@ -109,7 +206,7 @@ internal static class SchemaGenerator
             {
                 _ when parent["$ref"] is not null => "it's below a repeated type",
                 _ when parent["properties"] is not JsonObject => "it's inside a dictionary or an object without fields",
-                _ when parent["properties"]![path[i]] is not JsonObject => $"'{path[i]}' isn't serialized, e.g. [JsonIgnore]",
+                _ when parent["properties"]![path[i]] is null => $"'{path[i]}' isn't serialized, e.g. [JsonIgnore]",
                 _ => null
             };
 
@@ -119,7 +216,11 @@ internal static class SchemaGenerator
                     $"Field '{string.Join('.', properties.Select(p => p.Name))}' of {owner} has no place in the schema: {reason}.");
             }
 
-            field = (JsonObject)parent["properties"]![path[i]]!;
+            // An untyped property (object, JsonElement) is the schema `true`: make it an object to describe it.
+            if (parent["properties"]![path[i]] is not JsonObject member)
+                parent["properties"]![path[i]] = member = new JsonObject();
+
+            field = member;
             if (i < path.Count - 1)
                 parent = field;
         }

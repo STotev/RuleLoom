@@ -30,5 +30,8 @@ public enum FieldType
     Object,
 
     /// <summary>A list of values described by <see cref="FieldDefinition.Items"/>.</summary>
-    Array
+    Array,
+
+    /// <summary>Any JSON value (an <c>object</c>, <c>JsonElement</c> or <c>JsonNode</c> property; the schema <c>true</c>).</summary>
+    Any
 }

@@ -11,4 +11,12 @@ public sealed record ContextReference(string? Path, IReadOnlyDictionary<string, 
 {
     /// <summary>Whether the reference has several named parts.</summary>
     public bool IsComposite => Path is null;
+
+    /// <summary>Compares the path and the parts' names and paths.</summary>
+    public bool Equals(ContextReference? other) =>
+        other is not null && Path == other.Path && Parts.Count == other.Parts.Count &&
+        Parts.All(part => other.Parts.TryGetValue(part.Key, out var path) && path == part.Value);
+
+    /// <inheritdoc />
+    public override int GetHashCode() => HashCode.Combine(Path, Parts.Count);
 }

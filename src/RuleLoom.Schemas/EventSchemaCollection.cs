@@ -32,15 +32,15 @@ public sealed class EventSchemaCollection(JsonSerializerOptions? options = null)
     }
 
     /// <summary>
-    /// Adds every public, non-abstract schema class in <paramref name="assembly"/> that has a public parameterless
-    /// constructor, ordered by name.
+    /// Adds every public, non-abstract, non-generic schema class in <paramref name="assembly"/> that has a public
+    /// parameterless constructor, ordered by name.
     /// </summary>
     public EventSchemaCollection AddFromAssembly(Assembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
 
         var types = assembly.GetExportedTypes()
-            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IEventSchema).IsAssignableFrom(t) &&
+            .Where(t => t is { IsClass: true, IsAbstract: false, ContainsGenericParameters: false } && typeof(IEventSchema).IsAssignableFrom(t) &&
                         t.GetConstructor(Type.EmptyTypes) is not null)
             .OrderBy(t => t.FullName, StringComparer.Ordinal);
 

@@ -35,8 +35,8 @@ public class SchemaJsonTests
 
         Assert.Equal(Order.ToJson(), parsed.ToJson());
         Assert.Equal((Order.EventType, Order.Label, Order.Description), (parsed.EventType, parsed.Label, parsed.Description));
-        Assert.Equal(Describe(Order.Fields), Describe(parsed.Fields));
-        Assert.Equal(Order.Contexts.Select(Describe), parsed.Contexts.Select(Describe));
+        Assert.Equal(Order.Fields, parsed.Fields);
+        Assert.Equal(Order.Contexts, parsed.Contexts);
     }
 
     [Fact]
@@ -71,13 +71,4 @@ public class SchemaJsonTests
     {
         Assert.ThrowsAny<JsonException>(() => EventSchemaDefinition.Parse(json));
     }
-
-    private static string Describe(ContextDefinition context) =>
-        $"{context.Name}:{context.Label}:{context.Description}:{context.ReferencedBy?.Path}:" +
-        string.Join(",", context.ReferencedBy?.Parts.Select(p => $"{p.Key}={p.Value}") ?? []);
-
-    private static string Describe(IEnumerable<FieldDefinition> fields) =>
-        string.Join(";", fields.Select(f =>
-            $"{f.Name}:{f.Type}:{f.IsNullable}:{f.Label}:{f.Description}:{string.Join("|", f.EnumValues)}" +
-            $"[{Describe(f.Fields)}]<{(f.Items is null ? "" : Describe([f.Items]))}>"));
 }

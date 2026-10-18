@@ -72,3 +72,30 @@ public sealed class LineAddedSchema : EventSchema<LineDto>
 {
     public LineAddedSchema() => Event("LineAdded");
 }
+
+public sealed class TreeDto
+{
+    public NodeDto A { get; set; } = new();
+    public NodeDto B { get; set; } = new();
+}
+
+public sealed class NodeDto
+{
+    public string Name { get; set; } = "";
+    public List<NodeDto> Kids { get; set; } = [];
+}
+
+public sealed class PayloadDto
+{
+    public object? Payload { get; set; }
+    public System.Text.Json.JsonElement Data { get; set; }
+    public List<object> Bag { get; set; } = [];
+    public OrderStatus? MaybeStatus { get; set; }
+    public int Quantity { get; set; }
+}
+
+/// <summary>A public generic schema class: assembly scans must skip it.</summary>
+public class AuditSchema<T> : EventSchema<T>
+{
+    public AuditSchema() => Event("Audit");
+}

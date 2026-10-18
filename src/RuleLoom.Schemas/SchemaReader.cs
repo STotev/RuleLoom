@@ -22,7 +22,7 @@ internal static class SchemaReader
         };
 
         return (eventType, String(document, "title"), String(document, "description"),
-            ReadFields(document), contexts);
+            ReadFields(document, document), contexts);
     }
 
     private static ContextDefinition ReadContext(string name, JsonObject node)
@@ -42,42 +42,59 @@ internal static class SchemaReader
         return new ContextDefinition(name, String(node, "title"), String(node, "description"), reference);
     }
 
-    private static List<FieldDefinition> ReadFields(JsonObject schema) => schema["properties"] switch
+    private static List<FieldDefinition> ReadFields(JsonObject schema, JsonObject root) => schema["properties"] switch
     {
         null => [],
-        JsonObject properties => properties.Select(pair => ReadField(pair.Key, Object(pair.Value, pair.Key))).ToList(),
+        JsonObject properties => properties.Select(pair => ReadField(pair.Key, pair.Value, root)).ToList(),
         _ => throw new JsonException("'properties' must be an object.")
     };
 
-    private static FieldDefinition ReadField(string name, JsonObject node)
+    private static FieldDefinition ReadField(string name, JsonNode? node, JsonObject root)
     {
-        var types = Types(node);
-        var isNullable = types.Contains("null");
-        var enumValues = node["enum"] is JsonArray values
-            ? values.Where(v => v is not null).Select(v => v!.ToString()).ToList()
-            : [];
+        // The schema `true` (any value): what the exporter writes for object, JsonElement and JsonNode.
+        if (node is JsonValue any && any.TryGetValue<bool>(out var accepted) && accepted)
+            return new FieldDefinition(name, FieldType.Any, true, null, null, [], [], null);
 
-        var type = enumValues.Count > 0 ? FieldType.Enum : ReadType(types, String(node, "format"), name);
+        if (node is not JsonObject field)
+            throw new JsonException($"'{name}' must be a JSON object or true.");
+
+        // A remaining $ref points at an ancestor (a repeated type): describe it by its target, without its fields.
+        var isCycle = field["$ref"] is not null;
+        var described = isCycle ? Target(field, root, name) : field;
+
+        var types = Types(described);
+        var enumValues = described["enum"] is JsonArray values ? values.Where(v => v is not null).Select(v => v!.ToString()).ToList() : [];
+        var isNullable = types.Contains("null") || described["enum"] is JsonArray all && all.Any(v => v is null);
+        var type = enumValues.Count > 0 ? FieldType.Enum : ReadType(types, String(described, "format"), name);
 
         return new FieldDefinition(
             name,
             type,
             isNullable,
-            String(node, "title"),
-            String(node, "description"),
+            String(field, "title"),
+            String(field, "description"),
             enumValues,
-            type == FieldType.Object ? ReadFields(node) : [],
-            type == FieldType.Array && node["items"] is JsonObject items ? ReadField(string.Empty, items) : null);
+            type == FieldType.Object && !isCycle ? ReadFields(described, root) : [],
+            type == FieldType.Array && !isCycle ? ReadField(string.Empty, described["items"] ?? JsonValue.Create(true), root) : null);
     }
 
+    private static JsonObject Target(JsonObject field, JsonObject root, string name) =>
+        field["$ref"] is JsonValue reference && reference.TryGetValue<string>(out var pointer) &&
+        SchemaGenerator.Resolve(root, pointer) is JsonObject target
+            ? target
+            : throw new JsonException($"Field '{name}' has a '$ref' that doesn't point inside the document.");
+
     /// <summary>
-    /// The first non-null type wins, except that numbers win over strings (lenient number handling writes both).
-    /// No type (e.g. a <c>$ref</c> to a repeated type) is an object without fields.
+    /// The first non-null type wins. A number that may also be a string is sent as a string (WriteAsString); numbers
+    /// win otherwise. No type (the schema <c>{}</c>) is any value.
     /// </summary>
     private static FieldType ReadType(IReadOnlyList<string> types, string? format, string name)
     {
         var candidates = types.Where(t => t != "null").ToList();
+        var isNumber = candidates.Contains("integer") || candidates.Contains("number");
 
+        if (isNumber && candidates.Contains("string"))
+            return FieldType.String;
         if (candidates.Contains("integer"))
             return FieldType.Integer;
         if (candidates.Contains("number"))
@@ -85,7 +102,8 @@ internal static class SchemaReader
 
         return candidates.FirstOrDefault() switch
         {
-            null or "object" => FieldType.Object,
+            null => FieldType.Any,
+            "object" => FieldType.Object,
             "string" => format switch
             {
                 "date-time" => FieldType.DateTime,
@@ -100,10 +118,14 @@ internal static class SchemaReader
 
     private static List<string> Types(JsonObject node) => node["type"] switch
     {
-        JsonValue value => [value.GetValue<string>()],
-        JsonArray array => array.Where(t => t is not null).Select(t => t!.GetValue<string>()).ToList(),
-        _ => []
+        null => [],
+        JsonValue value => [TypeName(value)],
+        JsonArray array => array.Select(TypeName).ToList(),
+        _ => throw new JsonException("'type' must be a string or an array of strings.")
     };
+
+    private static string TypeName(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<string>(out var name) ? name : throw new JsonException("'type' must be a string or an array of strings.");
 
     private static string? String(JsonObject node, string name) =>
         node[name] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;

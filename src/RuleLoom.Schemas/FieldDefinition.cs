@@ -19,4 +19,16 @@ public sealed record FieldDefinition(
     string? Description,
     IReadOnlyList<string> EnumValues,
     IReadOnlyList<FieldDefinition> Fields,
-    FieldDefinition? Items);
+    FieldDefinition? Items)
+{
+    /// <summary>Compares every member, including the contents of <see cref="EnumValues"/> and <see cref="Fields"/>.</summary>
+    public bool Equals(FieldDefinition? other) =>
+        other is not null &&
+        (Name, Type, IsNullable, Label, Description) == (other.Name, other.Type, other.IsNullable, other.Label, other.Description) &&
+        EnumValues.SequenceEqual(other.EnumValues) &&
+        Fields.SequenceEqual(other.Fields) &&
+        Equals(Items, other.Items);
+
+    /// <inheritdoc />
+    public override int GetHashCode() => HashCode.Combine(Name, Type, IsNullable, Label, Description, EnumValues.Count, Fields.Count);
+}
