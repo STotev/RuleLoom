@@ -158,7 +158,7 @@ environment `nuget`) and attaches the packages to the GitHub release.
 - **Schemas** (`RuleLoom.Schemas`): `class XSchema : EventSchema<TDto>` configures `Event(name)` (required),
   `Field(o => o.A.B)` (`Label`/`Description`/`Ignore`) and `Context<T>(name, c => c.Field(...))` (`Many()`); `Build(options)`
   generates an `EventSchemaDefinition` from how `TDto` is serialized (Web defaults unless options are given; numbers
-  not typed as strings; null-oblivious types non-nullable), adds titles (from JSON names), descriptions and
+  not typed as strings; null-oblivious types non-nullable), adds configured titles and descriptions (no automatic labels) and
   `x-ruleloom-event`/`x-ruleloom-contexts`, and rewrites context `$ref`s. `ToJson()`/`Parse`/`ParseMany` round-trip;
   field names are JSON names. `EventSchemaCollection` gathers schemas (assembly scan) and writes a JSON array.
 - **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is

@@ -62,8 +62,8 @@ IReadOnlyList<EventSchemaDefinition> parsed = EventSchemaDefinition.ParseMany(js
 - **`EventSchemaCollection`** gathers schema classes (`Add<TSchema>()`, `Add(schema)`, `AddFromAssemblyOf<T>()` /
   `AddFromAssembly(assembly)`: public non-abstract classes with a parameterless constructor), builds them (duplicate
   event types throw) and writes them as JSON.
-- Default labels: the event label comes from the event type (`OrderPlaced` → "Order placed"), a context label from its
-  name (`customer` → "Customer").
+- **Labels are only what the developer configures** (no labels derived from names): a `title` is written only where
+  `Label(...)` is set, and the model's `Label` is `null` otherwise. UIs fall back to the JSON name.
 
 ## Generation
 
@@ -77,9 +77,8 @@ policy, `[JsonIgnore]`, enum converters, nullability, formats (`date-time`, `dat
 - **Normalization** so the schema describes what is *sent*: generated without `AllowReadingFromString` (written numbers
   are numbers; otherwise they appear as `["string","number"]` with a pattern), with null-oblivious types treated as
   non-nullable (list items, the root), and the root typed `"object"`.
-- **RuleLoom's layer** is applied to the generated document: `$schema`, `x-ruleloom-event`, the event `title` and
-  `description`, a `title` on every property (configured, or from the JSON name: `customerTier` → "Customer tier",
-  `vatID` → "Vat ID"), configured descriptions, ignored fields removed, and `x-ruleloom-contexts`.
+- **RuleLoom's layer** is applied to the generated document: `$schema`, `x-ruleloom-event`, configured titles and
+  descriptions (event, fields, contexts), ignored fields removed, and `x-ruleloom-contexts`.
 - **`Field(o => o.Customer.Tier)`** is mapped to the JSON path through the serializer's type info (so it follows the
   naming policy). Configuring a property the serializer doesn't write (`[JsonIgnore]`) or that has no place in the
   schema (inside a dictionary, below a cycle) throws when building.
@@ -111,15 +110,15 @@ cover. Labels use the standard `title`, descriptions `description`.
   "type": "object",
   "properties": {
     "total": { "type": "number", "title": "Order total" },
-    "status": { "type": "string", "enum": ["Placed", "Paid"], "title": "Status" },
-    "placedAt": { "type": "string", "format": "date-time", "title": "Placed at" },
-    "note": { "type": ["string", "null"], "title": "Note" },
-    "customer": { "type": "object", "title": "Customer", "properties": { "tier": { "type": "string", "title": "Tier" } } },
-    "lines": { "type": "array", "title": "Lines", "items": { "type": "object", "properties": { "sku": { "type": "string", "title": "Sku" } } } }
+    "status": { "type": "string", "enum": ["Placed", "Paid"] },
+    "placedAt": { "type": "string", "format": "date-time" },
+    "note": { "type": ["string", "null"] },
+    "customer": { "type": "object", "properties": { "tier": { "type": "string", "description": "Loyalty tier at the time of the order." } } },
+    "lines": { "type": "array", "items": { "type": "object", "properties": { "sku": { "type": "string" } } } }
   },
   "x-ruleloom-contexts": {
-    "customer": { "title": "Customer", "type": "object", "properties": { "tier": { "type": "string", "title": "Tier" } } },
-    "watchers": { "title": "Watchers", "type": "array", "items": { "type": "object", "properties": { "email": { "type": "string", "title": "Email" } } } }
+    "customer": { "title": "Customer", "type": "object", "properties": { "tier": { "type": "string", "title": "Loyalty tier" } } },
+    "watchers": { "title": "Watchers", "type": "array", "items": { "type": "object", "properties": { "email": { "type": "string" } } } }
   }
 }
 ```
@@ -133,7 +132,7 @@ cover. Labels use the standard `title`, descriptions `description`.
 
 ## Test plan
 
-- **Builder:** event name required, labels and descriptions, nested `Field` paths, `Ignore`, merging repeated
+- **Builder:** event name required, configured labels and descriptions only, nested `Field` paths, `Ignore`, merging repeated
   configuration, invalid expressions, contexts (single and many, duplicates), assembly collection and individual adds.
 - **Generation:** types and formats (string, integer, number, boolean, date-time, date, uuid, enums as numbers and with
   `JsonStringEnumConverter` as names), nullability, nested objects, arrays, dictionaries, cycles (`$ref`, also inside
@@ -152,4 +151,5 @@ cover. Labels use the standard `title`, descriptions `description`.
 | Generator | System.Text.Json's `JsonSchemaExporter` (no dependency; follows the producer's serialization) instead of hand-written inference or NJsonSchema (Newtonsoft, older drafts) |
 | Serializer options | `JsonSerializerDefaults.Web` by default, overridable |
 | json-everything (JsonSchema.Net) | Evaluated and not used: its NuGet binaries come with an "Open Source Maintenance Fee" agreement (a monthly fee for revenue-generating organisations above US$10,000), which RuleLoom's users would inherit; its generator doesn't follow System.Text.Json's contract; and the part it would replace (reading JSON back) is about 80 lines. Worth revisiting (or Corvus.JsonSchema, Apache-2.0) when incoming events are validated against schemas |
+| Labels | Only configured labels; no automatic labels from names (and no Humanizer): a guessed label rarely matches the business term, and it was code to maintain |
 | Typed model vs document lookup | Keep the typed field tree (`FieldDefinition` with nested `Fields`/`Items`), which C# consumers can iterate. A document-only design with a path lookup was tried: it didn't reduce code and dropped the tree |
