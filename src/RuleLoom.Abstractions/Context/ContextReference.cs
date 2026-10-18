@@ -1,7 +1,7 @@
-namespace RuleLoom.Schemas;
+namespace RuleLoom.Abstractions.Context;
 
 /// <summary>
-/// How an event refers to a context: one subject path (e.g. <c>customerId</c>) or named paths for a composite reference
+/// How an event refers to a context (declared in its schema with <c>ReferencedBy</c>): one subject path (e.g. <c>customerId</c>) or named paths for a composite reference
 /// (e.g. <c>country</c> → <c>address.country</c>, <c>postcode</c> → <c>address.postcode</c>). Paths are JSON paths of
 /// the subject.
 /// </summary>

@@ -12,7 +12,8 @@ public sealed class RuleEngine(
     IConditionEvaluator conditionEvaluator,
     IActionFactory actionFactory,
     TimeProvider? timeProvider = null,
-    IContextProviderFactory? contextProviders = null)
+    IContextProviderFactory? contextProviders = null,
+    IContextReferenceSource? contextReferences = null)
 {
     private readonly IConditionEvaluator _conditionEvaluator =
         conditionEvaluator ?? throw new ArgumentNullException(nameof(conditionEvaluator));
@@ -45,7 +46,7 @@ public sealed class RuleEngine(
 
         var context = contextProviders is null
             ? new EvaluationContext(current, previous)
-            : new EvaluationContext(current, previous, eventType, contextProviders);
+            : new EvaluationContext(current, previous, eventType, contextProviders, contextReferences);
 
         await PrefetchContextsAsync(context, matchingRules, cancellationToken);
 
