@@ -27,8 +27,8 @@ public sealed class EventSchemaDefinition
     /// <summary>The event type rules are written for.</summary>
     public string EventType { get; }
 
-    /// <summary>A readable name for authoring UIs.</summary>
-    public string Label { get; }
+    /// <summary>A readable name for authoring UIs, if configured (<c>title</c>).</summary>
+    public string? Label { get; }
 
     /// <summary>An optional longer explanation.</summary>
     public string? Description { get; }

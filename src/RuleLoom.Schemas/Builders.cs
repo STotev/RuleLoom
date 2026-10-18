@@ -14,7 +14,7 @@ public sealed class EventBuilder
 
     internal string EventType { get; }
 
-    /// <summary>A readable name for authoring UIs (default: from the event type, <c>OrderPlaced</c> → "Order placed").</summary>
+    /// <summary>A readable name for authoring UIs (written as <c>title</c>).</summary>
     public EventBuilder Label(string label)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
@@ -40,7 +40,7 @@ public sealed class FieldBuilder
 
     internal FieldBuilder(FieldConfiguration configuration) => _configuration = configuration;
 
-    /// <summary>A readable name for authoring UIs (default: from the JSON name, <c>customerTier</c> → "Customer tier").</summary>
+    /// <summary>A readable name for authoring UIs (written as <c>title</c>).</summary>
     public FieldBuilder Label(string label)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
@@ -83,7 +83,7 @@ public sealed class ContextBuilder
     internal string? ConfiguredDescription { get; private set; }
     internal bool IsMany { get; private set; }
 
-    /// <summary>A readable name for authoring UIs (default: from the name, <c>customer</c> → "Customer").</summary>
+    /// <summary>A readable name for authoring UIs (written as <c>title</c>).</summary>
     public ContextBuilder Label(string label)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(label);

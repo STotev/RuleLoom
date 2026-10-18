@@ -9,7 +9,7 @@ namespace RuleLoom.Schemas;
 
 /// <summary>
 /// Generates event documents with System.Text.Json's schema exporter and applies RuleLoom's layer: event keywords,
-/// titles, descriptions, ignored fields and contexts.
+/// configured titles and descriptions, ignored fields and contexts.
 /// </summary>
 internal static class SchemaGenerator
 {
@@ -31,10 +31,11 @@ internal static class SchemaGenerator
         var document = new JsonObject
         {
             ["$schema"] = SchemaUri,
-            [EventKeyword] = @event.EventType,
-            ["title"] = @event.ConfiguredLabel ?? Labels.FromName(@event.EventType)
+            [EventKeyword] = @event.EventType
         };
 
+        if (@event.ConfiguredLabel is { } label)
+            document["title"] = label;
         if (@event.ConfiguredDescription is { } description)
             document["description"] = description;
 
@@ -55,8 +56,10 @@ internal static class SchemaGenerator
 
     private static JsonObject GenerateContext(ContextBuilder context, JsonSerializerOptions serializer)
     {
-        var node = new JsonObject { ["title"] = context.ConfiguredLabel ?? Labels.FromName(context.Name) };
+        var node = new JsonObject();
 
+        if (context.ConfiguredLabel is { } label)
+            node["title"] = label;
         if (context.ConfiguredDescription is { } description)
             node["description"] = description;
 
@@ -87,7 +90,6 @@ internal static class SchemaGenerator
             throw new InvalidOperationException($"{type.Name} ({owner}) must serialize as a JSON object.");
 
         schema["type"] = "object";
-        AddTitles(schema);
 
         foreach (var (properties, configuration) in fields.All)
             Apply(schema, JsonPath(type, properties, serializer, owner), configuration, properties, owner);
@@ -161,24 +163,6 @@ internal static class SchemaGenerator
         }
 
         return path;
-    }
-
-    private static void AddTitles(JsonObject schema)
-    {
-        if (schema["properties"] is JsonObject properties)
-        {
-            foreach (var (name, value) in properties)
-            {
-                if (value is not JsonObject property)
-                    continue;
-
-                property["title"] ??= Labels.FromName(name);
-                AddTitles(property);
-            }
-        }
-
-        if (schema["items"] is JsonObject items)
-            AddTitles(items);
     }
 
     private static void RewriteReferences(JsonNode? node, string prefix)

@@ -71,8 +71,8 @@ public class SchemaJsonTests
               "properties": { "at": { "type": "string", "format": "date-time", "examples": ["2026-01-01T00:00:00Z"] } } }
             """);
 
-        Assert.Equal(("Pinged", "Pinged"), (schema.EventType, schema.Label));
-        Assert.Equal((FieldType.DateTime, "At"), (schema.Fields[0].Type, schema.Fields[0].Label));
+        Assert.Equal(("Pinged", (string?)null), (schema.EventType, schema.Label));
+        Assert.Equal((FieldType.DateTime, (string?)null), (schema.Fields[0].Type, schema.Fields[0].Label));
     }
 
     [Theory]

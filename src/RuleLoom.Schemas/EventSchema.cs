@@ -18,7 +18,7 @@ namespace RuleLoom.Schemas;
 /// }
 /// </code>
 /// Fields are generated from how <typeparamref name="T"/> is serialized (System.Text.Json's schema exporter);
-/// the configuration adds labels and descriptions and leaves fields out.
+/// the configuration adds labels and descriptions and leaves fields out. Only configured labels are written.
 /// </summary>
 /// <typeparam name="T">The event's subject type (usually a DTO).</typeparam>
 public abstract class EventSchema<T> : IEventSchema

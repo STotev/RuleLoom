@@ -16,11 +16,11 @@ public class EventSchemaTests
     }
 
     [Fact]
-    public void Build_EventWithoutLabel_GetsOneFromItsType()
+    public void Build_EventWithoutLabel_HasNoLabel()
     {
         var schema = new LineAddedSchema().Build();
 
-        Assert.Equal("Line added", schema.Label);
+        Assert.Null(schema.Label);
         Assert.Null(schema.Description);
     }
 
@@ -69,14 +69,15 @@ public class EventSchemaTests
     }
 
     [Fact]
-    public void Build_Labels_AreConfiguredOrComeFromNames()
+    public void Build_LabelsAndDescriptions_AreOnlyTheConfiguredOnes()
     {
         var customer = Field(Order.Fields, "customer");
 
         Assert.Equal("Order total", Field(Order.Fields, "total").Label);
-        Assert.Equal("Placed at", Field(Order.Fields, "placedAt").Label);
-        Assert.Equal("Vat ID", Field(customer.Fields, "vatID").Label);
+        Assert.Null(Field(Order.Fields, "placedAt").Label);
+        Assert.Null(Field(customer.Fields, "vatID").Label);
         Assert.Equal("Loyalty tier at the time of the order.", Field(customer.Fields, "tier").Description);
+        Assert.DoesNotContain("\"title\": \"Placed at\"", Order.ToJson());
     }
 
     [Fact]
@@ -121,7 +122,7 @@ public class EventSchemaTests
         Assert.Equal("Loyalty tier", Field(customer.Fields, "tier").Label);
         Assert.DoesNotContain(customer.Fields, f => f.Name == "internalId");
 
-        Assert.Equal(("Watchers", true), (watchers.Label, watchers.IsMany));
+        Assert.Equal(((string?)null, true), (watchers.Label, watchers.IsMany));
         Assert.Equal(["email", "manager"], watchers.Fields.Select(f => f.Name));
     }
 

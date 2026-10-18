@@ -8,7 +8,7 @@ namespace RuleLoom.Schemas;
 /// </summary>
 internal static class SchemaReader
 {
-    public static (string EventType, string Label, string? Description, IReadOnlyList<FieldDefinition> Fields,
+    public static (string EventType, string? Label, string? Description, IReadOnlyList<FieldDefinition> Fields,
         IReadOnlyList<ContextDefinition> Contexts) ReadEvent(JsonObject document)
     {
         var eventType = String(document, SchemaGenerator.EventKeyword)
@@ -21,7 +21,7 @@ internal static class SchemaReader
             _ => throw new JsonException($"'{SchemaGenerator.ContextsKeyword}' must be an object.")
         };
 
-        return (eventType, String(document, "title") ?? Labels.FromName(eventType), String(document, "description"),
+        return (eventType, String(document, "title"), String(document, "description"),
             ReadFields(document), contexts);
     }
 
@@ -30,7 +30,7 @@ internal static class SchemaReader
         var isMany = Types(node).Contains("array");
         var element = isMany ? Object(node["items"], $"{name}.items") : node;
 
-        return new ContextDefinition(name, String(node, "title") ?? Labels.FromName(name), String(node, "description"),
+        return new ContextDefinition(name, String(node, "title"), String(node, "description"),
             isMany, ReadFields(element));
     }
 
@@ -55,7 +55,7 @@ internal static class SchemaReader
             name,
             type,
             isNullable,
-            String(node, "title") ?? Labels.FromName(name),
+            String(node, "title"),
             String(node, "description"),
             enumValues,
             type == FieldType.Object ? ReadFields(node) : [],

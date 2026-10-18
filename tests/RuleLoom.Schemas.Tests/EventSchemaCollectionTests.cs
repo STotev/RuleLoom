@@ -19,18 +19,4 @@ public class EventSchemaCollectionTests
 
         Assert.Contains("LineAdded", error.Message);
     }
-
-    [Theory]
-    [InlineData("customerTier", "Customer tier")]
-    [InlineData("OrderPlaced", "Order placed")]
-    [InlineData("vatID", "Vat ID")]
-    [InlineData("VATNumber", "VAT number")]
-    [InlineData("id", "Id")]
-    [InlineData("customer", "Customer")]
-    [InlineData("order_total", "Order total")]
-    [InlineData("line2Sku", "Line2 sku")]
-    public void Labels_FromNames(string name, string label)
-    {
-        Assert.Equal(label, Labels.FromName(name));
-    }
 }
