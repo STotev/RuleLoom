@@ -77,8 +77,8 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 |---|---|---|
 | `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models. **Must have no external package dependencies.** |
 | `RuleLoom` | `src/RuleLoom` | Default implementation: engine, evaluator, operators, actions, scheduling |
-| `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Event schemas: `EventSchema<T>` classes, generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`). **No external dependencies**; producers use it without the engine |
-| `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(...)`: DI registration of engine, evaluator, actions, operators, validator |
+| `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Event schemas: `EventSchema<T>` classes, generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`). **No dependencies at all** (not even Abstractions); producers use it without the engine; `RuleLoom` references it. `ISchemaStore` + `InMemorySchemaStore` |
+| `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(...)`: DI registration of engine, evaluator, actions, operators, context providers, validator, schemas (`AddSchemas`) |
 | `RuleLoom.Tests` | `tests/RuleLoom.Tests` | xUnit unit tests |
 | `RuleLoom.Tests.Integration` | `tests/RuleLoom.Tests.Integration` | xUnit end-to-end tests |
 | `RuleLoom.Schemas.Tests` | `tests/RuleLoom.Schemas.Tests` | xUnit tests of schema building and JSON |
@@ -162,6 +162,15 @@ environment `nuget`) and attaches the packages to the GitHub release.
   not typed as strings; null-oblivious types non-nullable), adds configured titles and descriptions (no automatic labels) and
   `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`). `ToJson()`/`Parse`/`ParseMany` round-trip;
   field names are JSON names. `EventSchemaCollection` gathers schemas (assembly scan) and writes a JSON array.
+  `ISchemaStore` (+ `InMemorySchemaStore`) keeps schemas where the engine runs; DI's `AddSchemas(s => s.Add<T>() /
+  AddFromAssemblyOf<T>() / AddJson(json) / UseStore<T>())` registers sources and storage separately: the in-memory store
+  starts with the sources; your own store gets them at startup (`SchemaSourcesStartup` hosted service, or
+  `serviceProvider.SaveRuleLoomSchemasAsync()` without a host). `RuleLoom` references `RuleLoom.Schemas`:
+  `RuleEngine` takes an optional `ISchemaStore` and wraps the context providers (`SchemaReferencingProviders`): the
+  event's schema picks the provider (`Context("toAccount").LoadedBy("account")`, else the context name) and its declared
+  reference is resolved on the current state and passed as `ContextRequest.Reference`
+  (`GetReference<T>()`); null without one. Storage is RuleLoom-provided (in-memory now; publishing and storage packages
+  in 0.7).
 - **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is
   validated before deserialization (`RuleJsonValidator`); invalid rules throw `RuleParseException` (a `JsonException`)
   whose `Path` is the JSONPath of the problem. `Id`, `Name`, `EventType` and `Condition` are required, and every condition

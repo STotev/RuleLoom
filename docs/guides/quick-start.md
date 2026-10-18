@@ -176,6 +176,34 @@ services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("custom
 
 See [Contexts](json-rules.md#contexts) for writing providers and how loading works.
 
+## Event schemas
+
+Describe each event in a schema class (package `RuleLoom.Schemas`): its fields come from your DTO, and it declares the
+contexts it relates to and how it refers to them. Register schemas where the engine runs, so providers receive each
+event's reference:
+
+```csharp
+public sealed class TransferMadeSchema : EventSchema<TransferDto>
+{
+    public TransferMadeSchema()
+    {
+        Event("TransferMade");
+        Field(t => t.Amount).Label("Amount");
+        Context("fromAccount").LoadedBy("account").ReferencedBy(t => t.FromAccountId).Label("From account");
+        Context("toAccount").LoadedBy("account").ReferencedBy(t => t.ToAccountId).Label("To account");
+    }
+}
+
+services.AddRuleLoom(rules => rules
+    .AddSchemas(s => s.AddFromAssemblyOf<TransferMadeSchema>())     // sources; kept in memory unless .UseStore<MyStore>()
+    .AddContextProvider<AccountProvider>("account"));                // loads both accounts, each with its own reference
+```
+
+With your own store (`.UseStore<MyStore>()`), the sources are saved into it when the app starts; in an app without a
+host (e.g. a plain console app), call `await serviceProvider.SaveRuleLoomSchemasAsync()` once at startup.
+`new EventSchemaCollection().AddFromAssemblyOf<TransferMadeSchema>().ToJson()` exports the schemas as JSON Schema, for
+another service or an authoring UI.
+
 ## Validating rules before saving them
 
 ```csharp

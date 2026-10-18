@@ -43,7 +43,13 @@ internal static class SchemaReader
             _ => throw new JsonException($"The reference of context '{name}' must be a path or an object of paths.")
         };
 
-        return new ContextDefinition(name, String(node, "title"), String(node, "description"), reference);
+        var provider = node[SchemaGenerator.ProviderKeyword] is null
+            ? name
+            : String(node, SchemaGenerator.ProviderKeyword) is { } configured && !string.IsNullOrWhiteSpace(configured)
+                ? configured
+                : throw new JsonException($"The provider of context '{name}' must be a non-empty string.");
+
+        return new ContextDefinition(name, String(node, "title"), String(node, "description"), reference, provider);
     }
 
     private static List<FieldDefinition> ReadFields(JsonObject schema, JsonObject root) => schema["properties"] switch

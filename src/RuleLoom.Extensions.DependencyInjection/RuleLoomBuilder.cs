@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
+using RuleLoom.Schemas;
 
 namespace RuleLoom.Extensions.DependencyInjection;
 
@@ -48,6 +50,37 @@ public sealed class RuleLoomBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         _registry.AddContextProvider(name, typeof(TProvider));
         Services.TryAddScoped<TProvider>();
+        return this;
+    }
+
+    /// <summary>
+    /// Registers event schemas: their sources (schema classes, exported JSON) and where they're kept, an
+    /// <see cref="ISchemaStore"/> (the in-memory store, Singleton, or your own with
+    /// <see cref="SchemaRegistration.UseStore{TStore}"/>, Scoped). The in-memory store starts with the sources; your own
+    /// store gets them at startup (a hosted service, or <c>SaveRuleLoomSchemasAsync()</c> in apps without a host). The
+    /// engine reads the store, so context providers receive each event's declared reference. Call it once; a later call
+    /// replaces the configuration.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Two sources describe the same event type.</exception>
+    public RuleLoomBuilder AddSchemas(Action<SchemaRegistration>? configure = null)
+    {
+        var registration = new SchemaRegistration();
+        configure?.Invoke(registration);
+
+        // Built now, so mistakes in schema classes or JSON surface when the app is configured.
+        var sources = new SchemaSources(registration.BuildSources());
+        Services.Replace(ServiceDescriptor.Singleton(sources));
+
+        if (registration.StoreType is { } storeType)
+        {
+            Services.Replace(ServiceDescriptor.Scoped(typeof(ISchemaStore), storeType));
+            Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SchemaSourcesStartup>());
+        }
+        else
+        {
+            Services.Replace(ServiceDescriptor.Singleton<ISchemaStore>(new InMemorySchemaStore(sources.Schemas)));
+        }
+
         return this;
     }
 
