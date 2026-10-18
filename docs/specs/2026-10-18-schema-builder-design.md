@@ -151,3 +151,5 @@ cover. Labels use the standard `title`, descriptions `description`.
 | Cycles | Kept as `$ref` in JSON (from the exporter); read back as an object without fields |
 | Generator | System.Text.Json's `JsonSchemaExporter` (no dependency; follows the producer's serialization) instead of hand-written inference or NJsonSchema (Newtonsoft, older drafts) |
 | Serializer options | `JsonSerializerDefaults.Web` by default, overridable |
+| json-everything (JsonSchema.Net) | Evaluated and not used: its NuGet binaries come with an "Open Source Maintenance Fee" agreement (a monthly fee for revenue-generating organisations above US$10,000), which RuleLoom's users would inherit; its generator doesn't follow System.Text.Json's contract; and the part it would replace (reading JSON back) is about 80 lines. Worth revisiting (or Corvus.JsonSchema, Apache-2.0) when incoming events are validated against schemas |
+| Typed model vs document lookup | Keep the typed field tree (`FieldDefinition` with nested `Fields`/`Items`), which C# consumers can iterate. A document-only design with a path lookup was tried: it didn't reduce code and dropped the tree |
