@@ -22,11 +22,10 @@ events (e.g. `fromAccount` and `toAccount`) without knowing each event's shape.
 | Store contract | `ISchemaStore` in `RuleLoom.Schemas`: `GetAsync(eventType)` (case-insensitive), `ListAsync()`, `SaveAsync(schema)` (replaces a schema of the same event type). Async; tenancy and persistence are the implementation's | PRD: storage stays the consumer's |
 | In-memory store | `InMemorySchemaStore` (thread-safe), optionally seeded with schemas | Tests, samples and simple services |
 | Registration | `AddRuleLoom(r => r.AddSchemas(s => s.Add<OrderPlacedSchema>().AddFromAssemblyOf<T>().AddJson(json)))` registers an `InMemorySchemaStore` (Singleton) seeded with the built and imported schemas; they're built when `AddSchemas` runs, so mistakes surface at startup. Your own store is chosen explicitly with `s.UseStore<MyStore>()` (Scoped); combining it with schemas added in `AddSchemas` throws (save them to your store instead). `SerializerOptions` sets the options for building classes. A later `AddSchemas` call replaces the store | One place to configure RuleLoom, with no dependence on registration order; the DI package references `RuleLoom.Schemas` |
-| Where the engine's contract lives | `IContextReferenceSource` in **Abstractions** (`RuleLoom.Abstractions.Context`): `GetReferenceAsync(eventType, contextName)` → `ContextReference?`. `ContextReference` moves from Schemas to Abstractions; `RuleLoom.Schemas` now references `RuleLoom.Abstractions` | The engine (`RuleLoom`) must not depend on `RuleLoom.Schemas`; Abstractions stays dependency-free |
-| Schema-backed source | `SchemaStoreContextReferences` (in `RuleLoom.Schemas`) reads the event's schema from the `ISchemaStore`; `AddSchemas` registers it (Scoped, like a tenant-aware store) | |
+| How the engine gets references | **The engine (`RuleLoom`) references `RuleLoom.Schemas`** and takes an optional `ISchemaStore`. It wraps the context providers it hands to `EvaluationContext`; before calling a provider, the wrapper reads the event's schema, resolves the context's `ReferencedBy` and passes the request on with `Reference` set. Abstractions only gains `ContextRequest.Reference` and `GetReference<T>()`; `ContextReference` stays in Schemas, which stays dependency-free | Decided in review: a seam interface in Abstractions (tried first) existed only to avoid a dependency that should exist. `RuleLoom.Schemas` still ships separately and comes with `RuleLoom` transitively |
 | Passing the reference | When a context is loaded (prefetch or `GetContextAsync`), the engine asks the source for the context's reference and resolves its paths from the event's current state: a single path gives its value, a composite reference gives an `IReadOnlyDictionary<string, object?>` (part name → value). It's set on `ContextRequest.Reference`. Without a source, a schema or a reference, `Reference` is `null` and the provider reads the subject as before | |
 | Typed access | `ContextRequest.GetReference<T>()`: the value converted with `ValueConverter` (single), or the parts mapped onto `T`'s properties by name, ignoring case (composite, e.g. `record ZoneKey(string Country, string Postcode)`) | Providers work with typed keys |
-| Wiring | `RuleEngine` and `EvaluationContext` take an optional `IContextReferenceSource`; `AddRuleLoom`'s engine factory resolves it if registered | Existing constructions keep working |
+| Wiring | `RuleEngine` takes an optional `ISchemaStore`; `AddRuleLoom`'s engine factory resolves it if registered (`AddSchemas`). Manual use: `new RuleEngine(evaluator, actions, contextProviders: providers, schemas: store)` | Existing constructions keep working; no DI or ASP.NET Core needed |
 
 ## Example
 
@@ -57,10 +56,9 @@ services.AddRuleLoom(r => r
 
 - **`InMemorySchemaStore`**: get (case-insensitive), list, save replaces, seeded; an imported JSON collection gives back
   the same schemas.
-- **`SchemaStoreContextReferences`**: reference found, unknown event, unknown context, context without a reference.
 - **`ContextRequest.GetReference<T>()`**: single value converted, composite mapped onto a record, `null`.
 - **Engine**: single and composite references reach providers; one provider under two names gets each its own
-  reference; no source / no schema / no reference → `null`; references resolve on JSON and .NET state; on-demand loads
+  reference; no schemas / unknown event / no declared reference → `null`; references resolve on JSON and .NET state; on-demand loads
   (`GetContextAsync`) get references too.
 - **DI**: `AddSchemas` registers the seeded in-memory store and the source; `UseStore<T>()` registers your store; seeds
   with your own store throw; duplicate event types throw; the engine passes references end to end.
@@ -70,3 +68,13 @@ services.AddRuleLoom(r => r
 - JSON guide (contexts): references and `GetReference<T>()`.
 - Quick start / README: `AddSchemas`.
 - `AGENTS.md`.
+
+## Deviations
+
+- The engine's references came first through an `IContextReferenceSource` seam in Abstractions; in review the core
+  referencing `RuleLoom.Schemas` was preferred, so the seam is gone and the engine reads `ISchemaStore` directly (wrapping
+  providers), and `ContextReference` stays in Schemas.
+- The wider storage model (sources / storage / publishing; RuleLoom-provided storage) was decided in review and recorded in
+  the vision; publishing, registration endpoints, startup saving into persistent stores and storage packages are 0.7.
+- `GetReference<string>()` converts any value to its invariant text and `GetReference<Guid>()` parses GUID text, beyond
+  the shared value converter (common for IDs).
