@@ -1,7 +1,5 @@
 using System.Reflection;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace RuleLoom.Schemas;
 
@@ -12,12 +10,6 @@ namespace RuleLoom.Schemas;
 /// when omitted.</param>
 public sealed class EventSchemaCollection(JsonSerializerOptions? options = null)
 {
-    private static readonly JsonSerializerOptions WriteOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
-
     private readonly List<IEventSchema> _schemas = [];
 
     /// <summary>Adds a schema class.</summary>
@@ -60,7 +52,9 @@ public sealed class EventSchemaCollection(JsonSerializerOptions? options = null)
     /// schema is invalid.</exception>
     public IReadOnlyList<EventSchemaDefinition> Build()
     {
-        var built = _schemas.Select(schema => schema.Build(options)).ToList();
+        // One read-only copy for every schema, so they share the serializer's metadata.
+        var shared = options is null ? null : SchemaGenerator.Freeze(options);
+        var built = _schemas.Select(schema => schema.Build(shared)).ToList();
 
         var duplicate = built.GroupBy(s => s.EventType, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
         if (duplicate is not null)
@@ -73,6 +67,17 @@ public sealed class EventSchemaCollection(JsonSerializerOptions? options = null)
     /// Builds every schema and writes them as a JSON array of event documents (read back with
     /// <see cref="EventSchemaDefinition.ParseMany"/>).
     /// </summary>
-    public string ToJson() =>
-        new JsonArray(Build().Select(schema => (JsonNode)schema.CloneDocument()).ToArray()).ToJsonString(WriteOptions);
+    public string ToJson()
+    {
+        using var buffer = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(buffer, EventSchemaDefinition.WriterOptions))
+        {
+            writer.WriteStartArray();
+            foreach (var schema in Build())
+                schema.WriteTo(writer);
+            writer.WriteEndArray();
+        }
+
+        return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
+    }
 }

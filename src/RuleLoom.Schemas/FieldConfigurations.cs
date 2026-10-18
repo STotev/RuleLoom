@@ -15,7 +15,7 @@ internal sealed class FieldConfigurations
     public FieldBuilder Field(LambdaExpression property)
     {
         var properties = PropertyChains.FromProperty(property);
-        var key = string.Join('.', properties.Select(p => p.Name));
+        var key = PropertyChains.Describe(properties);
 
         if (!_fields.TryGetValue(key, out var entry))
             _fields[key] = entry = (properties, new FieldConfiguration());
@@ -31,6 +31,8 @@ internal sealed class FieldConfigurations
 /// </summary>
 internal static class PropertyChains
 {
+    public static string Describe(IReadOnlyList<PropertyInfo> properties) => string.Join('.', properties.Select(p => p.Name));
+
     public static IReadOnlyList<PropertyInfo> FromProperty(LambdaExpression lambda) =>
         Chain(lambda.Body, lambda.Parameters[0])
         ?? throw new ArgumentException($"'{lambda}' must be a chain of properties, e.g. o => o.Customer.Tier.", nameof(lambda));

@@ -92,6 +92,8 @@ public sealed class PayloadDto
     public List<object> Bag { get; set; } = [];
     public OrderStatus? MaybeStatus { get; set; }
     public int Quantity { get; set; }
+    public double Score { get; set; }
+    public string Code { get; set; } = "";
 }
 
 /// <summary>A public generic schema class: assembly scans must skip it.</summary>

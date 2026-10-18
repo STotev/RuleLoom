@@ -20,11 +20,41 @@ public class ExporterEdgeCaseTests
     }
 
     [Fact]
-    public void Build_UntypedPropertyWithLabel_IsDescribed()
+    public void Build_UntypedPropertyWithLabel_IsDescribedAndStaysNullable()
     {
-        var schema = new PayloadSchema().Build();
+        var payload = Field(new PayloadSchema().Build().Fields, "payload");
 
-        Assert.Equal("Raw payload", Field(schema.Fields, "payload").Label);
+        Assert.Equal(("Raw payload", FieldType.Any, true), (payload.Label, payload.Type, payload.IsNullable));
+    }
+
+    [Fact]
+    public void Build_NamedFloatingPointLiterals_StayNumbers()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+
+        Assert.Equal(FieldType.Number, Field(new PayloadSchema().Build(options).Fields, "score").Type);
+    }
+
+    [Fact]
+    public void Build_OptionsChangedAfterABuild_AreFollowed()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var schema = new PayloadSchema();
+
+        var before = schema.Build(options);
+        options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+        var after = schema.Build(options);
+
+        Assert.Contains(before.Fields, f => f.Name == "maybeStatus");
+        Assert.Contains(after.Fields, f => f.Name == "maybe_status");
+    }
+
+    [Fact]
+    public void Build_CompositeReferencePartsThatCollide_Throw()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() => new CollidingReferenceSchema().Build());
+
+        Assert.Contains("context 'thing'", error.Message);
     }
 
     [Fact]
@@ -105,6 +135,15 @@ public class ExporterEdgeCaseTests
         {
             Event("PayloadReceived");
             Field(p => p.Payload).Label("Raw payload");
+        }
+    }
+
+    private sealed class CollidingReferenceSchema : EventSchema<PayloadDto>
+    {
+        public CollidingReferenceSchema()
+        {
+            Event("Colliding");
+            Context("thing").ReferencedBy(p => new { code = p.Code, Code = p.Quantity });
         }
     }
 

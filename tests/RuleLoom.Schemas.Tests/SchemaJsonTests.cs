@@ -67,6 +67,8 @@ public class SchemaJsonTests
     [InlineData("""{ "x-ruleloom-event": "E", "properties": { "a": { "type": "date" } } }""")]
     [InlineData("""{ "x-ruleloom-event": "E", "x-ruleloom-contexts": [] }""")]
     [InlineData("""{ "x-ruleloom-event": "E", "x-ruleloom-contexts": { "c": { "x-ruleloom-referenced-by": 1 } } }""")]
+    [InlineData("""{ "x-ruleloom-event": " " }""")]
+    [InlineData("""{ "x-ruleloom-event": "E", "x-ruleloom-contexts": { "customer": {}, "Customer": {} } }""")]
     public void Parse_InvalidDocument_Throws(string json)
     {
         Assert.ThrowsAny<JsonException>(() => EventSchemaDefinition.Parse(json));

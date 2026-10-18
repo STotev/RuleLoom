@@ -20,10 +20,25 @@ internal static class SchemaGenerator
     public const string ContextsKeyword = "x-ruleloom-contexts";
     public const string ReferencedByKeyword = "x-ruleloom-referenced-by";
 
-    private static readonly JsonSerializerOptions WebDefaults = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions WebDefaults = Freeze(new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
-    // Prepared once per options instance, so System.Text.Json's metadata cache is shared by every schema built with them.
+    // Prepared once per read-only options instance, so System.Text.Json's metadata cache is shared by every schema built
+    // with them. Options that can still change are prepared on each build, so later changes aren't missed.
     private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> Prepared = new();
+
+    /// <summary>
+    /// A read-only copy of <paramref name="options"/> (or the options themselves if they're read-only already), so
+    /// several builds can share its prepared form.
+    /// </summary>
+    public static JsonSerializerOptions Freeze(JsonSerializerOptions options)
+    {
+        if (options.IsReadOnly)
+            return options;
+
+        var frozen = new JsonSerializerOptions(options);
+        frozen.MakeReadOnly(populateMissingResolver: true);
+        return frozen;
+    }
 
     public static EventSchemaDefinition Generate(
         EventBuilder @event,
@@ -32,7 +47,8 @@ internal static class SchemaGenerator
         IReadOnlyList<ContextDeclaration> contexts,
         JsonSerializerOptions? options)
     {
-        var serializer = Prepared.GetValue(options ?? WebDefaults, PrepareOptions);
+        var source = options ?? WebDefaults;
+        var serializer = source.IsReadOnly ? Prepared.GetValue(source, PrepareOptions) : PrepareOptions(source);
 
         var document = new JsonObject
         {
@@ -73,13 +89,19 @@ internal static class SchemaGenerator
         {
             var owner = $"the reference of context '{context.Name}'";
             var parts = PropertyChains.FromReference(reference)
-                .Select(part => (part.Name, Path: string.Join('.', JsonPath(subjectType, part.Properties, serializer, owner))))
+                .Select(part => (Name: part.Name is null ? null : serializer.PropertyNamingPolicy?.ConvertName(part.Name) ?? part.Name,
+                    Path: string.Join('.', JsonPath(subjectType, part.Properties, serializer, owner))))
                 .ToList();
+
+            if (parts.GroupBy(part => part.Name).FirstOrDefault(group => group.Key is not null && group.Count() > 1) is { } duplicate)
+            {
+                throw new InvalidOperationException(
+                    $"Part '{duplicate.Key}' of {owner} appears more than once (after the naming policy).");
+            }
 
             node[ReferencedByKeyword] = parts is [(null, var path)]
                 ? path
-                : new JsonObject(parts.Select(part => KeyValuePair.Create(
-                    serializer.PropertyNamingPolicy?.ConvertName(part.Name!) ?? part.Name!, (JsonNode?)part.Path)));
+                : new JsonObject(parts.Select(part => KeyValuePair.Create(part.Name!, (JsonNode?)part.Path)));
         }
 
         return node;
@@ -107,7 +129,7 @@ internal static class SchemaGenerator
             if (parent.Path is not null)
             {
                 throw new InvalidOperationException(
-                    $"Field '{Describe(entry.Properties)}' of {owner} is inside ignored field '{Describe(parent.Properties)}'.");
+                    $"Field '{PropertyChains.Describe(entry.Properties)}' of {owner} is inside ignored field '{PropertyChains.Describe(parent.Properties)}'.");
             }
         }
 
@@ -118,8 +140,6 @@ internal static class SchemaGenerator
         return schema;
     }
 
-    private static string Describe(IReadOnlyList<PropertyInfo> properties) => string.Join('.', properties.Select(p => p.Name));
-
     /// <summary>
     /// The exporter writes a <c>$ref</c> for every repeat of a type, also to a sibling property. Copies those targets in
     /// place, so the only references left point at an ancestor (a real cycle): removing an ignored field can't leave a
@@ -127,7 +147,6 @@ internal static class SchemaGenerator
     /// </summary>
     private static void InlineSiblingReferences(JsonObject root)
     {
-        var copies = 0;
         Visit(root, "#");
 
         void Visit(JsonNode? node, string pointer)
@@ -138,9 +157,6 @@ internal static class SchemaGenerator
                     if (obj["$ref"] is JsonValue reference && reference.TryGetValue<string>(out var target) &&
                         !IsAncestor(target, pointer) && Resolve(root, target) is JsonObject resolved)
                     {
-                        if (++copies > 256)
-                            throw new InvalidOperationException("The type's schema has too many repeated parts to inline.");
-
                         var copy = (JsonObject)resolved.DeepClone();
                         Rebase(copy, target, pointer);
                         obj.Remove("$ref");
@@ -213,7 +229,7 @@ internal static class SchemaGenerator
             if (reason is not null)
             {
                 throw new InvalidOperationException(
-                    $"Field '{string.Join('.', properties.Select(p => p.Name))}' of {owner} has no place in the schema: {reason}.");
+                    $"Field '{PropertyChains.Describe(properties)}' of {owner} has no place in the schema: {reason}.");
             }
 
             // An untyped property (object, JsonElement) is the schema `true`: make it an object to describe it.
@@ -256,7 +272,7 @@ internal static class SchemaGenerator
             if (member is null)
             {
                 throw new InvalidOperationException(
-                    $"Field '{string.Join('.', properties.Select(p => p.Name))}' of {owner} isn't serialized " +
+                    $"Field '{PropertyChains.Describe(properties)}' of {owner} isn't serialized " +
                     $"('{property.Name}' isn't written, e.g. [JsonIgnore]).");
             }
 

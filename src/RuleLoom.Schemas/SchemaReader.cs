@@ -11,8 +11,9 @@ internal static class SchemaReader
     public static (string EventType, string? Label, string? Description, IReadOnlyList<FieldDefinition> Fields,
         IReadOnlyList<ContextDefinition> Contexts) ReadEvent(JsonObject document)
     {
-        var eventType = String(document, SchemaGenerator.EventKeyword)
-            ?? throw new JsonException($"An event schema needs '{SchemaGenerator.EventKeyword}'.");
+        var eventType = String(document, SchemaGenerator.EventKeyword) is { } name && !string.IsNullOrWhiteSpace(name)
+            ? name
+            : throw new JsonException($"An event schema needs a non-empty '{SchemaGenerator.EventKeyword}'.");
 
         var contexts = document[SchemaGenerator.ContextsKeyword] switch
         {
@@ -20,6 +21,9 @@ internal static class SchemaReader
             JsonObject nodes => nodes.Select(pair => ReadContext(pair.Key, Object(pair.Value, pair.Key))).ToList(),
             _ => throw new JsonException($"'{SchemaGenerator.ContextsKeyword}' must be an object.")
         };
+
+        if (contexts.GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1) is { } duplicate)
+            throw new JsonException($"Context '{duplicate.Key}' appears more than once (names ignore case).");
 
         return (eventType, String(document, "title"), String(document, "description"),
             ReadFields(document, document), contexts);
@@ -64,8 +68,8 @@ internal static class SchemaReader
 
         var types = Types(described);
         var enumValues = described["enum"] is JsonArray values ? values.Where(v => v is not null).Select(v => v!.ToString()).ToList() : [];
-        var isNullable = types.Contains("null") || described["enum"] is JsonArray all && all.Any(v => v is null);
         var type = enumValues.Count > 0 ? FieldType.Enum : ReadType(types, String(described, "format"), name);
+        var isNullable = type == FieldType.Any || types.Contains("null") || described["enum"] is JsonArray all && all.Any(v => v is null);
 
         return new FieldDefinition(
             name,
@@ -116,8 +120,10 @@ internal static class SchemaReader
         };
     }
 
+    // Without "type", the types of the "anyOf" branches (e.g. a number that may also be NaN or Infinity).
     private static List<string> Types(JsonObject node) => node["type"] switch
     {
+        null when node["anyOf"] is JsonArray branches => branches.OfType<JsonObject>().SelectMany(Types).Distinct().ToList(),
         null => [],
         JsonValue value => [TypeName(value)],
         JsonArray array => array.Select(TypeName).ToList(),

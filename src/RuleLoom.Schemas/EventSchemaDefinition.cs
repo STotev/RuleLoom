@@ -10,11 +10,10 @@ namespace RuleLoom.Schemas;
 /// </summary>
 public sealed class EventSchemaDefinition
 {
-    private static readonly JsonSerializerOptions WriteOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
+    // Indented, readable JSON (no escaping of characters such as '+'); shared by every writer of schema documents.
+    internal static readonly JsonWriterOptions WriterOptions = new() { Indented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+    private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true, Encoder = WriterOptions.Encoder };
 
     private readonly JsonObject _document;
 
@@ -70,9 +69,12 @@ public sealed class EventSchemaDefinition
             if (JsonNode.Parse(json) is not JsonArray documents)
                 throw new JsonException("Expected a JSON array of event schemas.");
 
-            return documents
+            var items = documents.ToList();
+            documents.Clear();   // detaches the items, so they can be kept without copying
+
+            return items
                 .Select((node, index) => node is JsonObject document
-                    ? new EventSchemaDefinition((JsonObject)document.DeepClone())
+                    ? new EventSchemaDefinition(document)
                     : throw new JsonException($"Item {index} isn't an event schema."))
                 .ToList();
         });
@@ -91,5 +93,5 @@ public sealed class EventSchemaDefinition
         }
     }
 
-    internal JsonObject CloneDocument() => (JsonObject)_document.DeepClone();
+    internal void WriteTo(Utf8JsonWriter writer) => _document.WriteTo(writer);
 }
