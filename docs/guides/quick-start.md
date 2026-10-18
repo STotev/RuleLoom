@@ -195,10 +195,12 @@ public sealed class TransferMadeSchema : EventSchema<TransferDto>
 }
 
 services.AddRuleLoom(rules => rules
-    .AddSchemas(s => s.AddFromAssemblyOf<TransferMadeSchema>())     // or .AddJson(exportedJson), or .UseStore<MyStore>()
+    .AddSchemas(s => s.AddFromAssemblyOf<TransferMadeSchema>())     // sources; kept in memory unless .UseStore<MyStore>()
     .AddContextProvider<AccountProvider>("account"));                // loads both accounts, each with its own reference
 ```
 
+With your own store (`.UseStore<MyStore>()`), the sources are saved into it when the app starts; in an app without a
+host (e.g. a plain console app), call `await serviceProvider.SaveRuleLoomSchemasAsync()` once at startup.
 `new EventSchemaCollection().AddFromAssemblyOf<TransferMadeSchema>().ToJson()` exports the schemas as JSON Schema, for
 another service or an authoring UI.
 

@@ -163,7 +163,9 @@ environment `nuget`) and attaches the packages to the GitHub release.
   `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`). `ToJson()`/`Parse`/`ParseMany` round-trip;
   field names are JSON names. `EventSchemaCollection` gathers schemas (assembly scan) and writes a JSON array.
   `ISchemaStore` (+ `InMemorySchemaStore`) keeps schemas where the engine runs; DI's `AddSchemas(s => s.Add<T>() /
-  AddFromAssemblyOf<T>() / AddJson(json) / UseStore<T>())` registers the store. `RuleLoom` references `RuleLoom.Schemas`:
+  AddFromAssemblyOf<T>() / AddJson(json) / UseStore<T>())` registers sources and storage separately: the in-memory store
+  starts with the sources; your own store gets them at startup (`SchemaSourcesStartup` hosted service, or
+  `serviceProvider.SaveRuleLoomSchemasAsync()` without a host). `RuleLoom` references `RuleLoom.Schemas`:
   `RuleEngine` takes an optional `ISchemaStore` and wraps the context providers (`SchemaReferencingProviders`): the
   event's schema picks the provider (`Context("toAccount").LoadedBy("account")`, else the context name) and its declared
   reference is resolved on the current state and passed as `ContextRequest.Reference`
