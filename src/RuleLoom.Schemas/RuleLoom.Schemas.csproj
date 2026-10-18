@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Event schemas for RuleLoom: describe the events a service raises in small classes, generate JSON Schema from your DTOs with System.Text.Json, and ship the schemas to a central rules service. No dependencies outside .NET.</Description>
+    <PackageTags>rules;rule-engine;business-rules;json-schema;events</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RuleLoom.Schemas.Tests" />
+  </ItemGroup>
+
+</Project>
