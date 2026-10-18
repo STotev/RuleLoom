@@ -115,7 +115,7 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 | **0.6: Schemas and contexts** ([PRD #87](https://github.com/STotev/RuleLoom/issues/87)) | New `RuleLoom.Schemas` package: event schema classes (`EventSchema<T>`) with inference from DTOs, JSON Schema export/import, `ISchemaStore` + in-memory store; **contexts** (`@customer.Tier`) loaded by consumer-registered context providers, prefetched once per event; previous state rebuilt from changed fields; schema-aware `RuleValidator` (unknown paths and contexts are errors, type mismatches warnings); `#` reserved for functions | Detail under [Schema & validation](#schema--validation) below |
 | **0.7: Authoring surface & hosting** | Transport-free **catalogue** (event schemas, operators, actions, validate); **action descriptors** (FluentValidation-style; parameters that are values or paths); `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration); HTTP schema registration client and optional build-time schema generation; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape) | Optional packages; no rule CRUD. The PRD also decides **scopes** (applications / bounded contexts) and rule groups, see the vision |
 | **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
-| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides | 1.0 marks a stable API; packages are already published from 0.5.0 |
+| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides, a **documentation site** built from `docs/` with more extensive examples (see below) | 1.0 marks a stable API; packages are already published from 0.5.0 |
 | **After 0.7** | **Fluent rule builder** producing `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the schema builder's expression → path translation | Mainly for in-process users; placed once 0.7 settles |
 | **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
 
@@ -238,6 +238,18 @@ published results in `docs/benchmarks.md`, a README Performance section, and a m
 XML docs on all public APIs (packages ship XML docs; missing ones outside Abstractions are suppressed until then),
 concept/operator guides,
 scenario samples. Detail: old roadmap §1.4, PRD #1 plan Phase 3.
+
+**Documentation site** (raised 2026-10-19): publish the Markdown in `docs/` as a website (GitHub Pages, built by a
+workflow on release), with API reference from the XML docs and more extensive examples (recipes for common setups:
+inside a single service, a service shared by others, contexts, schemas, scheduling). To explore which tool fits:
+
+| Tool | Notes |
+|---|---|
+| **DocFX** | .NET-native: Markdown guides plus API reference generated from the assemblies' XML docs, in one site; used by .NET libraries such as Polly |
+| **MkDocs + Material** | Very popular for prose docs, simple to run, good search; no .NET API reference of its own |
+| **Docusaurus / VitePress / Starlight** | Modern static-site generators (React, Vue, Astro), with versioned docs (Docusaurus) and good search; API reference needs a separate generator |
+
+Decide before 1.0 (an early, minimal site could come sooner), and move or keep the current guides accordingly.
 
 ### Developer experience (old Phase 2)
 Fluent rule builder API (scheduled for **0.6**; post-1.0 typed rule consumers build on it); more operators — comparison (`between` `in`; `gt` `gte` `lt` `lte` are in #22), string
