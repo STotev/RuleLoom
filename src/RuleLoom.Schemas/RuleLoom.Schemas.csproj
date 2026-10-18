@@ -9,8 +9,4 @@
     <InternalsVisibleTo Include="RuleLoom.Schemas.Tests" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\RuleLoom.Abstractions\RuleLoom.Abstractions.csproj" />
-  </ItemGroup>
-
 </Project>

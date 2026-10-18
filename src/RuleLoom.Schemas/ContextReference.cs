@@ -1,4 +1,4 @@
-namespace RuleLoom.Abstractions.Context;
+namespace RuleLoom.Schemas;
 
 /// <summary>
 /// How an event refers to a context (declared in its schema with <c>ReferencedBy</c>): one subject path (e.g. <c>customerId</c>) or named paths for a composite reference

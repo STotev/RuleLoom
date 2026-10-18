@@ -41,7 +41,7 @@ public static class RuleLoomServiceCollectionExtensions
             sp.GetRequiredService<IActionFactory>(),
             sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<IContextProviderFactory>(),
-            sp.GetService<IContextReferenceSource>()));
+            sp.GetService<RuleLoom.Schemas.ISchemaStore>()));
         services.TryAddScoped(sp => new RuleValidator(
             sp.GetRequiredService<RuleLoomOperators>().All,
             sp.GetRequiredService<IActionFactory>()));

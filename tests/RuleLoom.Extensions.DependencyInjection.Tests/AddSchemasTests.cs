@@ -30,7 +30,6 @@ public class AddSchemasTests
         using var scope = provider.CreateScope();
 
         Assert.IsType<EmptyStore>(scope.ServiceProvider.GetRequiredService<ISchemaStore>());
-        Assert.IsType<SchemaStoreContextReferences>(scope.ServiceProvider.GetRequiredService<IContextReferenceSource>());
     }
 
     [Fact]

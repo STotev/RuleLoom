@@ -17,7 +17,8 @@ public sealed record ContextRequest(string Name, string EventType, object? Curre
     private static readonly JsonSerializerOptions ReferenceJsonOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>
-    /// The event's reference to this context, resolved from the subject: the value for a single reference (e.g. a
+    /// The event's reference to this context, resolved from the subject by the engine when the event's schema declares one
+    /// (<c>ReferencedBy</c>): the value for a single reference (e.g. a
     /// customer ID), the part values by name for a composite one (<see cref="IReadOnlyDictionary{TKey, TValue}"/>), or
     /// <c>null</c> when no reference is declared (read the subject with <see cref="Resolve"/> instead).
     /// </summary>

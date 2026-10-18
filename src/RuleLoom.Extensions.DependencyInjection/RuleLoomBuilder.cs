@@ -54,9 +54,8 @@ public sealed class RuleLoomBuilder
 
     /// <summary>
     /// Registers event schemas: an <see cref="ISchemaStore"/> (the in-memory store seeded with the schemas configured here,
-    /// Singleton, or your own with <see cref="SchemaRegistration.UseStore{TStore}"/>, Scoped) and the engine's source of
-    /// context references, so providers receive each event's resolved reference. Call it once; a later call replaces the
-    /// store.
+    /// Singleton, or your own with <see cref="SchemaRegistration.UseStore{TStore}"/>, Scoped). The engine reads it, so
+    /// context providers receive each event's declared reference. Call it once; a later call replaces the store.
     /// </summary>
     /// <exception cref="InvalidOperationException">Schemas were added together with your own store.</exception>
     public RuleLoomBuilder AddSchemas(Action<SchemaRegistration>? configure = null)
@@ -77,7 +76,6 @@ public sealed class RuleLoomBuilder
             Services.Replace(ServiceDescriptor.Singleton<ISchemaStore>(new InMemorySchemaStore(seeds)));
         }
 
-        Services.TryAddScoped<IContextReferenceSource>(sp => new SchemaStoreContextReferences(sp.GetRequiredService<ISchemaStore>()));
         return this;
     }
 

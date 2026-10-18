@@ -17,7 +17,6 @@ public class EvaluationContext
 
     private readonly string? _eventType;
     private readonly IContextProviderFactory? _contextProviders;
-    private readonly IContextReferenceSource? _contextReferences;
     private readonly ConcurrentDictionary<string, Lazy<Task<object?>>> _contexts = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -49,10 +48,7 @@ public class EvaluationContext
     /// <param name="previous">The previous state, if any.</param>
     /// <param name="eventType">The event being processed, passed to the providers.</param>
     /// <param name="contextProviders">The registered context providers.</param>
-    /// <param name="contextReferences">How the event refers to its contexts (e.g. from its schema), resolved and passed to
-    /// providers as <see cref="ContextRequest.Reference"/>; without it, providers read the subject themselves.</param>
-    public EvaluationContext(object? current, object? previous, string eventType, IContextProviderFactory contextProviders,
-        IContextReferenceSource? contextReferences = null)
+    public EvaluationContext(object? current, object? previous, string eventType, IContextProviderFactory contextProviders)
         : this(current, previous)
     {
         ArgumentNullException.ThrowIfNull(eventType);
@@ -60,7 +56,6 @@ public class EvaluationContext
 
         _eventType = eventType;
         _contextProviders = contextProviders;
-        _contextReferences = contextReferences;
     }
 
     /// <summary>
@@ -155,34 +150,13 @@ public class EvaluationContext
     {
         try
         {
-            var request = new ContextRequest(name, _eventType!, Current, Previous)
-            {
-                Reference = await ResolveReferenceAsync(name, cancellationToken).ConfigureAwait(false)
-            };
-
-            return await provider.GetAsync(request, cancellationToken).ConfigureAwait(false);
+            return await provider.GetAsync(new ContextRequest(name, _eventType!, Current, Previous), cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             throw new ContextLoadException(name, ex);
         }
-    }
-
-    /// <summary>
-    /// The event's declared reference to the context, resolved on the current state: one value, or the parts by name.
-    /// </summary>
-    private async ValueTask<object?> ResolveReferenceAsync(string name, CancellationToken cancellationToken)
-    {
-        if (_contextReferences is null ||
-            await _contextReferences.GetReferenceAsync(_eventType!, name, cancellationToken).ConfigureAwait(false) is not { } reference)
-        {
-            return null;
-        }
-
-        return reference.IsComposite
-            ? reference.Parts.ToDictionary(part => part.Key, part => Resolve(part.Value), StringComparer.OrdinalIgnoreCase)
-                as IReadOnlyDictionary<string, object?>
-            : Resolve(reference.Path!);
     }
 
     private object? GetLoadedContext(string name)

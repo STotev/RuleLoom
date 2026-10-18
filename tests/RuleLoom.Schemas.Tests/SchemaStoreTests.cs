@@ -29,17 +29,4 @@ public class SchemaStoreTests
         Assert.Equal(Order.Fields, stored!.Fields);
         Assert.Equal(Order.Contexts, stored.Contexts);
     }
-
-    [Fact]
-    public async Task SchemaStoreContextReferences_ReadsReferencesFromTheEventSchema()
-    {
-        var references = new SchemaStoreContextReferences(new InMemorySchemaStore([Order]));
-        var ct = TestContext.Current.CancellationToken;
-
-        Assert.Equal("customerId", (await references.GetReferenceAsync("OrderPlaced", "CUSTOMER", ct))!.Path);
-        Assert.True((await references.GetReferenceAsync("OrderPlaced", "shipping-zone", ct))!.IsComposite);
-        Assert.Null(await references.GetReferenceAsync("OrderPlaced", "calendar", ct));
-        Assert.Null(await references.GetReferenceAsync("OrderPlaced", "unknown", ct));
-        Assert.Null(await references.GetReferenceAsync("Unknown", "customer", ct));
-    }
 }

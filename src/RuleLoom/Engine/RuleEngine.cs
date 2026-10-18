@@ -4,7 +4,9 @@ using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
+using RuleLoom.Contexts;
 using RuleLoom.Scheduling;
+using RuleLoom.Schemas;
 
 namespace RuleLoom.Engine;
 
@@ -13,8 +15,12 @@ public sealed class RuleEngine(
     IActionFactory actionFactory,
     TimeProvider? timeProvider = null,
     IContextProviderFactory? contextProviders = null,
-    IContextReferenceSource? contextReferences = null)
+    ISchemaStore? schemas = null)
 {
+    // With schemas, providers receive each event's declared reference to their context.
+    private readonly IContextProviderFactory? _contextProviders =
+        contextProviders is not null && schemas is not null ? new SchemaReferencingProviders(contextProviders, schemas) : contextProviders;
+
     private readonly IConditionEvaluator _conditionEvaluator =
         conditionEvaluator ?? throw new ArgumentNullException(nameof(conditionEvaluator));
 
@@ -44,9 +50,9 @@ public sealed class RuleEngine(
             .OrderByDescending(r => r.Priority)
             .ToList();
 
-        var context = contextProviders is null
+        var context = _contextProviders is null
             ? new EvaluationContext(current, previous)
-            : new EvaluationContext(current, previous, eventType, contextProviders, contextReferences);
+            : new EvaluationContext(current, previous, eventType, _contextProviders);
 
         await PrefetchContextsAsync(context, matchingRules, cancellationToken);
 
@@ -114,10 +120,10 @@ public sealed class RuleEngine(
         IReadOnlyList<RuleDefinition> rules,
         CancellationToken cancellationToken)
     {
-        if (contextProviders is null)
+        if (_contextProviders is null)
             return;
 
-        var names = ContextReferences.Collect(rules).Where(name => contextProviders.TryGetProvider(name, out _));
+        var names = ContextReferences.Collect(rules).Where(name => _contextProviders.TryGetProvider(name, out _));
 
         await Task.WhenAll(names.Select(async name =>
         {

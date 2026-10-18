@@ -10,6 +10,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\RuleLoom.Abstractions\RuleLoom.Abstractions.csproj" />
+      <ProjectReference Include="..\RuleLoom.Schemas\RuleLoom.Schemas.csproj" />
     </ItemGroup>
 
 </Project>
