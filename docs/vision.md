@@ -159,6 +159,27 @@ await rules.PublishAsync(current: order, previous: before, ct);   // runs the co
 - **Builds on the fluent rule builder** (0.6), which already produces `RuleDefinition` in code; consumers add
   grouping by event type, typed inline actions and dispatch.
 
+### Scopes (applications, bounded contexts) and rule groups
+Raised 2026-10-18. One engine could serve several applications in an organisation (a public website, a back-office
+system, a set of microservices): each registers its own events, and users author rules only for the application they
+work in, with forms built from that application's schemas. Three needs are distinct:
+
+- **Tenancy**: *whose* rules (customer organisations). Stays the consumer's.
+- **Scope**: *which application or bounded context* raised the event, and which events, operators, actions and contexts
+  belong to it. Not modelled today; consumers would prefix event types (`orders.OrderPlaced`). Scope also separates two
+  bounded contexts that use the same event name, so users can tell them apart.
+- **Rule groups**: organising rules into sets that are enabled, disabled or ordered together.
+
+Options for scope:
+1. **Part of an event's identity**: the schema names its scope (e.g. `Event("OrderPlaced").In("orders")`), events are
+   keyed by *(scope, event type)*, rules carry the scope, the catalogue filters by it, and the engine matches only rules of
+   the event's scope. Fits `RuleEvent.Source` (0.7) and removes the prefixing boilerplate.
+2. **Named instances** per application (above), when applications need different actions, operators or providers.
+3. Both: scopes for events and rules, named instances only where capabilities differ.
+
+A standard *(tenant, scope, event type)* key might also make an optional rule-store contract worthwhile, to cut the
+boilerplate of loading the right rules and schemas. **To decide in the 0.7 PRD**, with the catalogue and `RuleEvent`.
+
 ### Per-event overrides of context fields
 Raised 2026-10-18 during #92. A context's fields are described once, with its provider; an event may want to hide some
 of them or label them differently for its rule authors (e.g. ignore a customer's internal fields for one event, or call
