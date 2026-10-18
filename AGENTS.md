@@ -156,10 +156,11 @@ environment `nuget`) and attaches the packages to the GitHub release.
   incomparable), other strings ordinal, JSON objects/arrays by content via `DeepEquals`; `changed` uses `AreEqual` too). Operators
   and other features must use them rather than `object.Equals` or ad-hoc parsing.
 - **Schemas** (`RuleLoom.Schemas`): `class XSchema : EventSchema<TDto>` configures `Event(name)` (required),
-  `Field(o => o.A.B)` (`Label`/`Description`/`Ignore`) and `Context<T>(name, c => c.Field(...))` (`Many()`); `Build(options)`
+  `Field(o => o.A.B)` (`Label`/`Description`/`Ignore`) and `Context(name)` (a relation: `ReferencedBy(o => o.Id)` or
+  `o => new { o.A, o.B }`; context fields are described with their provider); `Build(options)`
   generates an `EventSchemaDefinition` from how `TDto` is serialized (Web defaults unless options are given; numbers
   not typed as strings; null-oblivious types non-nullable), adds configured titles and descriptions (no automatic labels) and
-  `x-ruleloom-event`/`x-ruleloom-contexts`, and rewrites context `$ref`s. `ToJson()`/`Parse`/`ParseMany` round-trip;
+  `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`). `ToJson()`/`Parse`/`ParseMany` round-trip;
   field names are JSON names. `EventSchemaCollection` gathers schemas (assembly scan) and writes a JSON array.
 - **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is
   validated before deserialization (`RuleJsonValidator`); invalid rules throw `RuleParseException` (a `JsonException`)

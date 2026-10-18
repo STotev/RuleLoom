@@ -29,15 +29,13 @@ public sealed class OrderPlacedSchema : EventSchema<OrderDto>
         Event("OrderPlaced").Label("Order placed").Description("A customer placed an order.");
 
         Field(o => o.Total).Label("Order total");
-        Field(o => o.Customer.Tier).Description("Loyalty tier at the time of the order.");
+        Field(o => o.Status).Description("Placed or paid.");
+        Field(o => o.CustomerId).Ignore();          // technical: used to load the customer, not offered to rule authors
         Field(o => o.InternalNotes).Ignore();
 
-        Context<CustomerDto>("customer", c =>
-        {
-            c.Field(x => x.Tier).Label("Loyalty tier");
-            c.Field(x => x.InternalId).Ignore();
-        }).Label("Customer");
-        Context<UserDto>("watchers").Many().Label("Watchers");
+        Context("customer").ReferencedBy(o => o.CustomerId).Label("Customer");
+        Context("shipping-zone").ReferencedBy(o => new { o.Address.Country, o.Address.Postcode });
+        Context("calendar");                        // needs no reference (e.g. public holidays)
     }
 }
 
@@ -52,10 +50,16 @@ IReadOnlyList<EventSchemaDefinition> parsed = EventSchemaDefinition.ParseMany(js
 - **`Field(expression)`** points at a property, at any depth (`o => o.Customer.Tier`), and configures `Label`,
   `Description` or `Ignore()`. Configuring the same field twice merges (the last value wins). An expression that isn't a
   property chain throws.
-- **`Context<T>(name, configure?)`** declares a context (names ignore case; duplicates throw). Its fields are inferred
-  from `T` and can be configured with the same `Field(...)` API in `configure`; `.Many()` marks a collection of `T`;
-  `Label`/`Description` describe it. Contexts are descriptions only: the engine
-  loads them through context providers (#91).
+- **`Context(name)`** declares a context the event **relates to** (names ignore case; duplicates throw): an entity rules
+  use as `@name`, loaded by the context provider registered under that name (#91). The event schema describes the
+  relation, not the context's fields: those are described where the provider is registered (#93 follow-up slice), so
+  each context is described once, where its data really comes from. `Label`/`Description` describe the relation.
+- **`ReferencedBy(expression)`** says how the event refers to the context: a subject property (`o => o.CustomerId`) or,
+  for a composite reference, an anonymous object of properties (`o => new { o.Address.Country, o.Address.Postcode }`,
+  EF Core style). Paths are mapped to JSON names; part names follow the naming policy. The engine resolves the
+  reference from the event and passes it to the provider (#93), so one provider can serve several contexts and events
+  (e.g. `fromAccount`/`toAccount`). It's optional: contexts like a business calendar need none. A reference may point at
+  an ignored field (keys are often technical); a property that isn't serialized throws.
 - The configuration runs in the constructor (FluentValidation style). `Build()` (also used by the collection) runs
   inference, applies the configuration and returns an `EventSchemaDefinition`. Configuring a field that inference didn't
   produce throws (see Generation).
@@ -82,8 +86,7 @@ policy, `[JsonIgnore]`, enum converters, nullability, formats (`date-time`, `dat
 - **`Field(o => o.Customer.Tier)`** is mapped to the JSON path through the serializer's type info (so it follows the
   naming policy). Configuring a property the serializer doesn't write (`[JsonIgnore]`) or that has no place in the
   schema (inside a dictionary, below a cycle) throws when building.
-- **Cycles** come out as `$ref` pointers (standard JSON Schema). Context schemas are generated on their own and embedded,
-  so their `$ref`s are rewritten to stay inside the context. When reading, a `$ref` becomes an object without fields.
+- **Cycles** come out as `$ref` pointers (standard JSON Schema). When reading, a `$ref` becomes an object without fields.
 - Field names in the model are the **JSON names**; rule paths match them ignoring case.
 
 ## Model
@@ -94,7 +97,8 @@ Immutable records built by the builder and read back from JSON:
   `ParseMany(json)`.
 - **`FieldDefinition`**: `Name`, `Type` (`FieldType`), `IsNullable`, `Label`, `Description`, `EnumValues`, `Fields`
   (objects), `Items` (arrays: the element's definition).
-- **`ContextDefinition`**: `Name`, `Label`, `Description`, `IsMany`, `Fields`.
+- **`ContextDefinition`**: `Name`, `Label`, `Description`, `ReferencedBy` (`ContextReference`: a single `Path`, or named
+  `Parts` for a composite reference; `null` when there's none).
 
 ## JSON format
 
@@ -110,20 +114,21 @@ cover. Labels use the standard `title`, descriptions `description`.
   "type": "object",
   "properties": {
     "total": { "type": "number", "title": "Order total" },
-    "status": { "type": "string", "enum": ["Placed", "Paid"] },
+    "status": { "type": "string", "enum": ["Placed", "Paid"], "description": "Placed or paid." },
     "placedAt": { "type": "string", "format": "date-time" },
     "note": { "type": ["string", "null"] },
-    "customer": { "type": "object", "properties": { "tier": { "type": "string", "description": "Loyalty tier at the time of the order." } } },
+    "address": { "type": "object", "properties": { "country": { "type": "string" }, "postcode": { "type": "string" } } },
     "lines": { "type": "array", "items": { "type": "object", "properties": { "sku": { "type": "string" } } } }
   },
   "x-ruleloom-contexts": {
-    "customer": { "title": "Customer", "type": "object", "properties": { "tier": { "type": "string", "title": "Loyalty tier" } } },
-    "watchers": { "title": "Watchers", "type": "array", "items": { "type": "object", "properties": { "email": { "type": "string" } } } }
+    "customer": { "title": "Customer", "x-ruleloom-referenced-by": "customerId" },
+    "shipping-zone": { "x-ruleloom-referenced-by": { "country": "address.country", "postcode": "address.postcode" } },
+    "calendar": {}
   }
 }
 ```
 
-- A context is itself a JSON Schema (an object, or an array of objects for `Many()`).
+- A context entry describes the relation only (title, description, reference); context fields aren't in event schemas.
 - Ignored fields are left out.
 - Reading JSON back accepts what the serializer writes; other keywords are ignored, and `$ref` isn't supported. A
   schema round-trips without loss: `Parse(schema.ToJson()).ToJson()` equals `schema.ToJson()`. Invalid documents (no
@@ -133,10 +138,11 @@ cover. Labels use the standard `title`, descriptions `description`.
 ## Test plan
 
 - **Builder:** event name required, configured labels and descriptions only, nested `Field` paths, `Ignore`, merging repeated
-  configuration, invalid expressions, contexts (single and many, duplicates), assembly collection and individual adds.
+  configuration, invalid expressions, contexts (single and composite references, no reference, reference to an ignored
+  field, invalid and unserialized references, duplicates), assembly collection and individual adds.
 - **Generation:** types and formats (string, integer, number, boolean, date-time, date, uuid, enums as numbers and with
   `JsonStringEnumConverter` as names), nullability, nested objects, arrays, dictionaries, cycles (`$ref`, also inside
-  contexts), `[JsonIgnore]`, Web defaults vs custom options (naming policy), numbers not typed as strings.
+  in the subject), `[JsonIgnore]`, Web defaults vs custom options (naming policy), numbers not typed as strings.
 - **JSON:** the output shape (keywords, `title`, `format`, nullable types, contexts), lossless round trip, parsing ignores
   unknown keywords.
 
@@ -146,7 +152,9 @@ cover. Labels use the standard `title`, descriptions `description`.
 |---|---|
 | Names | `EventSchema<T>` is the producer's base class; the built model is `EventSchemaDefinition` (`FieldDefinition`, `ContextDefinition`) |
 | Several events | One JSON Schema document per event; a collection is a JSON array of documents |
-| Context fields | Configurable with a nested builder: `Context<T>(name, c => c.Field(...))` |
+| Contexts in event schemas | **Relations only**: `Context(name)` with an optional `ReferencedBy(...)` (single or composite, EF Core style). A context's fields are described once, where its provider is registered (generated from `ContextProvider<T>`), not by each producer. Replaces the earlier `Context<T>(name, c => c.Field(...))` and `Many()` |
+| Context references at run time | The engine resolves `ReferencedBy` and passes it to the provider (#93), so one provider serves several contexts/events (`fromAccount`/`toAccount`) |
+| Per-event overrides of context fields | Later idea (ignore or relabel a context's fields for one event); in the vision's *Under consideration* |
 | Cycles | Kept as `$ref` in JSON (from the exporter); read back as an object without fields |
 | Generator | System.Text.Json's `JsonSchemaExporter` (no dependency; follows the producer's serialization) instead of hand-written inference or NJsonSchema (Newtonsoft, older drafts) |
 | Serializer options | `JsonSerializerDefaults.Web` by default, overridable |
