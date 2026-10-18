@@ -45,6 +45,7 @@ dotnet add package RuleLoom.Extensions.DependencyInjection   # optional: service
 | `RuleLoom` | The engine, built-in operators, validation |
 | `RuleLoom.Abstractions` | Contracts and models only, e.g. for projects that write actions or operators |
 | `RuleLoom.Extensions.DependencyInjection` | Registration with `Microsoft.Extensions.DependencyInjection` |
+| `RuleLoom.Schemas` | Describing events (fields, labels, contexts) as JSON Schema, for producers and central rules services |
 
 Requires .NET 10.
 
