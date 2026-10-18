@@ -7,9 +7,9 @@ namespace RuleLoom.Extensions.DependencyInjection;
 /// <summary>
 /// The schemas configured as sources in <see cref="RuleLoomBuilder.AddSchemas"/>, to be saved into the store.
 /// </summary>
-internal sealed class SchemaSources(IReadOnlyList<EventSchemaDefinition> schemas)
+internal sealed class SchemaSources(SchemaSet schemas)
 {
-    public IReadOnlyList<EventSchemaDefinition> Schemas { get; } = schemas;
+    public SchemaSet Schemas { get; } = schemas;
 }
 
 /// <summary>

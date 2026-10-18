@@ -20,6 +20,7 @@ internal static class SchemaGenerator
     public const string ContextsKeyword = "x-ruleloom-contexts";
     public const string ReferencedByKeyword = "x-ruleloom-referenced-by";
     public const string ProviderKeyword = "x-ruleloom-provider";
+    public const string ContextKeyword = "x-ruleloom-context";
 
     private static readonly JsonSerializerOptions WebDefaults = Freeze(new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
@@ -48,8 +49,7 @@ internal static class SchemaGenerator
         IReadOnlyList<ContextDeclaration> contexts,
         JsonSerializerOptions? options)
     {
-        var source = options ?? WebDefaults;
-        var serializer = source.IsReadOnly ? Prepared.GetValue(source, PrepareOptions) : PrepareOptions(source);
+        var serializer = Serializer(options);
 
         var document = new JsonObject
         {
@@ -75,6 +75,46 @@ internal static class SchemaGenerator
         }
 
         return new EventSchemaDefinition(document);
+    }
+
+    public static ContextSchemaDefinition GenerateContext(
+        ContextSchemaBuilder context,
+        Type type,
+        FieldConfigurations fields,
+        JsonSerializerOptions? options)
+    {
+        var document = new JsonObject
+        {
+            ["$schema"] = SchemaUri,
+            [ContextKeyword] = context.Name
+        };
+
+        if (context.ConfiguredLabel is { } label)
+            document["title"] = label;
+        if (context.ConfiguredDescription is { } description)
+            document["description"] = description;
+
+        var schema = GenerateType(type, fields, Serializer(options), $"context '{context.Name}'");
+
+        if (context.IsMany)
+        {
+            // The element's references to itself now sit under "items".
+            Rebase(schema, "#", "#/items");
+            document["type"] = "array";
+            document["items"] = schema;
+        }
+        else
+        {
+            MoveMembers(schema, document);
+        }
+
+        return new ContextSchemaDefinition(document);
+    }
+
+    private static JsonSerializerOptions Serializer(JsonSerializerOptions? options)
+    {
+        var source = options ?? WebDefaults;
+        return source.IsReadOnly ? Prepared.GetValue(source, PrepareOptions) : PrepareOptions(source);
     }
 
     private static JsonObject DescribeContext(ContextDeclaration context, Type subjectType, JsonSerializerOptions serializer)
@@ -180,24 +220,28 @@ internal static class SchemaGenerator
             }
         }
 
-        static bool IsAncestor(string target, string pointer) => pointer == target || pointer.StartsWith(target + "/", StringComparison.Ordinal);
+    }
 
-        // References inside the copied part that pointed into it now point into the copy.
-        static void Rebase(JsonNode? node, string from, string to)
+    private static bool IsAncestor(string target, string pointer) =>
+        target == "#" || pointer == target || pointer.StartsWith(target + "/", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Makes references that pointed at or into <paramref name="from"/> point at or into <paramref name="to"/>.
+    /// </summary>
+    private static void Rebase(JsonNode? node, string from, string to)
+    {
+        switch (node)
         {
-            switch (node)
-            {
-                case JsonObject obj:
-                    if (obj["$ref"] is JsonValue value && value.TryGetValue<string>(out var target) && IsAncestor(from, target))
-                        obj["$ref"] = to + target[from.Length..];
-                    foreach (var (_, child) in obj)
-                        Rebase(child, from, to);
-                    break;
-                case JsonArray array:
-                    foreach (var child in array)
-                        Rebase(child, from, to);
-                    break;
-            }
+            case JsonObject obj:
+                if (obj["$ref"] is JsonValue value && value.TryGetValue<string>(out var target) && IsAncestor(from, target))
+                    obj["$ref"] = to + target[from.Length..];
+                foreach (var (_, child) in obj)
+                    Rebase(child, from, to);
+                break;
+            case JsonArray array:
+                foreach (var child in array)
+                    Rebase(child, from, to);
+                break;
         }
     }
 

@@ -29,6 +29,21 @@ internal static class SchemaReader
             ReadFields(document, document), contexts);
     }
 
+    public static (string Name, string? Label, string? Description, bool IsMany, IReadOnlyList<FieldDefinition> Fields)
+        ReadContextSchema(JsonObject document)
+    {
+        var name = String(document, SchemaGenerator.ContextKeyword) is { } value && !string.IsNullOrWhiteSpace(value)
+            ? value
+            : throw new JsonException($"A context schema needs a non-empty '{SchemaGenerator.ContextKeyword}'.");
+
+        var isMany = Types(document).Contains("array");
+        var element = isMany
+            ? document["items"] as JsonObject ?? throw new JsonException($"Context schema '{name}' is an array without object 'items'.")
+            : document;
+
+        return (name, String(document, "title"), String(document, "description"), isMany, ReadFields(element, document));
+    }
+
     private static ContextDefinition ReadContext(string name, JsonObject node)
     {
         var reference = node[SchemaGenerator.ReferencedByKeyword] switch

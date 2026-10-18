@@ -11,14 +11,14 @@ public class AddSchemasTests
     [Fact]
     public async Task AddSchemas_SeedsTheInMemoryStoreFromClassesAndJson()
     {
-        var json = new EventSchemaCollection().Add<AccountOpenedSchema>().ToJson();
+        var json = new SchemaCollection().Add<AccountOpenedSchema>().ToJson();
         var services = new ServiceCollection().AddRuleLoom(r => r.AddSchemas(s => s.Add<TransferMadeSchema>().AddJson(json)));
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
         var store = provider.GetRequiredService<ISchemaStore>();
 
         Assert.IsType<InMemorySchemaStore>(store);
-        Assert.Equal(["AccountOpened", "TransferMade"], (await store.ListAsync(TestContext.Current.CancellationToken)).Select(s => s.EventType));
+        Assert.Equal(["AccountOpened", "TransferMade"], (await store.ListEventsAsync(TestContext.Current.CancellationToken)).Select(s => s.EventType));
     }
 
     [Fact]
@@ -62,6 +62,22 @@ public class AddSchemasTests
     }
 
     [Fact]
+    public async Task AddSchemas_ContextSchemasFromClassesAndJson_ReachTheStores()
+    {
+        var json = new SchemaCollection().Add<AccountsSchema>().ToJson();
+        var inMemory = new ServiceCollection().AddRuleLoom(r => r.AddSchemas(s => s.AddJson(json)));
+        var saved = new SavedSchemas();
+        var yours = new ServiceCollection().AddSingleton(saved).AddRuleLoom(r => r.AddSchemas(s => s.Add<AccountsSchema>().UseStore<RecordingStore>()));
+
+        using var first = inMemory.BuildServiceProvider();
+        using var second = yours.BuildServiceProvider();
+        await second.SaveRuleLoomSchemasAsync(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(await first.GetRequiredService<ISchemaStore>().GetContextAsync("account", TestContext.Current.CancellationToken));
+        Assert.Equal(["account"], saved.Contexts.Select(c => c.Name));
+    }
+
+    [Fact]
     public async Task SaveRuleLoomSchemasAsync_WithoutSources_DoesNothing()
     {
         var saved = new SavedSchemas();
@@ -79,7 +95,7 @@ public class AddSchemasTests
     [Fact]
     public void AddSchemas_SameEventTwice_Throws()
     {
-        var json = new EventSchemaCollection().Add<TransferMadeSchema>().ToJson();
+        var json = new SchemaCollection().Add<TransferMadeSchema>().ToJson();
 
         Assert.Throws<InvalidOperationException>(() =>
             new ServiceCollection().AddRuleLoom(r => r.AddSchemas(s => s.Add<TransferMadeSchema>().AddJson(json))));
@@ -135,6 +151,11 @@ public class AddSchemasTests
 
     public sealed record AccountDto(string Id, bool Frozen);
 
+    public sealed class AccountsSchema : ContextSchema<AccountDto>
+    {
+        public AccountsSchema() => Context("account").Label("Account");
+    }
+
     public sealed class Accounts
     {
         public List<string> Loaded { get; } = [];
@@ -154,25 +175,39 @@ public class AddSchemasTests
     public sealed class SavedSchemas
     {
         public List<EventSchemaDefinition> Schemas { get; } = [];
+        public List<ContextSchemaDefinition> Contexts { get; } = [];
     }
 
     public sealed class RecordingStore(SavedSchemas saved) : ISchemaStore
     {
-        public ValueTask<EventSchemaDefinition?> GetAsync(string eventType, CancellationToken cancellationToken = default) =>
+        public ValueTask<EventSchemaDefinition?> GetEventAsync(string eventType, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(saved.Schemas.FirstOrDefault(s => s.EventType == eventType));
-        public ValueTask<IReadOnlyList<EventSchemaDefinition>> ListAsync(CancellationToken cancellationToken = default) =>
+        public ValueTask<IReadOnlyList<EventSchemaDefinition>> ListEventsAsync(CancellationToken cancellationToken = default) =>
             ValueTask.FromResult<IReadOnlyList<EventSchemaDefinition>>(saved.Schemas);
-        public ValueTask SaveAsync(EventSchemaDefinition schema, CancellationToken cancellationToken = default)
+        public ValueTask SaveEventAsync(EventSchemaDefinition schema, CancellationToken cancellationToken = default)
         {
             saved.Schemas.Add(schema);
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask<ContextSchemaDefinition?> GetContextAsync(string name, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(saved.Contexts.FirstOrDefault(s => s.Name == name));
+        public ValueTask<IReadOnlyList<ContextSchemaDefinition>> ListContextsAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<IReadOnlyList<ContextSchemaDefinition>>(saved.Contexts);
+        public ValueTask SaveContextAsync(ContextSchemaDefinition schema, CancellationToken cancellationToken = default)
+        {
+            saved.Contexts.Add(schema);
             return ValueTask.CompletedTask;
         }
     }
 
     public sealed class EmptyStore : ISchemaStore
     {
-        public ValueTask<EventSchemaDefinition?> GetAsync(string eventType, CancellationToken cancellationToken = default) => ValueTask.FromResult<EventSchemaDefinition?>(null);
-        public ValueTask<IReadOnlyList<EventSchemaDefinition>> ListAsync(CancellationToken cancellationToken = default) => ValueTask.FromResult<IReadOnlyList<EventSchemaDefinition>>([]);
-        public ValueTask SaveAsync(EventSchemaDefinition schema, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask<EventSchemaDefinition?> GetEventAsync(string eventType, CancellationToken cancellationToken = default) => ValueTask.FromResult<EventSchemaDefinition?>(null);
+        public ValueTask<IReadOnlyList<EventSchemaDefinition>> ListEventsAsync(CancellationToken cancellationToken = default) => ValueTask.FromResult<IReadOnlyList<EventSchemaDefinition>>([]);
+        public ValueTask SaveEventAsync(EventSchemaDefinition schema, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask<ContextSchemaDefinition?> GetContextAsync(string name, CancellationToken cancellationToken = default) => ValueTask.FromResult<ContextSchemaDefinition?>(null);
+        public ValueTask<IReadOnlyList<ContextSchemaDefinition>> ListContextsAsync(CancellationToken cancellationToken = default) => ValueTask.FromResult<IReadOnlyList<ContextSchemaDefinition>>([]);
+        public ValueTask SaveContextAsync(ContextSchemaDefinition schema, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
     }
 }

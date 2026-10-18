@@ -102,3 +102,25 @@ public class AuditSchema<T> : EventSchema<T>
 {
     public AuditSchema() => Event("Audit");
 }
+
+public sealed class AccountDto
+{
+    public string Id { get; set; } = "";
+    public decimal Balance { get; set; }
+    public string InternalRiskScore { get; set; } = "";
+}
+
+public sealed class AccountSchema : ContextSchema<AccountDto>
+{
+    public AccountSchema()
+    {
+        Context("account").Label("Account").Description("A customer's account.");
+        Field(a => a.Balance).Label("Balance");
+        Field(a => a.InternalRiskScore).Ignore();
+    }
+}
+
+public sealed class WatchersSchema : ContextSchema<UserDto>
+{
+    public WatchersSchema() => Context("watchers").Many();
+}

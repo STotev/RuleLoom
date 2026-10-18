@@ -1,0 +1,94 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+
+namespace RuleLoom.Schemas.Tests;
+
+public class ContextSchemaTests
+{
+    private static readonly ContextSchemaDefinition Account = new AccountSchema().Build();
+    private static readonly ContextSchemaDefinition Watchers = new WatchersSchema().Build();
+
+    [Fact]
+    public void Build_DescribesTheContextAndItsFields()
+    {
+        Assert.Equal(("account", "Account", "A customer's account.", false), (Account.Name, Account.Label, Account.Description, Account.IsMany));
+        Assert.Equal(["id", "balance"], Account.Fields.Select(f => f.Name));
+        Assert.Equal(("Balance", FieldType.Number), (Account.Fields[1].Label, Account.Fields[1].Type));
+    }
+
+    [Fact]
+    public void Build_Many_DescribesOneElementOfACollection()
+    {
+        var document = JsonNode.Parse(Watchers.ToJson())!;
+
+        Assert.True(Watchers.IsMany);
+        Assert.Equal(["email", "manager"], Watchers.Fields.Select(f => f.Name));
+        Assert.Equal("array", (string?)document["type"]);
+        Assert.Equal("watchers", (string?)document["x-ruleloom-context"]);
+    }
+
+    [Fact]
+    public void Build_Many_RepeatedTypesPointInsideTheItems()
+    {
+        var document = JsonNode.Parse(Watchers.ToJson())!;
+        var references = References(document).ToList();
+
+        Assert.NotEmpty(references);
+        Assert.All(references, reference =>
+        {
+            Assert.StartsWith("#/items", reference);
+            Assert.NotNull(Resolve(document, reference));
+        });
+    }
+
+    [Fact]
+    public void Parse_RoundTripsWithoutLoss()
+    {
+        var parsed = ContextSchemaDefinition.Parse(Account.ToJson());
+
+        Assert.Equal(Account.ToJson(), parsed.ToJson());
+        Assert.Equal(Account.Fields, parsed.Fields);
+        Assert.Equal((Account.Name, Account.Label, Account.IsMany), (parsed.Name, parsed.Label, parsed.IsMany));
+        Assert.Equal(Watchers.Fields, ContextSchemaDefinition.Parse(Watchers.ToJson()).Fields);
+    }
+
+    [Theory]
+    [InlineData("""{ "type": "object" }""")]
+    [InlineData("""{ "x-ruleloom-context": " " }""")]
+    [InlineData("""{ "x-ruleloom-context": "c", "type": "array" }""")]
+    [InlineData("""{ "x-ruleloom-context": "c", "properties": { "a": { "type": 1 } } }""")]
+    public void Parse_MalformedDocument_ThrowsJsonException(string json)
+    {
+        Assert.Throws<JsonException>(() => ContextSchemaDefinition.Parse(json));
+    }
+
+    [Fact]
+    public void Build_WithoutContext_Throws()
+    {
+        Assert.Throws<InvalidOperationException>(() => new UnnamedSchema().Build());
+        Assert.Throws<InvalidOperationException>(() => new TwiceNamedSchema());
+    }
+
+    private static IEnumerable<string> References(JsonNode? node) => node switch
+    {
+        JsonObject obj => (obj["$ref"] is JsonValue value ? [value.GetValue<string>()] : Enumerable.Empty<string>())
+            .Concat(obj.SelectMany(pair => References(pair.Value))),
+        JsonArray array => array.SelectMany(References),
+        _ => []
+    };
+
+    private static JsonNode? Resolve(JsonNode root, string pointer) =>
+        pointer.TrimStart('#').Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Aggregate<string, JsonNode?>(root, (node, segment) => node?[segment]);
+
+    private sealed class UnnamedSchema : ContextSchema<AccountDto>;
+
+    private sealed class TwiceNamedSchema : ContextSchema<AccountDto>
+    {
+        public TwiceNamedSchema()
+        {
+            Context("a");
+            Context("b");
+        }
+    }
+}
