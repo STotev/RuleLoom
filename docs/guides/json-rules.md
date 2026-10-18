@@ -276,6 +276,10 @@ services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("custom
   `AddSchemas`, the engine resolves the reference from the event and passes it as `request.Reference`; read it with
   `request.GetReference<string>()` (a single value) or `GetReference<ZoneKey>()` (a composite reference mapped onto a
   record by part name). Without a declared reference, `Reference` is `null` and the provider reads the subject itself.
+- **Describing a context's fields.** A `ContextSchema<T>` (package `RuleLoom.Schemas`) describes what a context offers,
+  once per provider: `Context("account").Label("Account")`, `Field(a => a.Balance).Label("Balance")`, `Ignore()`, and
+  `Many()` for providers that return a collection. Registered with `AddSchemas` like event schemas, it's used to
+  validate `@` paths and to show rule authors what they can pick.
 - **One provider, several contexts.** A schema can say which provider loads a context:
   `Context("fromAccount").LoadedBy("account").ReferencedBy(t => t.FromAccountId)` and
   `Context("toAccount").LoadedBy("account").ReferencedBy(t => t.ToAccountId)`, with one

@@ -70,3 +70,10 @@ services.AddRuleLoom(r => r
 - JSON guide (contexts): describing a context's fields with `ContextSchema<T>`.
 - Quick start ("Event schemas"): context schema example.
 - `AGENTS.md`.
+
+## Deviations
+
+- `ISchemaStore`'s event methods were renamed in this slice (`GetAsync`/`ListAsync`/`SaveAsync` → `GetEventAsync`/
+  `ListEventsAsync`/`SaveEventAsync`) next to the new context methods; `InMemorySchemaStore` takes a `SchemaSet`.
+- `SchemaCollection.Add<T>()` takes any class with a parameterless constructor and checks at run time that it's an event
+  or context schema (C# can't constrain to either of two interfaces).

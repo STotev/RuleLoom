@@ -160,8 +160,11 @@ environment `nuget`) and attaches the packages to the GitHub release.
   `o => new { o.A, o.B }`; context fields are described with their provider); `Build(options)`
   generates an `EventSchemaDefinition` from how `TDto` is serialized (Web defaults unless options are given; numbers
   not typed as strings; null-oblivious types non-nullable), adds configured titles and descriptions (no automatic labels) and
-  `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`). `ToJson()`/`Parse`/`ParseMany` round-trip;
-  field names are JSON names. `EventSchemaCollection` gathers schemas (assembly scan) and writes a JSON array.
+  `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`). `ToJson()`/`Parse` round-trip;
+  field names are JSON names. `class XSchema : ContextSchema<TDto>` describes a context's fields (`Context(providerName)`
+  required, `Many()`, `Field(...)`) as a `ContextSchemaDefinition` (`x-ruleloom-context`). `SchemaCollection` gathers
+  both kinds (assembly scan) into a `SchemaSet` (`Events`, `Contexts`; `ToJson()` one array, `SchemaSet.Parse`).
+  `ISchemaStore` keeps both: `Get/List/SaveEventAsync`, `Get/List/SaveContextAsync`.
   `ISchemaStore` (+ `InMemorySchemaStore`) keeps schemas where the engine runs; DI's `AddSchemas(s => s.Add<T>() /
   AddFromAssemblyOf<T>() / AddJson(json) / UseStore<T>())` registers sources and storage separately: the in-memory store
   starts with the sources; your own store gets them at startup (`SchemaSourcesStartup` hosted service, or
