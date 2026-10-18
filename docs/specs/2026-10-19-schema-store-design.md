@@ -21,7 +21,7 @@ events (e.g. `fromAccount` and `toAccount`) without knowing each event's shape.
 |---|---|---|
 | Store contract | `ISchemaStore` in `RuleLoom.Schemas`: `GetAsync(eventType)` (case-insensitive), `ListAsync()`, `SaveAsync(schema)` (replaces a schema of the same event type). Async; tenancy and persistence are the implementation's | PRD: storage stays the consumer's |
 | In-memory store | `InMemorySchemaStore` (thread-safe), optionally seeded with schemas | Tests, samples and simple services |
-| Registration | `AddRuleLoom(r => r.AddSchemas(s => s.Add<OrderPlacedSchema>().AddFromAssemblyOf<T>().AddJson(json)))`: registers an `InMemorySchemaStore` (Singleton) seeded with the built and imported schemas, unless an `ISchemaStore` is already registered. To use your own store, register it (`services.AddScoped<ISchemaStore, MyStore>()`); seeds apply only to the in-memory store, and combining them with your own store throws when the store is resolved. Optional serializer options for building the classes | One place to configure RuleLoom; the DI package references `RuleLoom.Schemas` |
+| Registration | `AddRuleLoom(r => r.AddSchemas(s => s.Add<OrderPlacedSchema>().AddFromAssemblyOf<T>().AddJson(json)))` registers an `InMemorySchemaStore` (Singleton) seeded with the built and imported schemas; they're built when `AddSchemas` runs, so mistakes surface at startup. Your own store is chosen explicitly with `s.UseStore<MyStore>()` (Scoped); combining it with schemas added in `AddSchemas` throws (save them to your store instead). `SerializerOptions` sets the options for building classes. A later `AddSchemas` call replaces the store | One place to configure RuleLoom, with no dependence on registration order; the DI package references `RuleLoom.Schemas` |
 | Where the engine's contract lives | `IContextReferenceSource` in **Abstractions** (`RuleLoom.Abstractions.Context`): `GetReferenceAsync(eventType, contextName)` → `ContextReference?`. `ContextReference` moves from Schemas to Abstractions; `RuleLoom.Schemas` now references `RuleLoom.Abstractions` | The engine (`RuleLoom`) must not depend on `RuleLoom.Schemas`; Abstractions stays dependency-free |
 | Schema-backed source | `SchemaStoreContextReferences` (in `RuleLoom.Schemas`) reads the event's schema from the `ISchemaStore`; `AddSchemas` registers it (Scoped, like a tenant-aware store) | |
 | Passing the reference | When a context is loaded (prefetch or `GetContextAsync`), the engine asks the source for the context's reference and resolves its paths from the event's current state: a single path gives its value, a composite reference gives an `IReadOnlyDictionary<string, object?>` (part name → value). It's set on `ContextRequest.Reference`. Without a source, a schema or a reference, `Reference` is `null` and the provider reads the subject as before | |
@@ -62,8 +62,8 @@ services.AddRuleLoom(r => r
 - **Engine**: single and composite references reach providers; one provider under two names gets each its own
   reference; no source / no schema / no reference → `null`; references resolve on JSON and .NET state; on-demand loads
   (`GetContextAsync`) get references too.
-- **DI**: `AddSchemas` registers the seeded in-memory store and the source; a custom store wins; seeds with a custom
-  store throw; the engine passes references end to end.
+- **DI**: `AddSchemas` registers the seeded in-memory store and the source; `UseStore<T>()` registers your store; seeds
+  with your own store throw; duplicate event types throw; the engine passes references end to end.
 
 ## Docs
 
