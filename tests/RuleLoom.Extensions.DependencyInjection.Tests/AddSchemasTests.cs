@@ -33,12 +33,47 @@ public class AddSchemasTests
     }
 
     [Fact]
-    public void AddSchemas_SchemasWithYourOwnStore_Throws()
+    public async Task SaveRuleLoomSchemasAsync_SavesTheSourcesIntoYourStore()
     {
-        var error = Assert.Throws<InvalidOperationException>(() =>
-            new ServiceCollection().AddRuleLoom(r => r.AddSchemas(s => s.Add<TransferMadeSchema>().UseStore<EmptyStore>())));
+        var saved = new SavedSchemas();
+        var services = new ServiceCollection()
+            .AddSingleton(saved)
+            .AddRuleLoom(r => r.AddSchemas(s => s.Add<TransferMadeSchema>().Add<AccountOpenedSchema>().UseStore<RecordingStore>()));
 
-        Assert.Contains("EmptyStore", error.Message);
+        using var provider = services.BuildServiceProvider();
+        await provider.SaveRuleLoomSchemasAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["AccountOpened", "TransferMade"], saved.Schemas.Select(s => s.EventType).Order());
+    }
+
+    [Fact]
+    public async Task AddSchemas_WithYourStore_SavesTheSourcesWhenTheHostStarts()
+    {
+        var saved = new SavedSchemas();
+        var services = new ServiceCollection()
+            .AddSingleton(saved)
+            .AddRuleLoom(r => r.AddSchemas(s => s.Add<TransferMadeSchema>().UseStore<RecordingStore>()));
+
+        using var provider = services.BuildServiceProvider();
+        foreach (var hosted in provider.GetServices<Microsoft.Extensions.Hosting.IHostedService>())
+            await hosted.StartAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["TransferMade"], saved.Schemas.Select(s => s.EventType));
+    }
+
+    [Fact]
+    public async Task SaveRuleLoomSchemasAsync_WithoutSources_DoesNothing()
+    {
+        var saved = new SavedSchemas();
+        var withoutSchemas = new ServiceCollection().AddRuleLoom();
+        var withoutSources = new ServiceCollection().AddSingleton(saved).AddRuleLoom(r => r.AddSchemas(s => s.UseStore<RecordingStore>()));
+
+        using var first = withoutSchemas.BuildServiceProvider();
+        using var second = withoutSources.BuildServiceProvider();
+        await first.SaveRuleLoomSchemasAsync(TestContext.Current.CancellationToken);
+        await second.SaveRuleLoomSchemasAsync(TestContext.Current.CancellationToken);
+
+        Assert.Empty(saved.Schemas);
     }
 
     [Fact]
@@ -113,6 +148,24 @@ public class AddSchemasTests
             lock (accounts.Loaded)
                 accounts.Loaded.Add(id);
             return ValueTask.FromResult<AccountDto?>(new AccountDto(id, Frozen: id == "A-2"));
+        }
+    }
+
+    public sealed class SavedSchemas
+    {
+        public List<EventSchemaDefinition> Schemas { get; } = [];
+    }
+
+    public sealed class RecordingStore(SavedSchemas saved) : ISchemaStore
+    {
+        public ValueTask<EventSchemaDefinition?> GetAsync(string eventType, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(saved.Schemas.FirstOrDefault(s => s.EventType == eventType));
+        public ValueTask<IReadOnlyList<EventSchemaDefinition>> ListAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<IReadOnlyList<EventSchemaDefinition>>(saved.Schemas);
+        public ValueTask SaveAsync(EventSchemaDefinition schema, CancellationToken cancellationToken = default)
+        {
+            saved.Schemas.Add(schema);
+            return ValueTask.CompletedTask;
         }
     }
 

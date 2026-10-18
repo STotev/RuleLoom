@@ -4,8 +4,9 @@ using RuleLoom.Schemas;
 namespace RuleLoom.Extensions.DependencyInjection;
 
 /// <summary>
-/// Configures the event schemas for <see cref="RuleLoomBuilder.AddSchemas"/>: schema classes and exported JSON to seed
-/// the in-memory store with, or your own <see cref="ISchemaStore"/>.
+/// Configures the event schemas for <see cref="RuleLoomBuilder.AddSchemas"/>: where schemas come from (schema classes,
+/// exported JSON) and where they're kept (the in-memory store, or your own <see cref="ISchemaStore"/>). The sources are
+/// saved into the store: the in-memory store starts with them; your own store gets them at startup.
 /// </summary>
 public sealed class SchemaRegistration
 {
@@ -14,26 +15,24 @@ public sealed class SchemaRegistration
 
     internal Type? StoreType { get; private set; }
 
-    internal bool HasSeeds => _classes.Count > 0 || _json.Count > 0;
-
     /// <summary>The serializer options events are sent with, for building schema classes (Web defaults when unset).</summary>
     public JsonSerializerOptions? SerializerOptions { get; set; }
 
-    /// <summary>Adds a schema class to the in-memory store.</summary>
+    /// <summary>Adds a schema class as a source.</summary>
     public SchemaRegistration Add<TSchema>() where TSchema : IEventSchema, new()
     {
         _classes.Add(collection => collection.Add<TSchema>());
         return this;
     }
 
-    /// <summary>Adds the schema classes in the assembly that contains <typeparamref name="T"/> to the in-memory store.</summary>
+    /// <summary>Adds the schema classes in the assembly that contains <typeparamref name="T"/> as sources.</summary>
     public SchemaRegistration AddFromAssemblyOf<T>()
     {
         _classes.Add(collection => collection.AddFromAssemblyOf<T>());
         return this;
     }
 
-    /// <summary>Adds exported schemas (a JSON array, as written by <see cref="EventSchemaCollection.ToJson"/>) to the in-memory store.</summary>
+    /// <summary>Adds exported schemas (a JSON array, as written by <see cref="EventSchemaCollection.ToJson"/>) as a source.</summary>
     public SchemaRegistration AddJson(string json)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
@@ -42,8 +41,8 @@ public sealed class SchemaRegistration
     }
 
     /// <summary>
-    /// Uses <typeparamref name="TStore"/> (Scoped) instead of the in-memory store, e.g. a database-backed, tenant-aware
-    /// store. It can't be combined with schemas added here: save them to your store instead.
+    /// Keeps schemas in <typeparamref name="TStore"/> (Scoped) instead of the in-memory store, e.g. a database-backed
+    /// store. The sources are saved into it at startup (replacing stored schemas of the same event type).
     /// </summary>
     public SchemaRegistration UseStore<TStore>() where TStore : class, ISchemaStore
     {
@@ -52,10 +51,10 @@ public sealed class SchemaRegistration
     }
 
     /// <summary>
-    /// Builds the schema classes and reads the JSON for the in-memory store.
+    /// Builds the schema classes and reads the JSON.
     /// </summary>
     /// <exception cref="InvalidOperationException">Two schemas describe the same event type.</exception>
-    internal IReadOnlyList<EventSchemaDefinition> BuildSeeds()
+    internal IReadOnlyList<EventSchemaDefinition> BuildSources()
     {
         var collection = new EventSchemaCollection(SerializerOptions);
         foreach (var add in _classes)

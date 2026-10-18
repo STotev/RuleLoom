@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
@@ -53,27 +54,31 @@ public sealed class RuleLoomBuilder
     }
 
     /// <summary>
-    /// Registers event schemas: an <see cref="ISchemaStore"/> (the in-memory store seeded with the schemas configured here,
-    /// Singleton, or your own with <see cref="SchemaRegistration.UseStore{TStore}"/>, Scoped). The engine reads it, so
-    /// context providers receive each event's declared reference. Call it once; a later call replaces the store.
+    /// Registers event schemas: their sources (schema classes, exported JSON) and where they're kept, an
+    /// <see cref="ISchemaStore"/> (the in-memory store, Singleton, or your own with
+    /// <see cref="SchemaRegistration.UseStore{TStore}"/>, Scoped). The in-memory store starts with the sources; your own
+    /// store gets them at startup (a hosted service, or <c>SaveRuleLoomSchemasAsync()</c> in apps without a host). The
+    /// engine reads the store, so context providers receive each event's declared reference. Call it once; a later call
+    /// replaces the configuration.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Schemas were added together with your own store.</exception>
+    /// <exception cref="InvalidOperationException">Two sources describe the same event type.</exception>
     public RuleLoomBuilder AddSchemas(Action<SchemaRegistration>? configure = null)
     {
         var registration = new SchemaRegistration();
         configure?.Invoke(registration);
 
+        // Built now, so mistakes in schema classes or JSON surface when the app is configured.
+        var sources = new SchemaSources(registration.BuildSources());
+        Services.Replace(ServiceDescriptor.Singleton(sources));
+
         if (registration.StoreType is { } storeType)
         {
-            if (registration.HasSeeds)
-                throw new InvalidOperationException($"Schemas can't be added together with {storeType.Name}; save them to your store instead.");
-
             Services.Replace(ServiceDescriptor.Scoped(typeof(ISchemaStore), storeType));
+            Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SchemaSourcesStartup>());
         }
         else
         {
-            var seeds = registration.BuildSeeds();
-            Services.Replace(ServiceDescriptor.Singleton<ISchemaStore>(new InMemorySchemaStore(seeds)));
+            Services.Replace(ServiceDescriptor.Singleton<ISchemaStore>(new InMemorySchemaStore(sources.Schemas)));
         }
 
         return this;
