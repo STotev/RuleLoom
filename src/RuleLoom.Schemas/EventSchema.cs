@@ -13,7 +13,7 @@ namespace RuleLoom.Schemas;
 ///         Event("OrderPlaced").Label("Order placed");
 ///         Field(o =&gt; o.Total).Label("Order total");
 ///         Field(o =&gt; o.InternalNotes).Ignore();
-///         Context&lt;CustomerDto&gt;("customer");
+///         Context("customer").ReferencedBy(o =&gt; o.CustomerId);
 ///     }
 /// }
 /// </code>
@@ -24,7 +24,7 @@ namespace RuleLoom.Schemas;
 public abstract class EventSchema<T> : IEventSchema
 {
     private readonly FieldConfigurations _fields = new();
-    private readonly List<ContextBuilder> _contexts = [];
+    private readonly List<ContextBuilder<T>> _contexts = [];
     private EventBuilder? _event;
 
     /// <summary>
@@ -51,21 +51,18 @@ public abstract class EventSchema<T> : IEventSchema
     }
 
     /// <summary>
-    /// Declares a context the event's rules can use as <c>@name</c>, with its fields generated from
-    /// <typeparamref name="TContext"/> and optionally configured.
+    /// Declares a context the event relates to: an entity rules can use as <c>@name</c>, loaded by the context provider
+    /// registered under that name. Its fields are described where the provider is registered.
     /// </summary>
     /// <exception cref="ArgumentException">A context with this name is already declared (names ignore case).</exception>
-    protected ContextBuilder Context<TContext>(string name, Action<ContextFields<TContext>>? configure = null)
+    protected ContextBuilder<T> Context(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         if (_contexts.Any(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException($"Context '{name}' is already declared (names ignore case).", nameof(name));
 
-        var fields = new ContextFields<TContext>(new FieldConfigurations());
-        configure?.Invoke(fields);
-
-        var context = new ContextBuilder(name, typeof(TContext), fields.Fields);
+        var context = new ContextBuilder<T>(name);
         _contexts.Add(context);
         return context;
     }
@@ -78,6 +75,8 @@ public abstract class EventSchema<T> : IEventSchema
         if (_event is null)
             throw new InvalidOperationException($"{GetType().Name} doesn't name its event; call Event(\"...\") in its constructor.");
 
-        return SchemaGenerator.Generate(_event, typeof(T), _fields, _contexts, options);
+        return SchemaGenerator.Generate(_event, typeof(T), _fields,
+            _contexts.Select(c => new ContextDeclaration(c.Name, c.ConfiguredLabel, c.ConfiguredDescription, c.Reference)).ToList(),
+            options);
     }
 }

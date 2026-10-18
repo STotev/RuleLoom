@@ -18,27 +18,14 @@ public class SchemaJsonTests
         Assert.Equal("object", (string?)document["type"]);
         Assert.Equal("Order total", (string?)document["properties"]!["total"]!["title"]);
         Assert.Equal("date-time", (string?)document["properties"]!["placedAt"]!["format"]);
-        Assert.Equal("array", (string?)document["x-ruleloom-contexts"]!["watchers"]!["type"]);
+        Assert.Equal("customerId", (string?)document["x-ruleloom-contexts"]!["customer"]!["x-ruleloom-referenced-by"]);
+        Assert.Equal("address.postcode", (string?)document["x-ruleloom-contexts"]!["shipping-zone"]!["x-ruleloom-referenced-by"]!["postcode"]);
     }
 
     [Fact]
-    public void ToJson_ReferencesInContexts_PointInsideTheirContext()
+    public void ToJson_RepeatedTypeInTheSubject_IsAReference()
     {
-        var document = JsonNode.Parse(Order.ToJson())!;
-        var contexts = document["x-ruleloom-contexts"]!.AsObject();
-        var checkedReferences = 0;
-
-        foreach (var (name, context) in contexts)
-        {
-            foreach (var reference in References(context))
-            {
-                Assert.StartsWith($"#/x-ruleloom-contexts/{name}", reference);
-                Assert.NotNull(Resolve(document, reference));
-                checkedReferences++;
-            }
-        }
-
-        Assert.True(checkedReferences >= 2);
+        Assert.Contains("\"$ref\": \"#\"", Order.ToJson());
     }
 
     [Fact]
@@ -49,8 +36,7 @@ public class SchemaJsonTests
         Assert.Equal(Order.ToJson(), parsed.ToJson());
         Assert.Equal((Order.EventType, Order.Label, Order.Description), (parsed.EventType, parsed.Label, parsed.Description));
         Assert.Equal(Describe(Order.Fields), Describe(parsed.Fields));
-        Assert.Equal(Order.Contexts.Select(c => (c.Name, c.Label, c.IsMany, Describe(c.Fields))),
-            parsed.Contexts.Select(c => (c.Name, c.Label, c.IsMany, Describe(c.Fields))));
+        Assert.Equal(Order.Contexts.Select(Describe), parsed.Contexts.Select(Describe));
     }
 
     [Fact]
@@ -80,22 +66,15 @@ public class SchemaJsonTests
     [InlineData("""[]""")]
     [InlineData("""{ "x-ruleloom-event": "E", "properties": { "a": { "type": "date" } } }""")]
     [InlineData("""{ "x-ruleloom-event": "E", "x-ruleloom-contexts": [] }""")]
+    [InlineData("""{ "x-ruleloom-event": "E", "x-ruleloom-contexts": { "c": { "x-ruleloom-referenced-by": 1 } } }""")]
     public void Parse_InvalidDocument_Throws(string json)
     {
         Assert.ThrowsAny<JsonException>(() => EventSchemaDefinition.Parse(json));
     }
 
-    private static IEnumerable<string> References(JsonNode? node) => node switch
-    {
-        JsonObject obj => (obj["$ref"] is JsonValue value ? [value.GetValue<string>()] : Enumerable.Empty<string>())
-            .Concat(obj.SelectMany(pair => References(pair.Value))),
-        JsonArray array => array.SelectMany(References),
-        _ => []
-    };
-
-    private static JsonNode? Resolve(JsonNode root, string pointer) =>
-        pointer.TrimStart('#').Split('/', StringSplitOptions.RemoveEmptyEntries)
-            .Aggregate<string, JsonNode?>(root, (node, segment) => node?[segment.Replace("~1", "/").Replace("~0", "~")]);
+    private static string Describe(ContextDefinition context) =>
+        $"{context.Name}:{context.Label}:{context.Description}:{context.ReferencedBy?.Path}:" +
+        string.Join(",", context.ReferencedBy?.Parts.Select(p => $"{p.Key}={p.Value}") ?? []);
 
     private static string Describe(IEnumerable<FieldDefinition> fields) =>
         string.Join(";", fields.Select(f =>

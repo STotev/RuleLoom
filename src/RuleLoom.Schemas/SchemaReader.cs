@@ -27,11 +27,19 @@ internal static class SchemaReader
 
     private static ContextDefinition ReadContext(string name, JsonObject node)
     {
-        var isMany = Types(node).Contains("array");
-        var element = isMany ? Object(node["items"], $"{name}.items") : node;
+        var reference = node[SchemaGenerator.ReferencedByKeyword] switch
+        {
+            null => null,
+            JsonValue path when path.TryGetValue<string>(out var text) => new ContextReference(text, new Dictionary<string, string>()),
+            JsonObject parts => new ContextReference(null, parts.ToDictionary(
+                part => part.Key,
+                part => part.Value is JsonValue value && value.TryGetValue<string>(out var text)
+                    ? text
+                    : throw new JsonException($"Part '{part.Key}' of the reference of context '{name}' must be a path."))),
+            _ => throw new JsonException($"The reference of context '{name}' must be a path or an object of paths.")
+        };
 
-        return new ContextDefinition(name, String(node, "title"), String(node, "description"),
-            isMany, ReadFields(element));
+        return new ContextDefinition(name, String(node, "title"), String(node, "description"), reference);
     }
 
     private static List<FieldDefinition> ReadFields(JsonObject schema) => schema["properties"] switch

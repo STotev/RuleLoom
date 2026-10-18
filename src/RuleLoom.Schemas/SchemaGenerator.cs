@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -9,13 +10,14 @@ namespace RuleLoom.Schemas;
 
 /// <summary>
 /// Generates event documents with System.Text.Json's schema exporter and applies RuleLoom's layer: event keywords,
-/// configured titles and descriptions, ignored fields and contexts.
+/// configured titles and descriptions, ignored fields and the contexts the event relates to.
 /// </summary>
 internal static class SchemaGenerator
 {
     public const string SchemaUri = "https://json-schema.org/draft/2020-12/schema";
     public const string EventKeyword = "x-ruleloom-event";
     public const string ContextsKeyword = "x-ruleloom-contexts";
+    public const string ReferencedByKeyword = "x-ruleloom-referenced-by";
 
     private static readonly JsonSerializerOptions WebDefaults = new(JsonSerializerDefaults.Web);
 
@@ -23,7 +25,7 @@ internal static class SchemaGenerator
         EventBuilder @event,
         Type subjectType,
         FieldConfigurations fields,
-        IReadOnlyList<ContextBuilder> contexts,
+        IReadOnlyList<ContextDeclaration> contexts,
         JsonSerializerOptions? options)
     {
         var serializer = PrepareOptions(options ?? WebDefaults);
@@ -46,7 +48,7 @@ internal static class SchemaGenerator
             var contextNodes = new JsonObject();
 
             foreach (var context in contexts)
-                contextNodes[context.Name] = GenerateContext(context, serializer);
+                contextNodes[context.Name] = DescribeContext(context, subjectType, serializer);
 
             document[ContextsKeyword] = contextNodes;
         }
@@ -54,28 +56,26 @@ internal static class SchemaGenerator
         return new EventSchemaDefinition(document);
     }
 
-    private static JsonObject GenerateContext(ContextBuilder context, JsonSerializerOptions serializer)
+    private static JsonObject DescribeContext(ContextDeclaration context, Type subjectType, JsonSerializerOptions serializer)
     {
         var node = new JsonObject();
 
-        if (context.ConfiguredLabel is { } label)
+        if (context.Label is { } label)
             node["title"] = label;
-        if (context.ConfiguredDescription is { } description)
+        if (context.Description is { } description)
             node["description"] = description;
 
-        var schema = GenerateType(context.Type, context.Fields, serializer, $"context '{context.Name}'");
-        var pointer = $"#/{ContextsKeyword}/{EscapePointer(context.Name)}";
+        if (context.Reference is { } reference)
+        {
+            var owner = $"the reference of context '{context.Name}'";
+            var parts = PropertyChains.FromReference(reference)
+                .Select(part => (part.Name, Path: string.Join('.', JsonPath(subjectType, part.Properties, serializer, owner))))
+                .ToList();
 
-        if (context.IsMany)
-        {
-            RewriteReferences(schema, pointer + "/items");
-            node["type"] = "array";
-            node["items"] = schema;
-        }
-        else
-        {
-            RewriteReferences(schema, pointer);
-            MoveMembers(schema, node);
+            node[ReferencedByKeyword] = parts is [(null, var path)]
+                ? path
+                : new JsonObject(parts.Select(part => KeyValuePair.Create(
+                    serializer.PropertyNamingPolicy?.ConvertName(part.Name!) ?? part.Name!, (JsonNode?)part.Path)));
         }
 
         return node;
@@ -148,8 +148,9 @@ internal static class SchemaGenerator
 
         foreach (var property in properties)
         {
+            // Properties the serializer never writes ([JsonIgnore]) are listed without a getter.
             var member = serializer.GetTypeInfo(current).Properties
-                .FirstOrDefault(p => p.AttributeProvider is PropertyInfo info && info.Name == property.Name);
+                .FirstOrDefault(p => p.AttributeProvider is PropertyInfo info && info.Name == property.Name && p.Get is not null);
 
             if (member is null)
             {
@@ -163,24 +164,6 @@ internal static class SchemaGenerator
         }
 
         return path;
-    }
-
-    private static void RewriteReferences(JsonNode? node, string prefix)
-    {
-        switch (node)
-        {
-            case JsonObject obj:
-                if (obj["$ref"] is JsonValue reference && reference.GetValue<string>() is var target && target.StartsWith('#'))
-                    obj["$ref"] = prefix + target[1..];
-
-                foreach (var (_, value) in obj)
-                    RewriteReferences(value, prefix);
-                break;
-            case JsonArray array:
-                foreach (var item in array)
-                    RewriteReferences(item, prefix);
-                break;
-        }
     }
 
     private static bool IsObject(JsonObject schema) => schema["type"] switch
@@ -200,8 +183,6 @@ internal static class SchemaGenerator
         }
     }
 
-    private static string EscapePointer(string name) => name.Replace("~", "~0").Replace("/", "~1");
-
     /// <summary>
     /// Describes what is written: numbers aren't typed as strings (reading leniency), and the exporter needs a resolver.
     /// </summary>
@@ -214,3 +195,8 @@ internal static class SchemaGenerator
         return prepared;
     }
 }
+
+/// <summary>
+/// A context declared by an event schema: its name, label, description and reference expression.
+/// </summary>
+internal sealed record ContextDeclaration(string Name, string? Label, string? Description, LambdaExpression? Reference);

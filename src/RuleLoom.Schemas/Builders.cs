@@ -65,26 +65,20 @@ public sealed class FieldBuilder
 }
 
 /// <summary>
-/// Describes a context: returned by <see cref="EventSchema{T}"/>'s <c>Context(...)</c>.
+/// Describes a context the event relates to: returned by <see cref="EventSchema{T}"/>'s <c>Context(...)</c>.
 /// </summary>
-public sealed class ContextBuilder
+/// <typeparam name="T">The event's subject type.</typeparam>
+public sealed class ContextBuilder<T>
 {
-    internal ContextBuilder(string name, Type type, FieldConfigurations fields)
-    {
-        Name = name;
-        Type = type;
-        Fields = fields;
-    }
+    internal ContextBuilder(string name) => Name = name;
 
     internal string Name { get; }
-    internal Type Type { get; }
-    internal FieldConfigurations Fields { get; }
     internal string? ConfiguredLabel { get; private set; }
     internal string? ConfiguredDescription { get; private set; }
-    internal bool IsMany { get; private set; }
+    internal LambdaExpression? Reference { get; private set; }
 
     /// <summary>A readable name for authoring UIs (written as <c>title</c>).</summary>
-    public ContextBuilder Label(string label)
+    public ContextBuilder<T> Label(string label)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
         ConfiguredLabel = label;
@@ -92,35 +86,23 @@ public sealed class ContextBuilder
     }
 
     /// <summary>A longer explanation of the context.</summary>
-    public ContextBuilder Description(string description)
+    public ContextBuilder<T> Description(string description)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
         ConfiguredDescription = description;
         return this;
     }
 
-    /// <summary>Marks the context as a collection of its type (e.g. an ad's watchers).</summary>
-    public ContextBuilder Many()
+    /// <summary>
+    /// How the event refers to the context: a subject property (<c>o =&gt; o.CustomerId</c>) or, for a composite
+    /// reference, an anonymous object of properties (<c>o =&gt; new { o.Address.Country, o.Address.Postcode }</c>). The
+    /// engine resolves it from the event and passes it to the context provider. Calling it again replaces it.
+    /// </summary>
+    public ContextBuilder<T> ReferencedBy<TReference>(Expression<Func<T, TReference>> reference)
     {
-        IsMany = true;
+        ArgumentNullException.ThrowIfNull(reference);
+        PropertyChains.FromReference(reference);
+        Reference = reference;
         return this;
-    }
-}
-
-/// <summary>
-/// Configures a context's fields: passed to <c>Context(name, configure)</c>.
-/// </summary>
-/// <typeparam name="TContext">The context's type.</typeparam>
-public sealed class ContextFields<TContext>
-{
-    internal ContextFields(FieldConfigurations fields) => Fields = fields;
-
-    internal FieldConfigurations Fields { get; }
-
-    /// <summary>Configures a field of the context, at any depth (<c>c =&gt; c.Address.City</c>).</summary>
-    public FieldBuilder Field<TProperty>(Expression<Func<TContext, TProperty>> property)
-    {
-        ArgumentNullException.ThrowIfNull(property);
-        return Fields.Field(property);
     }
 }

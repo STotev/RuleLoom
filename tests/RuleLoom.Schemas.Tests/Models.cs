@@ -15,6 +15,8 @@ public sealed class OrderDto
     public DateTimeOffset PlacedAt { get; set; }
     public DateOnly? DueOn { get; set; }
     public Guid Id { get; set; }
+    public string CustomerId { get; set; } = "";
+    public AddressDto Address { get; set; } = new();
     public CustomerDto Customer { get; set; } = new();
     public List<LineDto> Lines { get; set; } = [];
     public string[] Tags { get; set; } = [];
@@ -29,6 +31,12 @@ public sealed class CustomerDto
     public string VatID { get; set; } = "";
     public string InternalId { get; set; } = "";
     public List<OrderDto> Orders { get; set; } = [];
+}
+
+public sealed class AddressDto
+{
+    public string Country { get; set; } = "";
+    public string Postcode { get; set; } = "";
 }
 
 public sealed class LineDto
@@ -52,13 +60,11 @@ public sealed class OrderPlacedSchema : EventSchema<OrderDto>
         Field(o => o.Customer.Tier).Description("Loyalty tier at the time of the order.");
         Field(o => o.InternalNotes).Ignore();
 
-        Context<CustomerDto>("customer", c =>
-        {
-            c.Field(x => x.Tier).Label("Loyalty tier");
-            c.Field(x => x.InternalId).Ignore();
-        }).Label("Customer").Description("The customer who placed the order.");
+        Field(o => o.CustomerId).Ignore();
 
-        Context<UserDto>("watchers").Many();
+        Context("customer").ReferencedBy(o => o.CustomerId).Label("Customer").Description("The customer who placed the order.");
+        Context("shipping-zone").ReferencedBy(o => new { o.Address.Country, o.Address.Postcode });
+        Context("calendar");
     }
 }
 

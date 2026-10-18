@@ -14,7 +14,7 @@ internal sealed class FieldConfigurations
 
     public FieldBuilder Field(LambdaExpression property)
     {
-        var properties = PropertyChain(property);
+        var properties = PropertyChains.FromProperty(property);
         var key = string.Join('.', properties.Select(p => p.Name));
 
         if (!_fields.TryGetValue(key, out var entry))
@@ -23,21 +23,50 @@ internal sealed class FieldConfigurations
         return new FieldBuilder(entry.Configuration);
     }
 
-    private static IReadOnlyList<PropertyInfo> PropertyChain(LambdaExpression lambda)
+}
+
+/// <summary>
+/// Reads property chains (<c>o =&gt; o.Customer.Tier</c>) and composite references
+/// (<c>o =&gt; new { o.Address.Country, o.Address.Postcode }</c>) from expressions.
+/// </summary>
+internal static class PropertyChains
+{
+    public static IReadOnlyList<PropertyInfo> FromProperty(LambdaExpression lambda) =>
+        Chain(lambda.Body, lambda.Parameters[0])
+        ?? throw new ArgumentException($"'{lambda}' must be a chain of properties, e.g. o => o.Customer.Tier.", nameof(lambda));
+
+    /// <summary>
+    /// A single chain (name <c>null</c>) or the named chains of an anonymous object.
+    /// </summary>
+    public static IReadOnlyList<(string? Name, IReadOnlyList<PropertyInfo> Properties)> FromReference(LambdaExpression lambda)
+    {
+        if (Chain(lambda.Body, lambda.Parameters[0]) is { } single)
+            return [(null, single)];
+
+        if (lambda.Body is NewExpression { Members: { Count: > 0 } members } created &&
+            created.Arguments.Select(argument => Chain(argument, lambda.Parameters[0])).ToList() is var chains &&
+            chains.All(chain => chain is not null))
+        {
+            return members.Select((member, i) => ((string?)member.Name, chains[i]!)).ToList();
+        }
+
+        throw new ArgumentException(
+            $"'{lambda}' must be a property (o => o.CustomerId) or an anonymous object of properties " +
+            "(o => new { o.Address.Country, o.Address.Postcode }).", nameof(lambda));
+    }
+
+    private static IReadOnlyList<PropertyInfo>? Chain(Expression body, ParameterExpression parameter)
     {
         var properties = new List<PropertyInfo>();
-        var body = lambda.Body is UnaryExpression { NodeType: ExpressionType.Convert } convert ? convert.Operand : lambda.Body;
+        body = body is UnaryExpression { NodeType: ExpressionType.Convert } convert ? convert.Operand : body;
 
         while (body is MemberExpression { Member: PropertyInfo property } member)
         {
             properties.Insert(0, property);
-            body = member.Expression;
+            body = member.Expression!;
         }
 
-        if (body != lambda.Parameters[0] || properties.Count == 0)
-            throw new ArgumentException($"'{lambda}' must be a chain of properties, e.g. o => o.Customer.Tier.", nameof(lambda));
-
-        return properties;
+        return body == parameter && properties.Count > 0 ? properties : null;
     }
 }
 

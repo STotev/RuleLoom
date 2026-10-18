@@ -113,17 +113,38 @@ public class EventSchemaTests
     }
 
     [Fact]
-    public void Build_Contexts_AreDescribed()
+    public void Build_Contexts_AreRelationsWithReferences()
     {
         var customer = Assert.Single(Order.Contexts, c => c.Name == "customer");
-        var watchers = Assert.Single(Order.Contexts, c => c.Name == "watchers");
+        var zone = Assert.Single(Order.Contexts, c => c.Name == "shipping-zone");
+        var calendar = Assert.Single(Order.Contexts, c => c.Name == "calendar");
 
-        Assert.Equal(("Customer", "The customer who placed the order.", false), (customer.Label, customer.Description, customer.IsMany));
-        Assert.Equal("Loyalty tier", Field(customer.Fields, "tier").Label);
-        Assert.DoesNotContain(customer.Fields, f => f.Name == "internalId");
+        Assert.Equal(("Customer", "The customer who placed the order."), (customer.Label, customer.Description));
+        Assert.Equal(("customerId", false), (customer.ReferencedBy!.Path, customer.ReferencedBy.IsComposite));
+        Assert.True(zone.ReferencedBy!.IsComposite);
+        Assert.Equal(new Dictionary<string, string> { ["country"] = "address.country", ["postcode"] = "address.postcode" }, zone.ReferencedBy.Parts);
+        Assert.Null(calendar.ReferencedBy);
+    }
 
-        Assert.Equal(((string?)null, true), (watchers.Label, watchers.IsMany));
-        Assert.Equal(["email", "manager"], watchers.Fields.Select(f => f.Name));
+    [Fact]
+    public void Build_ReferenceToAnIgnoredField_IsAllowed()
+    {
+        Assert.DoesNotContain(Order.Fields, f => f.Name == "customerId");
+        Assert.Equal("customerId", Order.Contexts.Single(c => c.Name == "customer").ReferencedBy!.Path);
+    }
+
+    [Fact]
+    public void ReferencedBy_NotPropertiesOrAnonymousObject_Throws()
+    {
+        Assert.Throws<ArgumentException>(() => new ComputedReferenceSchema());
+    }
+
+    [Fact]
+    public void Build_ReferenceToAnUnserializedProperty_Throws()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() => new UnserializedReferenceSchema().Build());
+
+        Assert.Contains("isn't serialized", error.Message);
     }
 
     [Fact]
@@ -157,7 +178,7 @@ public class EventSchemaTests
     {
         var error = Assert.Throws<InvalidOperationException>(() => new JsonIgnoredFieldSchema().Build());
 
-        Assert.Contains("'secret' isn't serialized", error.Message);
+        Assert.Contains("isn't serialized", error.Message);
     }
 
     [Fact]
@@ -203,8 +224,26 @@ public class EventSchemaTests
         public DuplicateContextSchema()
         {
             Event("Duplicate");
-            Context<CustomerDto>("customer");
-            Context<CustomerDto>("Customer");
+            Context("customer");
+            Context("Customer");
+        }
+    }
+
+    private sealed class ComputedReferenceSchema : EventSchema<OrderDto>
+    {
+        public ComputedReferenceSchema()
+        {
+            Event("Computed");
+            Context("customer").ReferencedBy(o => o.CustomerId.ToUpperInvariant());
+        }
+    }
+
+    private sealed class UnserializedReferenceSchema : EventSchema<OrderDto>
+    {
+        public UnserializedReferenceSchema()
+        {
+            Event("Unserialized");
+            Context("secret").ReferencedBy(o => o.Secret);
         }
     }
 
