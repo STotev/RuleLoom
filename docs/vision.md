@@ -185,6 +185,17 @@ Raised 2026-10-18 during #92. A context's fields are described once, with its pr
 of them or label them differently for its rule authors (e.g. ignore a customer's internal fields for one event, or call
 "tier" "Buyer tier" on a marketplace event). Not in 0.6; to consider with the 0.7 catalogue.
 
+### `AutoMap()`: opt-in conventions for schemas
+Raised 2026-10-19, inspired by Elasticsearch's `AutoMap()` for index templates (a mapping built from a POCO). Schemas are
+explicit by default (event names, context descriptions, labels); an opt-in `AutoMap()` would cut boilerplate for those who
+want conventions, for example:
+
+- describing a context from its provider's type (`ContextProvider<AccountDto>`) without a hand-written description;
+- labels derived from property names (`customerTier` → "Customer tier");
+- possibly event schemas by convention (the event type from the DTO's name).
+
+The magic stays optional: nothing is inferred unless `AutoMap()` is called. To design when the boilerplate starts to hurt.
+
 ### Validating incoming events against schemas
 Like MassTransit skipping messages of unknown types: once schemas are registered (0.6), a service could reject
 or skip events whose type has no schema, or whose payload doesn't fit it, instead of running rules that see `null`.
