@@ -87,8 +87,6 @@ services.AddRuleLoom(r => r
 - JSON guide (contexts): describing a context in its provider; collection providers.
 - Quick start ("Event schemas"): provider description example.
 - `AGENTS.md`: architecture table (Abstractions → Schemas; describing vs running), key concepts, extension points.
-- Vision ideas: a description pipeline (providers, actions and schema sources contributing descriptions independently),
-  to decide with the 0.7 action descriptors.
 
 ## Deviations
 

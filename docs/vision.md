@@ -190,11 +190,18 @@ Raised 2026-10-19, inspired by Elasticsearch's `AutoMap()` for index templates (
 explicit by default (event names, context descriptions, labels); an opt-in `AutoMap()` would cut boilerplate for those who
 want conventions, for example:
 
-- describing a context from its provider's type (`ContextProvider<AccountDto>`) without a hand-written description;
 - labels derived from property names (`customerTier` → "Customer tier");
 - possibly event schemas by convention (the event type from the DTO's name).
 
 The magic stays optional: nothing is inferred unless `AutoMap()` is called. To design when the boilerplate starts to hurt.
+(Since #101, a typed context provider's fields come from its type by default; labels stay explicit.)
+
+### A description pipeline
+Raised 2026-10-20 during the #101 rework. Context providers now describe what they load, and in 0.7 actions will describe
+their parameters. Rather than each feature wiring its descriptions into the schema store, providers, actions and schema
+sources could each contribute descriptions to a pipeline that nothing else depends on, so extensions (e.g. a provider
+package) plug in without the engine knowing them. Today context descriptions are the only contributor, so this waits
+for the 0.7 action descriptors, where there are several to design against.
 
 ### Validating incoming events against schemas
 Like MassTransit skipping messages of unknown types: once schemas are registered (0.6), a service could reject
