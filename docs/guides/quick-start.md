@@ -201,8 +201,27 @@ services.AddRuleLoom(rules => rules
 
 With your own store (`.UseStore<MyStore>()`), the sources are saved into it when the app starts; in an app without a
 host (e.g. a plain console app), call `await serviceProvider.SaveRuleLoomSchemasAsync()` once at startup.
-`new EventSchemaCollection().AddFromAssemblyOf<TransferMadeSchema>().ToJson()` exports the schemas as JSON Schema, for
-another service or an authoring UI.
+A context is described by the provider that loads it; every event that relates to it shares the description. A typed
+provider's fields come from its type; `Describe` adds labels and leaves fields out:
+
+```csharp
+public sealed class AccountProvider(IAccounts accounts) : ContextProvider<AccountDto>
+{
+    protected override async ValueTask<AccountDto?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
+        await accounts.FindAsync(request.GetReference<string>()!, cancellationToken);
+
+    protected override void Describe(ContextDescription<AccountDto> context)
+    {
+        context.Label("Account");
+        context.Field(a => a.Balance).Label("Balance");
+        context.Field(a => a.InternalRiskScore).Ignore();
+    }
+}
+```
+
+With `AddSchemas`, each provider's description is saved into the store under the name it's registered with (`account`).
+For a collection, derive from `CollectionContextProvider<TItem>`. `new SchemaCollection().AddFromAssemblyOf<TransferMadeSchema>().ToJson()`
+exports event schemas as JSON Schema documents, for another service or an authoring UI.
 
 ## Validating rules before saving them
 

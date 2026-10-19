@@ -14,7 +14,7 @@ namespace RuleLoom.Tests;
 public class ContextReferenceTests
 {
     // The event's schema declares how it refers to each context (as written by EventSchema<T> classes).
-    private static readonly InMemorySchemaStore Schemas = new([EventSchemaDefinition.Parse("""
+    private static readonly InMemorySchemaStore Schemas = new(new SchemaSet([EventSchemaDefinition.Parse("""
         { "x-ruleloom-event": "TransferMade", "type": "object",
           "x-ruleloom-contexts": {
             "fromAccount": { "x-ruleloom-referenced-by": "fromAccountId" },
@@ -24,7 +24,7 @@ public class ContextReferenceTests
             "payer": { "x-ruleloom-provider": "account", "x-ruleloom-referenced-by": "fromAccountId" },
             "payee": { "x-ruleloom-provider": "account", "x-ruleloom-referenced-by": "toAccountId" },
             "auditor": { "x-ruleloom-provider": "audit" } } }
-        """)]);
+        """)], []));
 
     public static TheoryData<string> StateKinds() => ["object", "json"];
 

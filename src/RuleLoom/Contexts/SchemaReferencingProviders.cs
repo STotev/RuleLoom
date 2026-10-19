@@ -27,7 +27,7 @@ internal sealed class SchemaReferencingProviders(IContextProviderFactory provide
     {
         public async ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken)
         {
-            var schema = await schemas.GetAsync(request.EventType, cancellationToken).ConfigureAwait(false);
+            var schema = await schemas.GetEventAsync(request.EventType, cancellationToken).ConfigureAwait(false);
             var declaration = schema?.Contexts.FirstOrDefault(c => string.Equals(c.Name, request.Name, StringComparison.OrdinalIgnoreCase));
             var providerName = declaration?.Provider ?? request.Name;
 

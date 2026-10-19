@@ -42,9 +42,9 @@ public class SchemaJsonTests
     [Fact]
     public void ParseMany_ReadsACollection()
     {
-        var json = new EventSchemaCollection().Add<OrderPlacedSchema>().Add<LineAddedSchema>().ToJson();
+        var json = new SchemaCollection().Add<OrderPlacedSchema>().Add<LineAddedSchema>().ToJson();
 
-        var schemas = EventSchemaDefinition.ParseMany(json);
+        var schemas = SchemaSet.Parse(json).Events;
 
         Assert.Equal(["OrderPlaced", "LineAdded"], schemas.Select(s => s.EventType));
     }

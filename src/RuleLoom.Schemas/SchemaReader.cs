@@ -8,13 +8,14 @@ namespace RuleLoom.Schemas;
 /// </summary>
 internal static class SchemaReader
 {
-    public static (string EventType, string? Label, string? Description, IReadOnlyList<FieldDefinition> Fields,
-        IReadOnlyList<ContextDefinition> Contexts) ReadEvent(JsonObject document)
-    {
-        var eventType = String(document, SchemaGenerator.EventKeyword) is { } name && !string.IsNullOrWhiteSpace(name)
+    /// <summary>The document's name: its event type or context name under <paramref name="keyword"/>.</summary>
+    public static string ReadName(JsonObject document, string keyword, string what) =>
+        String(document, keyword) is { } name && !string.IsNullOrWhiteSpace(name)
             ? name
-            : throw new JsonException($"An event schema needs a non-empty '{SchemaGenerator.EventKeyword}'.");
+            : throw new JsonException($"{what} needs a non-empty '{keyword}'.");
 
+    public static IReadOnlyList<ContextDefinition> ReadContexts(JsonObject document)
+    {
         var contexts = document[SchemaGenerator.ContextsKeyword] switch
         {
             null => [],
@@ -25,9 +26,14 @@ internal static class SchemaReader
         if (contexts.GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1) is { } duplicate)
             throw new JsonException($"Context '{duplicate.Key}' appears more than once (names ignore case).");
 
-        return (eventType, String(document, "title"), String(document, "description"),
-            ReadFields(document, document), contexts);
+        return contexts;
     }
+
+    /// <summary>The schema of one item of a context: the document itself, or its <c>items</c> for a collection.</summary>
+    public static (bool IsMany, JsonObject Item) ReadItem(JsonObject document, string name) =>
+        Types(document).Contains("array")
+            ? (true, document["items"] as JsonObject ?? throw new JsonException($"Context schema '{name}' is an array without object 'items'."))
+            : (false, document);
 
     private static ContextDefinition ReadContext(string name, JsonObject node)
     {
@@ -52,7 +58,7 @@ internal static class SchemaReader
         return new ContextDefinition(name, String(node, "title"), String(node, "description"), reference, provider);
     }
 
-    private static List<FieldDefinition> ReadFields(JsonObject schema, JsonObject root) => schema["properties"] switch
+    public static List<FieldDefinition> ReadFields(JsonObject schema, JsonObject root) => schema["properties"] switch
     {
         null => [],
         JsonObject properties => properties.Select(pair => ReadField(pair.Key, pair.Value, root)).ToList(),
@@ -139,7 +145,7 @@ internal static class SchemaReader
     private static string TypeName(JsonNode? node) =>
         node is JsonValue value && value.TryGetValue<string>(out var name) ? name : throw new JsonException("'type' must be a string or an array of strings.");
 
-    private static string? String(JsonObject node, string name) =>
+    public static string? String(JsonObject node, string name) =>
         node[name] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
 
     private static JsonObject Object(JsonNode? node, string name) =>
