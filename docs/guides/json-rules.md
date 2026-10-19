@@ -269,17 +269,18 @@ services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("custom
 
 - **The provider decides how to find the data.** It gets the context name and the event (type, current and previous
   state; `request.Resolve(path)` reads the subject), and returns a .NET object, JSON, a collection, or `null` when there
-  is none. `ContextProvider<T>` is a typed base class; implement `IContextProvider` directly to return untyped data
-  such as JSON from another service.
+  is none. `ContextProvider<T>` (one entity) and `CollectionContextProvider<TItem>` (a collection) are typed base
+  classes; implement `IContextProvider` directly to return untyped data such as JSON from another service.
 - **References from event schemas.** When the event's schema declares how it refers to a context
   (`Context("toAccount").ReferencedBy(t => t.ToAccountId)`, see `RuleLoom.Schemas`) and schemas are registered with
   `AddSchemas`, the engine resolves the reference from the event and passes it as `request.Reference`; read it with
   `request.GetReference<string>()` (a single value) or `GetReference<ZoneKey>()` (a composite reference mapped onto a
   record by part name). Without a declared reference, `Reference` is `null` and the provider reads the subject itself.
-- **Describing a context's fields.** A `ContextSchema<T>` (package `RuleLoom.Schemas`) describes what a context offers,
-  once per provider: `Context("account").Label("Account")`, `Field(a => a.Balance).Label("Balance")`, `Ignore()`, and
-  `Many()` for providers that return a collection. Registered with `AddSchemas` like event schemas, it's used to
-  validate `@` paths and to show rule authors what they can pick.
+- **Describing a context's fields.** A typed provider describes what it loads: its fields come from its type, and an
+  override of `Describe(ContextDescription<T> context)` adds `context.Label("Account")`,
+  `context.Field(a => a.Balance).Label("Balance")` or `.Ignore()`. With `AddSchemas`, the description is saved into the
+  schema store under the provider's registered name; it's used to validate `@` paths and to show rule authors what
+  they can pick. Untyped providers (`IContextProvider`, or a JSON or `object` type) have no description.
 - **One provider, several contexts.** A schema can say which provider loads a context:
   `Context("fromAccount").LoadedBy("account").ReferencedBy(t => t.FromAccountId)` and
   `Context("toAccount").LoadedBy("account").ReferencedBy(t => t.ToAccountId)`, with one

@@ -75,9 +75,9 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 
 | Project | Path | Role |
 |---|---|---|
-| `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models. **Must have no external package dependencies.** |
+| `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models: what the engine runs (operators, actions, context providers). **No dependencies outside `RuleLoom.Schemas` and .NET**; extensions describe themselves with Schemas' builders (`ContextDescription<T>`) |
 | `RuleLoom` | `src/RuleLoom` | Default implementation: engine, evaluator, operators, actions, scheduling |
-| `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Event schemas: `EventSchema<T>` classes, generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`). **No dependencies at all** (not even Abstractions); producers use it without the engine; `RuleLoom` references it. `ISchemaStore` + `InMemorySchemaStore` |
+| `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Descriptions: event schemas (`EventSchema<T>` classes) and context schemas (`ContextDescription<T>`), generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`). **No dependencies at all** (not even Abstractions); producers use it without the engine; `RuleLoom.Abstractions` and `RuleLoom` reference it. `ISchemaStore` + `InMemorySchemaStore` |
 | `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(...)`: DI registration of engine, evaluator, actions, operators, context providers, validator, schemas (`AddSchemas`) |
 | `RuleLoom.Tests` | `tests/RuleLoom.Tests` | xUnit unit tests |
 | `RuleLoom.Tests.Integration` | `tests/RuleLoom.Tests.Integration` | xUnit end-to-end tests |
@@ -161,13 +161,15 @@ environment `nuget`) and attaches the packages to the GitHub release.
   generates an `EventSchemaDefinition` from how `TDto` is serialized (Web defaults unless options are given; numbers
   not typed as strings; null-oblivious types non-nullable), adds configured titles and descriptions (no automatic labels) and
   `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`). `ToJson()`/`Parse` round-trip;
-  field names are JSON names. `class XSchema : ContextSchema<TDto>` describes a context's fields (`Context(providerName)`
-  required, `Many()`, `Field(...)`) as a `ContextSchemaDefinition` (`x-ruleloom-context`). `SchemaCollection` gathers
-  both kinds (assembly scan) into a `SchemaSet` (`Events`, `Contexts`; `ToJson()` one array, `SchemaSet.Parse`).
+  field names are JSON names. Contexts are described by their providers: `ContextDescription<T>` (`Label`/`Description`/
+  `Field(...)`) builds a `ContextSchemaDefinition` (`x-ruleloom-context`; `IsMany` for collections); both inherit
+  `SchemaDefinition` (`Label`, `Description`, `Fields`, `ToJson`). `SchemaCollection` gathers event schema classes
+  (assembly scan) into a `SchemaSet` (`Events`, `Contexts`; `ToJson()` one array, `SchemaSet.Parse`).
   `ISchemaStore` keeps both: `Get/List/SaveEventAsync`, `Get/List/SaveContextAsync`.
   `ISchemaStore` (+ `InMemorySchemaStore`) keeps schemas where the engine runs; DI's `AddSchemas(s => s.Add<T>() /
-  AddFromAssemblyOf<T>() / AddJson(json) / UseStore<T>())` registers sources and storage separately: the in-memory store
-  starts with the sources; your own store gets them at startup (`SchemaSourcesStartup` hosted service, or
+  AddFromAssemblyOf<T>() / AddJson(json) / UseStore<T>())` registers sources and storage separately; registered
+  providers' schemas (`IContextProvider.GetSchema(name)`) are sources too, read from a scope: the in-memory store
+  starts with the sources (created on first use); your own store gets them at startup (`SchemaSourcesStartup` hosted service, or
   `serviceProvider.SaveRuleLoomSchemasAsync()` without a host). `RuleLoom` references `RuleLoom.Schemas`:
   `RuleEngine` takes an optional `ISchemaStore` and wraps the context providers (`SchemaReferencingProviders`): the
   event's schema picks the provider (`Context("toAccount").LoadedBy("account")`, else the context name) and its declared
@@ -191,9 +193,10 @@ environment `nuget`) and attaches the packages to the GitHub release.
   (`SendEmailAction` → `send-email`) or `[ActionName("...")]`; read parameters with
   `action.GetParameter<T>(name)` / `TryGetParameter<T>` (plain CLR values, converted via `ValueConverter`);
   return `ActionResult.Success()` or `ActionResult.Failed(...)`.
-- **Context provider**: derive from `ContextProvider<TContext>` (typed `LoadAsync`) or implement `IContextProvider`
-  (`ValueTask<object?> GetAsync(ContextRequest, CancellationToken)`); read the subject with `request.Resolve(path)`;
-  return the context, a collection, or `null` (not found). Actions read contexts with `GetContextAsync<T>(name)`.
+- **Context provider**: derive from `ContextProvider<TContext>` / `CollectionContextProvider<TItem>` (typed `LoadAsync`;
+  override `Describe(ContextDescription<T>)` for labels and ignores; the type gives the schema) or implement
+  `IContextProvider` (`ValueTask<object?> GetAsync(ContextRequest, CancellationToken)`; no schema unless `GetSchema` is
+  implemented); read the subject with `request.Resolve(path)`; return the context, a collection, or `null` (not found). Actions read contexts with `GetContextAsync<T>(name)`.
 
 ## Code Style
 

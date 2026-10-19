@@ -92,3 +92,9 @@ services.AddRuleLoom(r => r
 
 - `ISchemaStore`'s event methods were renamed in this slice (`GetAsync`/`ListAsync`/`SaveAsync` → `GetEventAsync`/
   `ListEventsAsync`/`SaveEventAsync`) next to the new context methods; `InMemorySchemaStore` takes a `SchemaSet`.
+- Typed providers of untyped data (`ContextProvider<object>`, `JsonElement`, `JsonDocument`, `JsonNode` and its subtypes)
+  have no schema, like `IContextProvider`: their type declares no fields.
+- A collection type is rejected by `ContextDescription<T>.Build` (dictionaries aren't collections), so it fails for a
+  `ContextProvider<List<X>>` when its schema is read, as planned, and for direct use of the description.
+- `SchemaDefinition` is public: the shared base of both definitions (`Label`, `Description`, `Fields`, `ToJson`), so UIs
+  and the validator can treat both kinds alike.
