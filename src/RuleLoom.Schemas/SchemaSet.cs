@@ -38,9 +38,7 @@ public sealed class SchemaSet
         using (var writer = new Utf8JsonWriter(buffer, SchemaJson.WriterOptions))
         {
             writer.WriteStartArray();
-            foreach (var schema in Events)
-                schema.WriteTo(writer);
-            foreach (var schema in Contexts)
+            foreach (var schema in Events.Concat<SchemaDefinition>(Contexts))
                 schema.WriteTo(writer);
             writer.WriteEndArray();
         }

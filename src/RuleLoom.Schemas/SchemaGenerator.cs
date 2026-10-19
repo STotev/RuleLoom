@@ -10,8 +10,8 @@ using System.Text.Json.Serialization.Metadata;
 namespace RuleLoom.Schemas;
 
 /// <summary>
-/// Generates event documents with System.Text.Json's schema exporter and applies RuleLoom's layer: event keywords,
-/// configured titles and descriptions, ignored fields and the contexts the event relates to.
+/// Generates event and context documents with System.Text.Json's schema exporter and applies RuleLoom's layer: the
+/// document kind, configured titles and descriptions, ignored fields and the contexts an event relates to.
 /// </summary>
 internal static class SchemaGenerator
 {
@@ -50,17 +50,7 @@ internal static class SchemaGenerator
         JsonSerializerOptions? options)
     {
         var serializer = Serializer(options);
-
-        var document = new JsonObject
-        {
-            ["$schema"] = SchemaUri,
-            [EventKeyword] = @event.EventType
-        };
-
-        if (@event.ConfiguredLabel is { } label)
-            document["title"] = label;
-        if (@event.ConfiguredDescription is { } description)
-            document["description"] = description;
+        var document = Document(EventKeyword, @event.EventType, @event.ConfiguredLabel, @event.ConfiguredDescription);
 
         MoveMembers(GenerateType(subjectType, fields, serializer, subjectType.Name), document);
 
@@ -86,17 +76,7 @@ internal static class SchemaGenerator
         FieldConfigurations fields,
         JsonSerializerOptions? options)
     {
-        var document = new JsonObject
-        {
-            ["$schema"] = SchemaUri,
-            [ContextKeyword] = name
-        };
-
-        if (label is not null)
-            document["title"] = label;
-        if (description is not null)
-            document["description"] = description;
-
+        var document = Document(ContextKeyword, name, label, description);
         var schema = GenerateType(type, fields, Serializer(options), $"context '{name}'");
 
         if (isMany)
@@ -112,6 +92,23 @@ internal static class SchemaGenerator
         }
 
         return new ContextSchemaDefinition(document);
+    }
+
+    /// <summary>The start of a schema document: its kind and name, title and description.</summary>
+    private static JsonObject Document(string keyword, string name, string? label, string? description)
+    {
+        var document = new JsonObject
+        {
+            ["$schema"] = SchemaUri,
+            [keyword] = name
+        };
+
+        if (label is not null)
+            document["title"] = label;
+        if (description is not null)
+            document["description"] = description;
+
+        return document;
     }
 
     private static JsonSerializerOptions Serializer(JsonSerializerOptions? options)
