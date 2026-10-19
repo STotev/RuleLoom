@@ -3,10 +3,10 @@ using System.Text.Json.Nodes;
 
 namespace RuleLoom.Schemas.Tests;
 
-public class ContextSchemaTests
+public class ContextDescriptionTests
 {
-    private static readonly ContextSchemaDefinition Account = new AccountSchema().Build();
-    private static readonly ContextSchemaDefinition Watchers = new WatchersSchema().Build();
+    private static readonly ContextSchemaDefinition Account = Contexts.Account();
+    private static readonly ContextSchemaDefinition Watchers = Contexts.Watchers();
 
     [Fact]
     public void Build_DescribesTheContextAndItsFields()
@@ -17,7 +17,7 @@ public class ContextSchemaTests
     }
 
     [Fact]
-    public void Build_Many_DescribesOneElementOfACollection()
+    public void Build_Many_DescribesOneItemOfACollection()
     {
         var document = JsonNode.Parse(Watchers.ToJson())!;
 
@@ -63,10 +63,39 @@ public class ContextSchemaTests
     }
 
     [Fact]
-    public void Build_WithoutContext_Throws()
+    public void Build_WithoutConfiguration_DescribesTheTypeWithoutLabels()
     {
-        Assert.Throws<InvalidOperationException>(() => new UnnamedSchema().Build());
-        Assert.Throws<InvalidOperationException>(() => new TwiceNamedSchema());
+        var schema = new ContextDescription<AccountDto>().Build("account");
+
+        Assert.Equal((null, null), (schema.Label, schema.Description));
+        Assert.Equal(["id", "balance", "internalRiskScore"], schema.Fields.Select(f => f.Name));
+        Assert.All(schema.Fields, field => Assert.Null(field.Label));
+    }
+
+    [Fact]
+    public void Build_CollectionType_Throws()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() => new ContextDescription<List<UserDto>>().Build("watchers"));
+
+        Assert.Contains("collection", error.Message);
+    }
+
+    [Fact]
+    public void Build_FieldNotSerialized_Throws()
+    {
+        var context = new ContextDescription<OrderDto>();
+        context.Field(o => o.Secret).Label("Secret");
+
+        Assert.Throws<InvalidOperationException>(() => context.Build("order"));
+    }
+
+    [Fact]
+    public void Build_DictionaryType_IsNotACollection()
+    {
+        var schema = new ContextDescription<Dictionary<string, string>>().Build("settings");
+
+        Assert.False(schema.IsMany);
+        Assert.Empty(schema.Fields);
     }
 
     private static IEnumerable<string> References(JsonNode? node) => node switch
@@ -80,15 +109,4 @@ public class ContextSchemaTests
     private static JsonNode? Resolve(JsonNode root, string pointer) =>
         pointer.TrimStart('#').Split('/', StringSplitOptions.RemoveEmptyEntries)
             .Aggregate<string, JsonNode?>(root, (node, segment) => node?[segment]);
-
-    private sealed class UnnamedSchema : ContextSchema<AccountDto>;
-
-    private sealed class TwiceNamedSchema : ContextSchema<AccountDto>
-    {
-        public TwiceNamedSchema()
-        {
-            Context("a");
-            Context("b");
-        }
-    }
 }

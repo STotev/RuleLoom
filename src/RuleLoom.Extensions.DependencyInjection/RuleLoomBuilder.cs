@@ -42,7 +42,8 @@ public sealed class RuleLoomBuilder
 
     /// <summary>
     /// Registers <typeparamref name="TProvider"/> (Scoped) as the provider of the context <paramref name="name"/>,
-    /// which rules use as <c>@name</c>. The same type may provide several contexts.
+    /// which rules use as <c>@name</c>. The same type may provide several contexts. With <see cref="AddSchemas"/>, the
+    /// context's schema (<see cref="IContextProvider.GetSchema"/>) is saved into the schema store under this name.
     /// </summary>
     /// <exception cref="ArgumentException">The name is already used by another provider (names are case-insensitive).</exception>
     public RuleLoomBuilder AddContextProvider<TProvider>(string name) where TProvider : class, IContextProvider
@@ -54,13 +55,15 @@ public sealed class RuleLoomBuilder
     }
 
     /// <summary>
-    /// Registers event schemas: their sources (schema classes, exported JSON) and where they're kept, an
-    /// <see cref="ISchemaStore"/> (the in-memory store, Singleton, or your own with
+    /// Registers schemas: their sources (event schema classes, exported JSON, and the contexts registered providers
+    /// describe) and where they're kept, an <see cref="ISchemaStore"/> (the in-memory store, Singleton, or your own with
     /// <see cref="SchemaRegistration.UseStore{TStore}"/>, Scoped). The in-memory store starts with the sources; your own
     /// store gets them at startup (a hosted service, or <c>SaveRuleLoomSchemasAsync()</c> in apps without a host). The
     /// engine reads the store, so context providers receive each event's declared reference. Call it once; a later call
     /// replaces the configuration.
     /// </summary>
+    /// <remarks>Providers' descriptions are read when the store is first used (in-memory) or at startup (your own store),
+    /// from a scope that resolves each provider once.</remarks>
     /// <exception cref="InvalidOperationException">Two sources describe the same event type.</exception>
     public RuleLoomBuilder AddSchemas(Action<SchemaRegistration>? configure = null)
     {
@@ -68,7 +71,7 @@ public sealed class RuleLoomBuilder
         configure?.Invoke(registration);
 
         // Built now, so mistakes in schema classes or JSON surface when the app is configured.
-        var sources = new SchemaSources(registration.BuildSources());
+        var sources = new SchemaSources(registration.BuildSources(), registration.SerializerOptions, _registry);
         Services.Replace(ServiceDescriptor.Singleton(sources));
 
         if (registration.StoreType is { } storeType)
@@ -78,7 +81,11 @@ public sealed class RuleLoomBuilder
         }
         else
         {
-            Services.Replace(ServiceDescriptor.Singleton<ISchemaStore>(new InMemorySchemaStore(sources.Schemas)));
+            Services.Replace(ServiceDescriptor.Singleton<ISchemaStore>(services =>
+            {
+                using var scope = services.CreateScope();
+                return new InMemorySchemaStore(sources.Collect(scope.ServiceProvider));
+            }));
         }
 
         return this;

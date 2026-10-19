@@ -37,6 +37,8 @@ internal sealed class RuleLoomRegistry
 
     public IReadOnlyCollection<string> ContextProviderNames => _contextProviders.Keys;
 
+    public IEnumerable<KeyValuePair<string, Type>> ContextProviders => _contextProviders;
+
     public void AddContextProvider(string name, Type providerType)
     {
         if (_contextProviders.Keys.FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase)) is { } existing)

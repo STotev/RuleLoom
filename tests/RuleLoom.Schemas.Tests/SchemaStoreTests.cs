@@ -33,11 +33,11 @@ public class SchemaStoreTests
     [Fact]
     public async Task InMemorySchemaStore_KeepsContextSchemas()
     {
-        var account = new AccountSchema().Build();
+        var account = Contexts.Account();
         var store = new InMemorySchemaStore(new SchemaSet([], [account]));
         var ct = TestContext.Current.CancellationToken;
 
-        await store.SaveContextAsync(new WatchersSchema().Build(), ct);
+        await store.SaveContextAsync(Contexts.Watchers(), ct);
         await store.SaveContextAsync(ContextSchemaDefinition.Parse(account.ToJson()), ct);
 
         Assert.Equal("account", (await store.GetContextAsync("ACCOUNT", ct))!.Name);

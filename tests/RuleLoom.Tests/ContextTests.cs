@@ -165,6 +165,48 @@ public class ContextTests
     }
 
     [Fact]
+    public async Task CollectionContextProvider_LoadsItems()
+    {
+        var context = Context(("watchers", new WatchersProvider()));
+
+        var watchers = await context.GetContextAsync<IReadOnlyList<Customer>>("watchers", TestContext.Current.CancellationToken);
+
+        Assert.Equal([new Customer("c-1", "Gold"), new Customer("c-2", "Basic")], watchers!);
+    }
+
+    [Fact]
+    public void GetSchema_TypedProvider_DescribesItsTypeUnderTheGivenName()
+    {
+        var schema = ((IContextProvider)new CustomerProvider()).GetSchema("buyer")!;
+
+        Assert.Equal(("buyer", "Customer", false), (schema.Name, schema.Label, schema.IsMany));
+        Assert.Equal(["id", "tier"], schema.Fields.Select(f => f.Name));
+        Assert.Equal("Loyalty tier", schema.Fields[1].Label);
+    }
+
+    [Fact]
+    public void GetSchema_CollectionProvider_DescribesOneItem()
+    {
+        var schema = ((IContextProvider)new WatchersProvider()).GetSchema("watchers")!;
+
+        Assert.True(schema.IsMany);
+        Assert.Equal(["id"], schema.Fields.Select(f => f.Name));
+    }
+
+    [Fact]
+    public void GetSchema_UntypedProviders_HaveNoSchema()
+    {
+        Assert.Null(((IContextProvider)new FakeContextProvider(new { })).GetSchema("customer"));
+        Assert.Null(((IContextProvider)new JsonProvider()).GetSchema("customer"));
+    }
+
+    [Fact]
+    public void GetSchema_ProviderOfACollectionType_Throws()
+    {
+        Assert.Throws<InvalidOperationException>(() => ((IContextProvider)new ListProvider()).GetSchema("watchers"));
+    }
+
+    [Fact]
     public void DirectContextProviderFactory_NamesIgnoreCaseAndDuplicatesThrow()
     {
         var provider = new FakeContextProvider(new { });
@@ -191,5 +233,31 @@ public class ContextTests
     {
         protected override ValueTask<Customer?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
             ValueTask.FromResult<Customer?>(new Customer((string)request.Resolve("CustomerId")!, "Gold"));
+
+        protected override void Describe(Schemas.ContextDescription<Customer> context)
+        {
+            context.Label("Customer");
+            context.Field(c => c.Tier).Label("Loyalty tier");
+        }
+    }
+
+    private sealed class WatchersProvider : CollectionContextProvider<Customer>
+    {
+        protected override ValueTask<IReadOnlyList<Customer>> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IReadOnlyList<Customer>>([new Customer("c-1", "Gold"), new Customer("c-2", "Basic")]);
+
+        protected override void Describe(Schemas.ContextDescription<Customer> context) => context.Field(c => c.Tier).Ignore();
+    }
+
+    private sealed class JsonProvider : ContextProvider<JsonNode>
+    {
+        protected override ValueTask<JsonNode?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(JsonNode.Parse("{}"));
+    }
+
+    private sealed class ListProvider : ContextProvider<List<Customer>>
+    {
+        protected override ValueTask<List<Customer>?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
+            ValueTask.FromResult<List<Customer>?>([]);
     }
 }

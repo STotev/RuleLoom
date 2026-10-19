@@ -21,31 +21,18 @@ public class SchemaCollectionTests
     }
 
     [Fact]
-    public void AddFromAssemblyOf_AddsContextSchemaClassesToo()
+    public void SchemaSet_SameContextTwice_Throws()
     {
-        var schemas = new SchemaCollection().AddFromAssemblyOf<AccountSchema>().Build();
+        var error = Assert.Throws<InvalidOperationException>(() => new SchemaSet([], [Contexts.Account(), Contexts.Account()]));
 
-        Assert.Equal(["account", "watchers"], schemas.Contexts.Select(c => c.Name));
-    }
-
-    [Fact]
-    public void Build_SameContextTwice_Throws()
-    {
-        var collection = new SchemaCollection().Add<AccountSchema>().Add(new AccountSchema());
-
-        Assert.Contains("account", Assert.Throws<InvalidOperationException>(() => collection.Build()).Message);
-    }
-
-    [Fact]
-    public void Add_TypeThatIsNotASchema_Throws()
-    {
-        Assert.Throws<ArgumentException>(() => new SchemaCollection().Add<AccountDto>());
+        Assert.Contains("account", error.Message);
     }
 
     [Fact]
     public void SchemaSet_RoundTripsEventsAndContexts()
     {
-        var json = new SchemaCollection().Add<OrderPlacedSchema>().Add<AccountSchema>().Add<WatchersSchema>().ToJson();
+        var events = new SchemaCollection().Add<OrderPlacedSchema>().Build().Events;
+        var json = new SchemaSet(events, [Contexts.Account(), Contexts.Watchers()]).ToJson();
 
         var parsed = SchemaSet.Parse(json);
 

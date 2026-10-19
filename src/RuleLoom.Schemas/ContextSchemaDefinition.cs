@@ -5,7 +5,7 @@ namespace RuleLoom.Schemas;
 
 /// <summary>
 /// A context's schema: the fields of the entity a context provider loads (e.g. <c>account</c>), shared by every event
-/// that relates to it. Built by <see cref="ContextSchema{T}"/> or read from JSON; written as a JSON Schema 2020-12
+/// that relates to it. Built by <see cref="ContextDescription{T}"/> (in a context provider) or read from JSON; written as a JSON Schema 2020-12
 /// document with <c>x-ruleloom-context</c>.
 /// </summary>
 public sealed class ContextSchemaDefinition
@@ -18,7 +18,7 @@ public sealed class ContextSchemaDefinition
         (Name, Label, Description, IsMany, Fields) = SchemaReader.ReadContextSchema(document);
     }
 
-    /// <summary>The name of the context provider it describes (matched ignoring case).</summary>
+    /// <summary>The name the context provider it describes is registered under (matched ignoring case).</summary>
     public string Name { get; }
 
     /// <summary>A readable name for authoring UIs, if configured (<c>title</c>).</summary>

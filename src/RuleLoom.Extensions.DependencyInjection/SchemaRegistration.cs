@@ -18,8 +18,8 @@ public sealed class SchemaRegistration
     /// <summary>The serializer options events are sent with, for building schema classes (Web defaults when unset).</summary>
     public JsonSerializerOptions? SerializerOptions { get; set; }
 
-    /// <summary>Adds a schema class (an <see cref="EventSchema{T}"/> or a <see cref="ContextSchema{T}"/>) as a source.</summary>
-    public SchemaRegistration Add<TSchema>() where TSchema : class, new()
+    /// <summary>Adds an event schema class (an <see cref="EventSchema{T}"/>) as a source.</summary>
+    public SchemaRegistration Add<TSchema>() where TSchema : IEventSchema, new()
     {
         _classes.Add(collection => collection.Add<TSchema>());
         return this;

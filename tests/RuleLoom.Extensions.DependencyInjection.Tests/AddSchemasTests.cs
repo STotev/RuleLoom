@@ -62,26 +62,63 @@ public class AddSchemasTests
     }
 
     [Fact]
-    public async Task AddSchemas_ContextSchemasFromClassesAndJson_ReachTheStores()
+    public async Task AddSchemas_ProviderSchemas_ReachTheInMemoryStoreUnderEachName()
     {
-        var json = new SchemaCollection().Add<AccountsSchema>().ToJson();
-        var inMemory = new ServiceCollection().AddRuleLoom(r => r.AddSchemas(s => s.AddJson(json)));
+        var services = new ServiceCollection()
+            .AddScoped<Accounts>()
+            .AddRuleLoom(r => r
+                .AddContextProvider<AccountProvider>("account")
+                .AddContextProvider<AccountProvider>("ledger")
+                .AddSchemas());
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+        var contexts = await provider.GetRequiredService<ISchemaStore>().ListContextsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["account", "ledger"], contexts.Select(c => c.Name));
+        Assert.All(contexts, c =>
+        {
+            Assert.Equal("Account", c.Label);
+            Assert.Equal(["id", "frozen"], c.Fields.Select(f => f.Name));
+        });
+    }
+
+    [Fact]
+    public async Task SaveRuleLoomSchemasAsync_SavesProviderSchemasAndJsonContextsIntoYourStore()
+    {
+        var json = new SchemaSet([], [new ContextDescription<AccountDto>().Build("branch")]).ToJson();
         var saved = new SavedSchemas();
-        var yours = new ServiceCollection().AddSingleton(saved).AddRuleLoom(r => r.AddSchemas(s => s.Add<AccountsSchema>().UseStore<RecordingStore>()));
+        var services = new ServiceCollection()
+            .AddSingleton(saved)
+            .AddScoped<Accounts>()
+            .AddRuleLoom(r => r
+                .AddSchemas(s => s.AddJson(json).UseStore<RecordingStore>())
+                .AddContextProvider<AccountProvider>("account"));
 
-        using var first = inMemory.BuildServiceProvider();
-        using var second = yours.BuildServiceProvider();
-        await second.SaveRuleLoomSchemasAsync(TestContext.Current.CancellationToken);
+        using var provider = services.BuildServiceProvider();
+        await provider.SaveRuleLoomSchemasAsync(TestContext.Current.CancellationToken);
 
-        Assert.NotNull(await first.GetRequiredService<ISchemaStore>().GetContextAsync("account", TestContext.Current.CancellationToken));
-        Assert.Equal(["account"], saved.Contexts.Select(c => c.Name));
+        Assert.Equal(["branch", "account"], saved.Contexts.Select(c => c.Name));
+    }
+
+    [Fact]
+    public void AddSchemas_ContextDescribedByAProviderAndJson_ThrowsWhenTheStoreIsCreated()
+    {
+        var json = new SchemaSet([], [new ContextDescription<AccountDto>().Build("account")]).ToJson();
+        var services = new ServiceCollection()
+            .AddSingleton<Accounts>()
+            .AddRuleLoom(r => r.AddSchemas(s => s.AddJson(json)).AddContextProvider<AccountProvider>("account"));
+
+        using var provider = services.BuildServiceProvider();
+
+        var error = Assert.Throws<InvalidOperationException>(() => provider.GetRequiredService<ISchemaStore>());
+        Assert.Contains("account", error.Message);
     }
 
     [Fact]
     public async Task SaveRuleLoomSchemasAsync_WithoutSources_DoesNothing()
     {
         var saved = new SavedSchemas();
-        var withoutSchemas = new ServiceCollection().AddRuleLoom();
+        var withoutSchemas = new ServiceCollection().AddSingleton<Accounts>().AddRuleLoom(r => r.AddContextProvider<AccountProvider>("account"));
         var withoutSources = new ServiceCollection().AddSingleton(saved).AddRuleLoom(r => r.AddSchemas(s => s.UseStore<RecordingStore>()));
 
         using var first = withoutSchemas.BuildServiceProvider();
@@ -90,6 +127,7 @@ public class AddSchemasTests
         await second.SaveRuleLoomSchemasAsync(TestContext.Current.CancellationToken);
 
         Assert.Empty(saved.Schemas);
+        Assert.Empty(saved.Contexts);
     }
 
     [Fact]
@@ -151,11 +189,6 @@ public class AddSchemasTests
 
     public sealed record AccountDto(string Id, bool Frozen);
 
-    public sealed class AccountsSchema : ContextSchema<AccountDto>
-    {
-        public AccountsSchema() => Context("account").Label("Account");
-    }
-
     public sealed class Accounts
     {
         public List<string> Loaded { get; } = [];
@@ -170,6 +203,8 @@ public class AddSchemasTests
                 accounts.Loaded.Add(id);
             return ValueTask.FromResult<AccountDto?>(new AccountDto(id, Frozen: id == "A-2"));
         }
+
+        protected override void Describe(ContextDescription<AccountDto> context) => context.Label("Account");
     }
 
     public sealed class SavedSchemas

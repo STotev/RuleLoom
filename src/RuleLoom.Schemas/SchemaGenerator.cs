@@ -78,7 +78,10 @@ internal static class SchemaGenerator
     }
 
     public static ContextSchemaDefinition GenerateContext(
-        ContextSchemaBuilder context,
+        string name,
+        string? label,
+        string? description,
+        bool isMany,
         Type type,
         FieldConfigurations fields,
         JsonSerializerOptions? options)
@@ -86,17 +89,17 @@ internal static class SchemaGenerator
         var document = new JsonObject
         {
             ["$schema"] = SchemaUri,
-            [ContextKeyword] = context.Name
+            [ContextKeyword] = name
         };
 
-        if (context.ConfiguredLabel is { } label)
+        if (label is not null)
             document["title"] = label;
-        if (context.ConfiguredDescription is { } description)
+        if (description is not null)
             document["description"] = description;
 
-        var schema = GenerateType(type, fields, Serializer(options), $"context '{context.Name}'");
+        var schema = GenerateType(type, fields, Serializer(options), $"context '{name}'");
 
-        if (context.IsMany)
+        if (isMany)
         {
             // The element's references to itself now sit under "items".
             Rebase(schema, "#", "#/items");
