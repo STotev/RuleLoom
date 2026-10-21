@@ -145,7 +145,9 @@ environment `nuget`) and attaches the packages to the GitHub release.
 - **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
   `RuleValidator` (`RuleLoom.Validation`) checks a rule against the registered operators and actions
   (unknown names, operand counts, incomplete schedules), returning every error with a JSONPath location.
-  Property paths aren't validated (needs the Schema System).
+  `ValidateAsync` also checks paths when the injected `ISchemaStore` has the event's schema (`SchemaPathChecker`):
+  unknown fields/contexts, unregistered providers, paths into lists → `Errors`; comparisons of built-in operators
+  that can't match and contexts without a schema → `Warnings` (`IsValid` ignores warnings).
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
   in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now. UTC only.
   `ReferencePath` values convert via `ValueConverter` (`DateTime`/`DateTimeOffset`, or strict ISO 8601 strings).

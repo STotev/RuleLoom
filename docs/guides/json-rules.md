@@ -215,7 +215,31 @@ foreach (var error in result.Errors)
 ```
 
 `RuleValidator` reports every problem at once: unknown operators, too few or too many operands, unknown actions,
-and `Delay`/`Advance` schedules without `amount` or `unit`. It doesn't check property paths.
+and `Delay`/`Advance` schedules without `amount` or `unit`.
+
+With schemas, it also checks paths. Give the validator the context providers and the schema store (DI does this) and
+call `ValidateAsync`. When the store has a schema for the rule's event, every path in conditions and schedule
+`referencePath`s is checked:
+
+```csharp
+var validator = new RuleValidator(operators, actionFactory, contextProviders, schemaStore);
+var result = await validator.ValidateAsync(rule, cancellationToken);
+
+foreach (var error in result.Errors)
+    Console.WriteLine($"{error.Path}: {error.Message}");   // "$.condition.operands[0].path: 'Totl' is not a field of OrderPlaced."
+foreach (var warning in result.Warnings)
+    Console.WriteLine($"{warning.Path}: {warning.Message}");
+```
+
+- **Errors:** unknown fields (ignored fields count as unknown), paths below a value without fields or into a list
+  (`Lines.Sku`, `@watchers.Email`), contexts the event doesn't declare, contexts whose provider isn't registered,
+  `$current.@x`/`$previous.@x`, and `changed` on a context. `$previous.` paths are checked against the subject.
+- **Warnings** (the rule stays valid; `IsValid` only looks at errors): `eq`, `gt`, `gte`, `lt` and `lte` comparing types
+  that can never match (a number field with `"100"`, a boolean with `"yes"`, a date with text that isn't ISO 8601,
+  `gt` on a list or object), and paths into a context whose provider has no schema (an untyped provider), which can't
+  be checked. Enum fields aren't checked.
+- Paths below untyped fields (`object`, JSON), dictionaries and repeated types aren't checked.
+- Without a store, or without a schema for the event, `ValidateAsync` returns what `Validate` returns.
 
 ## Type Inference Rules
 
