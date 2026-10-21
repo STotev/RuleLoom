@@ -4,6 +4,7 @@ using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
 using RuleLoom.Engine;
+using RuleLoom.Operators;
 using RuleLoom.Schemas;
 
 namespace RuleLoom.Validation;
@@ -111,6 +112,9 @@ public sealed class RuleValidator
         if (action.Condition is not null)
             ValidateRootCondition(action.Condition, $"{path}.condition", "An action's condition", errors);
 
+        if (action.Schedule?.ReferencePath is { } referencePath)
+            ValidatePath(referencePath, $"{path}.schedule.referencePath", errors);
+
         if (action.Schedule is { Mode: not ScheduleMode.Immediate } schedule)
         {
             if (schedule.Amount is null)
@@ -149,8 +153,47 @@ public sealed class RuleValidator
 
         for (var index = 0; index < condition.Operands.Count; index++)
         {
-            if (condition.Operands[index] is OperatorCondition nested)
-                ValidateOperator(nested, $"{path}.operands[{index}]", errors);
+            switch (condition.Operands[index])
+            {
+                case OperatorCondition nested:
+                    ValidateOperator(nested, $"{path}.operands[{index}]", errors);
+                    break;
+                case PathOperand operand:
+                    ValidatePath(operand.Path, $"{path}.operands[{index}].path", errors);
+
+                    if (@operator?.GetType() == typeof(ChangedOperator) && operand.Path.StartsWith('@'))
+                    {
+                        errors.Add(new($"{path}.operands[{index}].path",
+                            $"'changed' can't be used on a context ('{operand.Path}'): contexts have no previous state."));
+                    }
+
+                    break;
+            }
         }
+    }
+
+    /// <summary>
+    /// Checks what the parser checks in paths, for rules built in code: reserved prefixes, variables and contexts after a
+    /// state.
+    /// </summary>
+    private static void ValidatePath(string path, string location, List<RuleValidationError> errors)
+    {
+        var segments = path.Split('.', 3);
+        var first = segments[0];
+
+        var problem = first switch
+        {
+            _ when first.StartsWith('#') => $"Paths starting with '#' are reserved for functions: '{path}'.",
+            "@" => $"A context path needs a name after '@', e.g. '@customer.Tier': '{path}'.",
+            _ when !first.StartsWith('$') => null,
+            _ when !first.Equals("$current", StringComparison.OrdinalIgnoreCase) && !first.Equals("$previous", StringComparison.OrdinalIgnoreCase) =>
+                $"Unknown variable '{first}' in path '{path}'. Use $current or $previous.",
+            _ when segments.Length > 1 && segments[1].StartsWith('@') =>
+                $"Contexts have no current or previous state; use '{string.Join('.', segments[1..])}' instead of '{path}'.",
+            _ => null
+        };
+
+        if (problem is not null)
+            errors.Add(new(location, problem));
     }
 }

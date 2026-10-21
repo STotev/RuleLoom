@@ -129,6 +129,27 @@ public class RuleValidatorTests
             result.Errors.Select(e => e.Path));
     }
 
+    [Theory]
+    [InlineData("#now", "Paths starting with '#' are reserved for functions: '#now'.")]
+    [InlineData("@", "A context path needs a name after '@', e.g. '@customer.Tier': '@'.")]
+    [InlineData("$state.Price", "Unknown variable '$state' in path '$state.Price'. Use $current or $previous.")]
+    [InlineData("$previous.@customer.Tier", "Contexts have no current or previous state; use '@customer.Tier' instead of '$previous.@customer.Tier'.")]
+    public void Validate_PathsTheParserRejects_AreErrorsInRulesBuiltInCode(string path, string message)
+    {
+        AssertSingleError(Validator.Validate(Rule(Op("eq", Path(path), Value(1)))), "$.condition.operands[0].path", message);
+        AssertSingleError(
+            Validator.Validate(Rule(Valid, Action("log", schedule: new ScheduleMetadata
+                { Mode = ScheduleMode.Delay, Amount = 1, Unit = ScheduleUnit.Days, ReferencePath = path }))),
+            "$.actions[0].schedule.referencePath", message);
+    }
+
+    [Fact]
+    public void Validate_ChangedOnAContext_IsAnError()
+    {
+        AssertSingleError(Validator.Validate(Rule(Op("changed", Path("@customer.Tier")))), "$.condition.operands[0].path",
+            "'changed' can't be used on a context ('@customer.Tier'): contexts have no previous state.");
+    }
+
     [Fact]
     public void Constructor_DuplicateOperatorNames_Throws()
     {

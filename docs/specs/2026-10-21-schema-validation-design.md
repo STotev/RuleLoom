@@ -78,16 +78,17 @@ path and a value operand (or two typed field paths), following `ValueComparer`:
 
 | Field type | Compatible values |
 |---|---|
-| `Integer`, `Number` | numbers |
-| `String` | strings (an ISO 8601 string against a non-date field is fine: it compares as text) |
+| `Integer`, `Number` | numbers, CLR enums |
+| `String` | strings, `DateTime`/`DateTimeOffset` (compare with ISO 8601 text), CLR enums (match by name) |
 | `Boolean` | `true` / `false` |
-| `DateTime`, `Date` | `DateTime`/`DateTimeOffset` values and strict ISO 8601 strings |
-| `Enum` | one of `EnumValues` (ignoring case), or an integer |
+| `DateTime`, `Date` | `DateTime`/`DateTimeOffset` values and strict ISO 8601 strings (not `DateOnly`) |
+| `Enum` | not checked: CLR enums match by C# name or number, JSON state by its serialized text |
 | `Object`, `Array`, `Any` | not checked for `eq` (JSON values compare by content) |
 
 - `null` is compatible with anything; a non-nullable field compared with `null` isn't flagged (the payload may omit it).
-- Ordering operators (`gt`, `gte`, `lt`, `lte`) on a `Boolean`, `Object` or `Array` field: a warning, because those
-  values can't be ordered.
+- Ordering operators (`gt`, `gte`, `lt`, `lte`) on an `Object` or `Array` field: a warning, because those values can't
+  be ordered (booleans can: `false < true`).
+- At most one warning per comparison.
 - Two field paths of incompatible types (e.g. a number and a boolean): a warning.
 
 These are warnings, not errors, because the rule still runs (it just never matches), and the payload may not follow
@@ -123,3 +124,13 @@ the schema exactly (untyped JSON).
   paths: unknown `$` variables (`$state.Total`) and `#` paths (reserved for functions).
 - The new constructor parameters are optional, so existing code compiles unchanged (callers compiled against 0.5
   need a rebuild).
+- After code review: the checks that need no schema (`#` paths, a bare `@`, unknown `$` variables, contexts after a
+  state, `changed` on a context) moved into `Validate`, so they also apply without schemas. `ValidateAsync` adds only
+  what needs a schema.
+- After code review: booleans can be ordered (`ValueComparer` orders same-typed comparable values), so only objects and
+  lists get the ordering warning; enum fields aren't judged (CLR state matches enum names and numbers, JSON state the
+  serialized text, and the schema can't tell which); value compatibility follows `ValueComparer` for values built in
+  code (`DateTime` against text, CLR enums, `DateOnly`, `Guid`).
+- Known limit: an enum serialized as a number is an `Integer` field in the schema, so comparing it with a name
+  (`eq(Status, "Shipped")`) is a warning. That's right for JSON state (the payload has the number) but not for CLR
+  state, where names match.

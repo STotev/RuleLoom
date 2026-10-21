@@ -235,9 +235,9 @@ foreach (var warning in result.Warnings)
   (`Lines.Sku`, `@watchers.Email`), contexts the event doesn't declare, contexts whose provider isn't registered,
   `$current.@x`/`$previous.@x`, and `changed` on a context. `$previous.` paths are checked against the subject.
 - **Warnings** (the rule stays valid; `IsValid` only looks at errors): `eq`, `gt`, `gte`, `lt` and `lte` comparing types
-  that can never match (a number field with `"100"`, a boolean with `"yes"`, an enum with a value it doesn't have,
-  `gt` on a boolean), and paths into a context whose provider has no schema (an untyped provider), which can't be
-  checked.
+  that can never match (a number field with `"100"`, a boolean with `"yes"`, a date with text that isn't ISO 8601,
+  `gt` on a list or object), and paths into a context whose provider has no schema (an untyped provider), which can't
+  be checked. Enum fields aren't checked.
 - Paths below untyped fields (`object`, JSON), dictionaries and repeated types aren't checked.
 - Without a store, or without a schema for the event, `ValidateAsync` returns what `Validate` returns.
 

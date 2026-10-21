@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Globalization;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Values;
@@ -8,11 +10,12 @@ namespace RuleLoom.Validation;
 
 /// <summary>
 /// Checks a rule's paths against its event's schema and the schemas of the contexts it uses, and flags comparisons of
-/// built-in operators whose operand types can't match.
+/// built-in operators whose operand types can't match. Problems that need no schema (reserved prefixes, unknown
+/// variables, contexts after a state) are left to <see cref="RuleValidator.Validate"/>.
 /// </summary>
 /// <param name="event">The schema of the rule's event.</param>
-/// <param name="contexts">The event's contexts the rule uses, by context name: their schema, or <c>null</c> when the
-/// provider describes none. Declared contexts without a registered provider are missing.</param>
+/// <param name="contexts">The event's contexts the rule uses, by context name (ignoring case): their schema, or
+/// <c>null</c> when the provider describes none. Declared contexts without a registered provider are missing.</param>
 /// <param name="operators">The registered operators, by name.</param>
 internal sealed class SchemaPathChecker(
     EventSchemaDefinition @event,
@@ -47,95 +50,73 @@ internal sealed class SchemaPathChecker(
         return (_errors, _warnings);
     }
 
-    private void CheckCondition(ConditionNode? node, string location)
+    /// <returns>The schema field a path operand points at; <c>null</c> for other nodes and unchecked paths.</returns>
+    private FieldDefinition? CheckCondition(ConditionNode? node, string location)
     {
         switch (node)
         {
             case PathOperand operand:
-                Resolve(operand.Path, $"{location}.path");
-                break;
+                return Resolve(operand.Path, $"{location}.path");
             case OperatorCondition condition:
-                for (var index = 0; index < condition.Operands.Count; index++)
-                    CheckCondition(condition.Operands[index], $"{location}.operands[{index}]");
-                CheckOperator(condition, location);
-                break;
+                var fields = condition.Operands
+                    .Select((operand, index) => CheckCondition(operand, $"{location}.operands[{index}]"))
+                    .ToList();
+                CheckComparison(condition, fields, location);
+                return null;
+            default:
+                return null;
         }
     }
 
-    private void CheckOperator(OperatorCondition condition, string location)
+    private void CheckComparison(OperatorCondition condition, IReadOnlyList<FieldDefinition?> fields, string location)
     {
-        if (!operators.TryGetValue(condition.Operator, out var @operator))
-            return;
-
-        var type = @operator.GetType();
-
-        if (type == typeof(ChangedOperator))
+        if (!operators.TryGetValue(condition.Operator, out var @operator) || !ComparisonOperators.Contains(@operator.GetType()) ||
+            condition.Operands is not [var left, var right])
         {
-            foreach (var (operand, index) in condition.Operands.Select((operand, index) => (operand, index)))
-            {
-                if (operand is PathOperand { Path: var path } && path.StartsWith('@'))
-                    _errors.Add(new($"{location}.operands[{index}].path", $"'changed' can't be used on a context ('{path}'): contexts have no previous state."));
-            }
+            return;
         }
 
-        if (!ComparisonOperators.Contains(type) || condition.Operands is not [var left, var right])
-            return;
+        var (leftField, rightField) = (fields[0], fields[1]);
 
-        var leftField = Field(left);
-        var rightField = Field(right);
-
-        if (OrderingOperators.Contains(type))
+        // One warning per comparison: values that can't be ordered first, then types that can't match.
+        var problem = (leftField, rightField, left, right) switch
         {
-            foreach (var field in new[] { leftField, rightField })
-            {
-                if (field?.Type is FieldType.Boolean or FieldType.Object or FieldType.Array)
-                    _warnings.Add(new(location, $"'{condition.Operator}' can't order {Describe(field.Type)}; the condition is never true."));
-            }
-        }
-
-        var mismatch = (leftField, rightField, left, right) switch
-        {
+            _ when OrderingOperators.Contains(@operator.GetType()) &&
+                   new[] { leftField, rightField }.FirstOrDefault(f => f?.Type is FieldType.Object or FieldType.Array) is { } unordered =>
+                $"can't order {Describe(unordered.Type)}",
             ({ } l, { } r, _, _) => Compatible(l, r) ? null : $"compares {Describe(l.Type)} with {Describe(r.Type)}",
             ({ } l, null, _, ValueOperand value) => Compatible(l, value.Value) ? null : $"compares {Describe(l.Type)} with {Show(value.Value)}",
             (null, { } r, ValueOperand value, _) => Compatible(r, value.Value) ? null : $"compares {Show(value.Value)} with {Describe(r.Type)}",
             _ => null
         };
 
-        if (mismatch is not null)
-            _warnings.Add(new(location, $"'{condition.Operator}' {mismatch}; the condition is never true."));
+        if (problem is not null)
+            _warnings.Add(new(location, $"'{condition.Operator}' {problem}; the condition is never true."));
     }
 
-    /// <summary>The schema field a path operand points at, or <c>null</c> for values and unchecked paths.</summary>
-    private FieldDefinition? Field(ConditionNode operand) =>
-        operand is PathOperand { Path: var path } ? Resolve(path, location: null) : null;
-
-    /// <summary>
-    /// Resolves <paramref name="path"/> on the schemas, reporting problems at <paramref name="location"/> (none when
-    /// <c>null</c>: the path was already reported).
-    /// </summary>
+    /// <summary>Resolves <paramref name="path"/> on the schemas, reporting problems at <paramref name="location"/>.</summary>
     /// <returns>The field, or <c>null</c> when the path is wrong or can't be checked.</returns>
-    private FieldDefinition? Resolve(string path, string? location)
+    private FieldDefinition? Resolve(string path, string location)
     {
         var segments = path.Split('.');
         var first = segments[0];
         IReadOnlyList<FieldDefinition> fields;
         string owner;
 
-        if (first.StartsWith('@'))
+        if (first.StartsWith('@') && first.Length > 1)
         {
             var name = first[1..];
-            if (contexts.Keys.FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase)) is not { } declared)
+            if (!contexts.TryGetValue(name, out var context))
             {
-                var problem = @event.Contexts.Any(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase))
-                    ? $"No context provider is registered under '{Provider(name)}' (context '{first}')."
-                    : $"'{first}' is not a context of {@event.EventType}.";
-                return Report(location, problem);
+                var declared = @event.Contexts.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
+                return Report(location, declared is null
+                    ? $"'{first}' is not a context of {@event.EventType}."
+                    : $"No context provider is registered under '{declared.Provider}' (context '{first}').");
             }
 
-            if (contexts[declared] is not { } context)
+            if (context is null)
             {
-                if (location is not null)
-                    _warnings.Add(new(location, $"Context '{first}' has no schema; paths into it aren't checked."));
+                _warnings.Add(new(location, $"Context '{first}' has no schema; paths into it aren't checked."));
                 return null;
             }
 
@@ -147,22 +128,17 @@ internal sealed class SchemaPathChecker(
 
             (fields, owner, segments) = (context.Fields, $"'{first}'", segments[1..]);
         }
-        else if (first.StartsWith('$'))
+        else if (first.Equals("$current", StringComparison.OrdinalIgnoreCase) || first.Equals("$previous", StringComparison.OrdinalIgnoreCase))
         {
-            if (!first.Equals("$current", StringComparison.OrdinalIgnoreCase) && !first.Equals("$previous", StringComparison.OrdinalIgnoreCase))
-                return Report(location, $"Unknown variable '{first}' in path '{path}'. Use $current or $previous.");
-
-            if (segments.Length > 1 && segments[1].StartsWith('@'))
-                return Report(location, $"Contexts have no current or previous state; use '{string.Join('.', segments[1..])}' instead of '{path}'.");
-
-            if (segments.Length == 1)
+            // A context after a state is reported by Validate.
+            if (segments.Length == 1 || segments[1].StartsWith('@'))
                 return null;
 
             (fields, owner, segments) = (@event.Fields, @event.EventType, segments[1..]);
         }
-        else if (first.StartsWith('#'))
+        else if (first.StartsWith('$') || first.StartsWith('#') || first.StartsWith('@'))
         {
-            return Report(location, $"Paths starting with '#' are reserved for functions: '{path}'.");
+            return null;   // reported by Validate
         }
         else
         {
@@ -193,15 +169,11 @@ internal sealed class SchemaPathChecker(
         }
     }
 
-    private FieldDefinition? Report(string? location, string message)
+    private FieldDefinition? Report(string location, string message)
     {
-        if (location is not null)
-            _errors.Add(new(location, message));
+        _errors.Add(new(location, message));
         return null;
     }
-
-    private string Provider(string context) =>
-        @event.Contexts.First(c => string.Equals(c.Name, context, StringComparison.OrdinalIgnoreCase)).Provider;
 
     /// <summary>Like property paths: an exact-case match wins; an ambiguous case-insensitive match is unknown.</summary>
     private static FieldDefinition? Find(IReadOnlyList<FieldDefinition> fields, string name)
@@ -213,34 +185,34 @@ internal sealed class SchemaPathChecker(
         return matches.Count == 1 ? matches[0] : null;
     }
 
-    private static bool Compatible(FieldDefinition field, object? value) => value is null || (field.Type, value) switch
+    /// <summary>
+    /// Whether a value can match a field's values under <see cref="ValueComparer"/>. Enums aren't judged: CLR enums match
+    /// by C# name or number, JSON state by the serialized text, and the schema can't tell which the rule runs on.
+    /// </summary>
+    private static bool Compatible(FieldDefinition field, object? value) => value is null || field.Type switch
     {
-        (FieldType.Integer or FieldType.Number, _) => IsNumber(value),
-        (FieldType.Boolean, _) => value is bool,
-        (FieldType.String, _) => value is string or Guid,
-        (FieldType.DateTime or FieldType.Date, string text) => ValueConverter.TryConvert<DateTimeOffset>(text, out _),
-        (FieldType.DateTime or FieldType.Date, _) => value is DateTime or DateTimeOffset or DateOnly,
-        (FieldType.Enum, string text) => field.EnumValues.Contains(text, StringComparer.OrdinalIgnoreCase),
-        (FieldType.Enum, _) => value is Enum || IsNumber(value),
+        FieldType.Integer or FieldType.Number => IsNumber(value) || value is Enum,
+        FieldType.Boolean => value is bool,
+        FieldType.String => value is string or DateTime or DateTimeOffset or Enum,
+        FieldType.DateTime or FieldType.Date => value is DateTime or DateTimeOffset ||
+                                                value is string text && ValueConverter.TryConvert<DateTimeOffset>(text, out _),
         _ => true
     };
 
     private static bool IsNumber(object value) =>
         value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal;
 
-    private static bool Compatible(FieldDefinition left, FieldDefinition right) => (Kind(left.Type), Kind(right.Type)) switch
-    {
-        (null, _) or (_, null) => true,
-        var (l, r) => l == r
-    };
+    private static bool Compatible(FieldDefinition left, FieldDefinition right) =>
+        Kind(left.Type) is not { } l || Kind(right.Type) is not { } r || l == r;
 
-    // Field types that compare with each other; null when not checked.
+    // Field types that compare with each other; null when not checked (text can hold dates, numbers as text or enum
+    // names; objects and lists compare by content).
     private static string? Kind(FieldType type) => type switch
     {
         FieldType.Integer or FieldType.Number => "number",
         FieldType.Boolean => "boolean",
         FieldType.DateTime or FieldType.Date => "date",
-        _ => null   // text can hold dates, numbers as text or enum names; objects and lists aren't checked
+        _ => null
     };
 
     private static string Describe(FieldType type) => type switch
@@ -260,7 +232,9 @@ internal sealed class SchemaPathChecker(
     {
         string text => $"the text '{text}'",
         bool flag => flag ? "true" : "false",
-        IFormattable formattable => formattable.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
+        IDictionary => "an object",
+        IEnumerable => "a list",
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
         _ => $"{value}"
     };
 }

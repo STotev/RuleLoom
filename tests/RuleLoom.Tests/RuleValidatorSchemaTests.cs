@@ -131,7 +131,6 @@ public class RuleValidatorSchemaTests
     [InlineData("eq", "Paid", "yes")]
     [InlineData("eq", "Quantity", true)]
     [InlineData("gt", "PlacedAt", "yesterday")]
-    [InlineData("eq", "Status", "Shipped")]
     [InlineData("eq", "Number", 5)]
     public async Task ValidateAsync_ValuesThatCantMatch_AreWarnings(string @operator, string path, object value)
     {
@@ -148,7 +147,9 @@ public class RuleValidatorSchemaTests
     [InlineData("eq", "Number", "A-1")]
     [InlineData("lt", "PlacedAt", "2026-10-21T10:00:00Z")]
     [InlineData("eq", "Status", "paid")]
+    [InlineData("eq", "Status", "Shipped")]   // enums aren't judged: CLR and JSON state match differently
     [InlineData("eq", "Status", 1)]
+    [InlineData("gt", "Paid", false)]         // booleans are ordered
     [InlineData("eq", "Note", null)]
     [InlineData("eq", "Customer", "anything")]   // objects aren't checked
     public async Task ValidateAsync_ValuesThatCanMatch_HaveNoWarnings(string @operator, string path, object? value)
@@ -159,11 +160,25 @@ public class RuleValidatorSchemaTests
     }
 
     [Fact]
-    public async Task ValidateAsync_OrderingABoolean_IsAWarning()
+    public async Task ValidateAsync_OrderingAListOrObject_IsOneWarning()
     {
-        var result = await Validate(Rule(Op("gt", Path("Paid"), Value(true))));
+        var result = await Validate(Rule(Op("gt", Path("Lines"), Path("Customer"))));
 
-        Assert.Equal("'gt' can't order a boolean; the condition is never true.", Assert.Single(result.Warnings).Message);
+        Assert.Equal("'gt' can't order a list; the condition is never true.", Assert.Single(result.Warnings).Message);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ValuesBuiltInCode_FollowTheComparisonRules()
+    {
+        var guid = await Validate(Rule(Op("eq", Path("Number"), Value(Guid.Empty))));
+        var dateOnly = await Validate(Rule(Op("eq", Path("PlacedAt"), Value(new DateOnly(2026, 10, 21)))));
+        var dateAsText = await Validate(Rule(Op("eq", Path("Number"), Value(new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc)))));
+        var list = await Validate(Rule(Op("eq", Path("Total"), Value(new List<object?> { 1, 2 }))));
+
+        Assert.Single(guid.Warnings);
+        Assert.Single(dateOnly.Warnings);
+        Assert.Empty(dateAsText.Warnings);
+        Assert.Equal("'eq' compares a number with a list; the condition is never true.", Assert.Single(list.Warnings).Message);
     }
 
     [Fact]
