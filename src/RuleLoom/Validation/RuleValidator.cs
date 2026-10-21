@@ -17,7 +17,7 @@ public sealed class RuleValidator
     private readonly Dictionary<string, IConditionOperator> _operators = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _contextProviderNames;
     private readonly ISchemaStore? _schemas;
-    private readonly IReadOnlyList<RuleCheck> _checks;
+    private readonly HashSet<string> _actionNames;
 
     /// <summary>
     /// Creates a validator for the given operators, action factory, context providers and schema store — the same ones
@@ -45,15 +45,7 @@ public sealed class RuleValidator
 
         _contextProviderNames = new HashSet<string>(contextProviders?.ProviderNames ?? [], StringComparer.OrdinalIgnoreCase);
         _schemas = schemas;
-        _checks =
-        [
-            new RequiredFieldsCheck(),
-            new RootConditionCheck(),
-            new OperatorCheck(),
-            new ActionCheck(new HashSet<string>(actionFactory.ActionNames, StringComparer.OrdinalIgnoreCase)),
-            new PathSyntaxCheck(),
-            new ChangedCheck()
-        ];
+        _actionNames = new HashSet<string>(actionFactory.ActionNames, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -62,7 +54,7 @@ public sealed class RuleValidator
     public RuleValidationResult Validate(RuleDefinition rule)
     {
         ArgumentNullException.ThrowIfNull(rule);
-        return new RuleWalker(_operators, _checks).Walk(rule);
+        return Walk(rule, schemaPaths: null);
     }
 
     /// <summary>
@@ -86,7 +78,26 @@ public sealed class RuleValidator
         foreach (var context in schema.Contexts.Where(c => used.Contains(c.Name) && _contextProviderNames.Contains(c.Provider)))
             contexts[context.Name] = await _schemas.GetContextAsync(context.Provider, cancellationToken).ConfigureAwait(false);
 
-        var paths = new SchemaPaths(schema, contexts);
-        return new RuleWalker(_operators, [.. _checks, new SchemaPathCheck(paths), new ComparisonTypeCheck(paths)]).Walk(rule);
+        return Walk(rule, new SchemaPaths(schema, contexts));
+    }
+
+    // One walk with every check; with schemas, paths are also resolved on them and operators get their operands' fields.
+    private RuleValidationResult Walk(RuleDefinition rule, SchemaPaths? schemaPaths)
+    {
+        List<RuleCheck> checks =
+        [
+            new RequiredFieldsCheck(),
+            new RootConditionCheck(),
+            new ActionCheck(_actionNames),
+            new PathSyntaxCheck()
+        ];
+
+        if (schemaPaths is not null)
+            checks.Add(new SchemaPathCheck(schemaPaths));
+
+        // Last: operators validate their operands after the generic checks have reported the operands' paths.
+        checks.Add(new OperatorCheck(schemaPaths));
+
+        return new RuleWalker(_operators, checks).Walk(rule);
     }
 }

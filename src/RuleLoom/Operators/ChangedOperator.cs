@@ -17,13 +17,24 @@ public class ChangedOperator : IConditionOperator
         if (!RulePath.TryParse(text, out var path, out var error))
             throw new InvalidOperationException(error);
 
-        if (path.Root == PathRoot.Context)
-            throw new InvalidOperationException($"'changed' can't be used on context '{text}': contexts have no previous state.");
-
-        if (path.Property.Length == 0)
-            throw new InvalidOperationException($"'changed' needs a property, not the whole state: '{text}'.");
+        if (Problem(path, text) is { } problem)
+            throw new InvalidOperationException(problem);
 
         // The operand may already name a state ("$current.Price"); changed always compares both.
         return !ValueComparer.AreEqual(context.Resolve(path.InState(PathRoot.Current)), context.Resolve(path.InState(PathRoot.Previous)));
     }
+
+    public void ValidateOperands(OperandValidationContext context)
+    {
+        if (context.GetOperand(0) is not PathOperand operand)
+            context.Error(0, $"Operator '{context.OperatorName}' expects a path at operand 0, but got {context.GetOperand(0).GetType().Name}.");
+        else if (context.GetPath(0) is { } path && Problem(path, operand.Path) is { } problem)
+            context.Error(0, problem);
+    }
+
+    // changed compares a property's current and previous value: a context has no previous state, a whole state no property.
+    private static string? Problem(RulePath path, string text) =>
+        path.Root == PathRoot.Context ? $"'changed' can't be used on a context ('{text}'): contexts have no previous state."
+        : path.Property.Length == 0 ? $"'changed' needs a property, not the whole state: '{text}'."
+        : null;
 }

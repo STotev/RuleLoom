@@ -152,6 +152,20 @@ public class ChangedOperatorTests
         Assert.Contains(message, error.Message);
     }
 
+    [Theory]
+    [InlineData("Price", null)]
+    [InlineData("$previous.Price", null)]
+    [InlineData("@customer.Tier", "'changed' can't be used on a context ('@customer.Tier'): contexts have no previous state.")]
+    [InlineData("$current", "'changed' needs a property, not the whole state: '$current'.")]
+    public void ValidateOperands_ReportsWhatEvaluateRejects(string path, string? message)
+    {
+        var context = new OperandValidationContext(Op("changed", Path(path)));
+
+        new ChangedOperator().ValidateOperands(context);
+
+        Assert.Equal(message is null ? [] : [new OperandProblem(0, message, IsWarning: false)], context.Problems);
+    }
+
     private sealed class Order
     {
         public int Price { get; init; }

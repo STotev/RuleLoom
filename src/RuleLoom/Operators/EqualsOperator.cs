@@ -10,4 +10,6 @@ public class EqualsOperator : IConditionOperator
 
     public bool Evaluate(OperatorContext context) =>
         context.AreEqual(context.GetValue(0), context.GetValue(1));
+
+    public void ValidateOperands(OperandValidationContext context) => ComparedOperands.Validate(context, ordering: false);
 }

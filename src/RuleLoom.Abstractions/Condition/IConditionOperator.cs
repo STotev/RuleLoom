@@ -27,4 +27,13 @@ public interface IConditionOperator
     /// <see cref="OperatorContext.GetPath"/> for paths.
     /// </summary>
     bool Evaluate(OperatorContext context);
+
+    /// <summary>
+    /// Checks the operands when a rule is validated, before it runs: e.g. that an operand is a path, or (with schemas)
+    /// that compared types can match. Called only with an operand count within <see cref="MinOperands"/> and
+    /// <see cref="MaxOperands"/>. Report problems through <paramref name="context"/>; by default there is nothing to check.
+    /// </summary>
+    void ValidateOperands(OperandValidationContext context)
+    {
+    }
 }

@@ -276,6 +276,19 @@ Custom operators read paths with `RulePath` rather than taking the string apart:
 it. Invalid paths (`#…`, a bare `@`, unknown `$` variables, `$previous.@x`) are rejected by the parser, by
 `RuleValidator` and, in rules built in code, by the engine, which fails the rule.
 
+A custom operator can also check its operands when rules are validated, by implementing `ValidateOperands`. The
+validator calls it with a valid operand count and adds the locations:
+
+```csharp
+public void ValidateOperands(OperandValidationContext context)
+{
+    if (context.GetPath(0) is null)
+        context.Error(0, "'between' expects a path first.");
+    if (context.GetField(0) is { Type: not (FieldType.Integer or FieldType.Number) })   // with schemas
+        context.Warning("'between' compares numbers.");
+}
+```
+
 ## Contexts
 
 A rule often needs data beyond the event's subject: the order's customer, the warehouse, the people watching an ad.

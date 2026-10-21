@@ -3,7 +3,6 @@ using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
-using RuleLoom.Operators;
 
 namespace RuleLoom.Validation;
 
@@ -33,8 +32,12 @@ internal sealed class RootConditionCheck : RuleCheck
     }
 }
 
-/// <summary>Operators must be registered and get an operand count within their limits.</summary>
-internal sealed class OperatorCheck : RuleCheck
+/// <summary>
+/// Operators must be registered and get an operand count within their limits; then each operator validates its own
+/// operands (<see cref="IConditionOperator.ValidateOperands"/>), with the schema fields of path operands when there are
+/// schemas.
+/// </summary>
+internal sealed class OperatorCheck(SchemaPaths? schemaPaths) : RuleCheck
 {
     public override void Operator(OperatorCondition condition, IConditionOperator? @operator, string location, ValidationProblems problems)
     {
@@ -51,6 +54,30 @@ internal sealed class OperatorCheck : RuleCheck
         {
             problems.Error($"{location}.operands",
                 $"Operator '{condition.Operator}' allows at most {@operator.MaxOperands} operand(s), but has {condition.Operands.Count}.");
+        }
+    }
+
+    // After the operands, so their paths have been reported (and resolved on the schemas) in document order.
+    public override void Operands(OperatorCondition condition, IConditionOperator? @operator, IReadOnlyList<PathNode?> paths,
+        string location, ValidationProblems problems)
+    {
+        if (@operator is null || condition.Operands.Count < @operator.MinOperands || condition.Operands.Count > @operator.MaxOperands)
+            return;
+
+        var context = new OperandValidationContext(condition,
+            schemaPaths is null ? null : index => paths[index] is { } path ? schemaPaths.Resolve(path, problems) : null);
+        @operator.ValidateOperands(context);
+
+        foreach (var problem in context.Problems)
+        {
+            var at = problem.Operand is not { } index ? location
+                : condition.Operands[index] is PathOperand ? $"{location}.operands[{index}].path"
+                : $"{location}.operands[{index}]";
+
+            if (problem.IsWarning)
+                problems.Warning(at, problem.Message);
+            else
+                problems.Error(at, problem.Message);
         }
     }
 }
@@ -88,23 +115,5 @@ internal sealed class PathSyntaxCheck : RuleCheck
     {
         if (path.Error is not null)
             problems.Error(path.Location, path.Error);
-    }
-}
-
-/// <summary>
-/// The built-in <c>changed</c> compares a property's current and previous value: not a context's (it has no previous
-/// state), and not a whole state.
-/// </summary>
-internal sealed class ChangedCheck : RuleCheck
-{
-    public override void Path(PathNode path, ValidationProblems problems)
-    {
-        if (path.Parent?.GetType() != typeof(ChangedOperator) || path.Parsed is not { } parsed)
-            return;
-
-        if (parsed.Root == PathRoot.Context)
-            problems.Error(path.Location, $"'changed' can't be used on a context ('{path.Text}'): contexts have no previous state.");
-        else if (parsed.Property.Length == 0)
-            problems.Error(path.Location, $"'changed' needs a property, not the whole state: '{path.Text}'.");
     }
 }

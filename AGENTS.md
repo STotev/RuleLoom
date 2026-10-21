@@ -147,7 +147,7 @@ environment `nuget`) and attaches the packages to the GitHub release.
 - **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
   `RuleValidator` (`RuleLoom.Validation`; one `RuleWalker` pass handing each node to small `RuleCheck`s) checks a rule against the registered operators and actions
   (unknown names, operand counts, incomplete schedules), returning every error with a JSONPath location.
-  `ValidateAsync` also checks paths when the injected `ISchemaStore` has the event's schema (`SchemaPathCheck`, `ComparisonTypeCheck`):
+  `ValidateAsync` also checks paths when the injected `ISchemaStore` has the event's schema (`SchemaPathCheck`; operators get their operands' fields):
   unknown fields/contexts, unregistered providers, paths into lists → `Errors`; comparisons of built-in operators
   that can't match and contexts without a schema → `Warnings` (`IsValid` ignores warnings).
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
@@ -192,7 +192,10 @@ environment `nuget`) and attaches the packages to the GitHub release.
   `ctx.Test(i)` (condition, lazy; bool paths/values allowed), `ctx.GetPath(i)` (path string; parse with
   `RulePath.Parse`, resolve with `ctx.Resolve(path)`); compare with
   `ctx.AreEqual`/`ctx.TryCompare`. Unit-test operators with `new OperatorContext(condition, evaluationContext)`
-  (pass an evaluator only when operands are nested operators).
+  (pass an evaluator only when operands are nested operators). Optionally override
+  `ValidateOperands(OperandValidationContext)` to check operands when rules are validated (`GetPath`, `GetField` with
+  schemas, `Error`/`Warning`); share the rules with `Evaluate`. The validator never names specific operators: put
+  operator-specific checks on the operator (built-ins do: `changed`, the comparisons via `ComparedOperands`).
 - **Action**: implement `IAction` —
   `Task<ActionResult> ExecuteAsync(ActionDefinition, EvaluationContext, CancellationToken)`; name it by its class
   (`SendEmailAction` → `send-email`) or `[ActionName("...")]`; read parameters with

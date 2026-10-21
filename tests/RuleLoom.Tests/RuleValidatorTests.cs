@@ -158,6 +158,35 @@ public class RuleValidatorTests
     }
 
     [Fact]
+    public void Validate_ChangedWithAValue_IsAnErrorAtTheOperand()
+    {
+        AssertSingleError(Validator.Validate(Rule(Op("changed", Value(1)))), "$.condition.operands[0]",
+            "Operator 'changed' expects a path at operand 0, but got ValueOperand.");
+    }
+
+    [Fact]
+    public void Validate_CustomOperator_ReportsItsOwnOperandProblems()
+    {
+        var validator = new RuleValidator([new BetweenOperator()], new DirectActionFactory([]));
+
+        var result = validator.Validate(Rule(Op("between", Path("Price"), Value(10), Value(1))));
+
+        Assert.Equal(new RuleValidationError("$.condition.operands[0].path", "Use a number field."), Assert.Single(result.Errors));
+        Assert.Equal(new RuleValidationError("$.condition", "The lower bound is above the upper bound."), Assert.Single(result.Warnings));
+    }
+
+    [Fact]
+    public void Validate_OperandCountOutOfRange_DoesNotAskTheOperator()
+    {
+        var validator = new RuleValidator([new BetweenOperator()], new DirectActionFactory([]));
+
+        var result = validator.Validate(Rule(Op("between", Path("Price"))));
+
+        Assert.Equal("$.condition.operands", Assert.Single(result.Errors).Path);
+        Assert.Empty(result.Warnings);
+    }
+
+    [Fact]
     public void Constructor_DuplicateOperatorNames_Throws()
     {
         Assert.Throws<ArgumentException>(() => new RuleValidator(
@@ -183,6 +212,21 @@ public class RuleValidatorTests
 
     private static ActionDefinition Action(string type, ConditionNode? condition = null, ScheduleMetadata? schedule = null) =>
         new() { Action = type, Condition = condition, Schedule = schedule };
+
+    private sealed class BetweenOperator : IConditionOperator
+    {
+        public string Name => "between";
+        public int MinOperands => 3;
+        public int MaxOperands => 3;
+        public bool Evaluate(OperatorContext context) => true;
+
+        public void ValidateOperands(OperandValidationContext context)
+        {
+            context.Error(0, "Use a number field.");
+            if (context.GetOperand(1) is ValueOperand { Value: int low } && context.GetOperand(2) is ValueOperand { Value: int high } && low > high)
+                context.Warning("The lower bound is above the upper bound.");
+        }
+    }
 
     private sealed class NoOpAction : IAction
     {
