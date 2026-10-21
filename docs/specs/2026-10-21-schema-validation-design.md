@@ -116,3 +116,10 @@ the schema exactly (untyped JSON).
 - Quick start: validating against schemas.
 - `AGENTS.md`: validation (property paths are now validated with a schema).
 - The ASP.NET Core sample moves to `ValidateAsync` in #95.
+
+## Deviations
+
+- Rules built in code skip the parser, so with a schema the validator also reports what the parser would reject in
+  paths: unknown `$` variables (`$state.Total`) and `#` paths (reserved for functions).
+- The new constructor parameters are optional, so existing code compiles unchanged (callers compiled against 0.5
+  need a rebuild).

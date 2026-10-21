@@ -231,6 +231,9 @@ foreach (var error in validator.Validate(rule).Errors)
     Console.WriteLine($"{error.Path}: {error.Message}");          // e.g. "$.actions[0].action: No action is registered under the name 'send-sms'."
 ```
 
+With schemas registered (`AddSchemas`), `await validator.ValidateAsync(rule)` also checks the rule's paths against
+its event's schema and its contexts' schemas, and reports comparisons that can never match as `Warnings`.
+
 ## Next steps
 
 - [JSON rule guide](json-rules.md): the rule format in depth
