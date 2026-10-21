@@ -51,7 +51,8 @@ public sealed class RuleValidator
             new RootConditionCheck(),
             new OperatorCheck(),
             new ActionCheck(new HashSet<string>(actionFactory.ActionNames, StringComparer.OrdinalIgnoreCase)),
-            new PathSyntaxCheck()
+            new PathSyntaxCheck(),
+            new ChangedCheck()
         ];
     }
 

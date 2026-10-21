@@ -59,6 +59,8 @@ internal sealed class RuleWalker(IReadOnlyDictionary<string, IConditionOperator>
         foreach (var check in checks)
             check.Operator(condition, @operator, location, problems);
 
+        var paths = new PathNode?[condition.Operands.Count];
+
         for (var index = 0; index < condition.Operands.Count; index++)
         {
             var operandLocation = $"{location}.operands[{index}]";
@@ -69,18 +71,23 @@ internal sealed class RuleWalker(IReadOnlyDictionary<string, IConditionOperator>
                     Operator(nested, operandLocation, problems);
                     break;
                 case PathOperand operand:
-                    Path(operand.Path, $"{operandLocation}.path", @operator, problems);
+                    paths[index] = Path(operand.Path, $"{operandLocation}.path", @operator, problems);
                     break;
             }
         }
+
+        foreach (var check in checks)
+            check.Operands(condition, @operator, paths, location, problems);
     }
 
-    private void Path(string text, string location, IConditionOperator? parent, ValidationProblems problems)
+    private PathNode Path(string text, string location, IConditionOperator? parent, ValidationProblems problems)
     {
         RulePath.TryParse(text, out var parsed, out var error);
         var node = new PathNode(text, parsed, error, location, parent);
 
         foreach (var check in checks)
             check.Path(node, problems);
+
+        return node;
     }
 }

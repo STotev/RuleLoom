@@ -140,6 +140,18 @@ public class ChangedOperatorTests
         Assert.Equal(expected, new ChangedOperator().Evaluate(context));
     }
 
+    [Theory]
+    [InlineData("$current", "needs a property")]
+    [InlineData("$previous.@customer", "Contexts have no current or previous state")]
+    [InlineData("#now", "reserved for functions")]
+    public void Evaluate_WholeStateOrInvalidPath_ThrowsInvalidOperation(string path, string message)
+    {
+        var context = new EvaluationContext(new Order { Price = 1 }, new Order { Price = 2 });
+
+        var error = Assert.Throws<InvalidOperationException>(() => Evaluator().Evaluate(context, Op("changed", Path(path))));
+        Assert.Contains(message, error.Message);
+    }
+
     private sealed class Order
     {
         public int Price { get; init; }

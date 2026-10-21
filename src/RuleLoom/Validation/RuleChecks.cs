@@ -80,8 +80,7 @@ internal sealed class ActionCheck(IReadOnlySet<string> actionNames) : RuleCheck
 }
 
 /// <summary>
-/// Paths must be valid (<see cref="RulePath"/>): the parser checks this for JSON rules, this for rules built in code. The
-/// built-in <c>changed</c> can't be used on a context, which has no previous state.
+/// Paths must be valid (<see cref="RulePath"/>): the parser checks this for JSON rules, this for rules built in code.
 /// </summary>
 internal sealed class PathSyntaxCheck : RuleCheck
 {
@@ -89,7 +88,23 @@ internal sealed class PathSyntaxCheck : RuleCheck
     {
         if (path.Error is not null)
             problems.Error(path.Location, path.Error);
-        else if (path.Parent?.GetType() == typeof(ChangedOperator) && path.Parsed!.Root == PathRoot.Context)
+    }
+}
+
+/// <summary>
+/// The built-in <c>changed</c> compares a property's current and previous value: not a context's (it has no previous
+/// state), and not a whole state.
+/// </summary>
+internal sealed class ChangedCheck : RuleCheck
+{
+    public override void Path(PathNode path, ValidationProblems problems)
+    {
+        if (path.Parent?.GetType() != typeof(ChangedOperator) || path.Parsed is not { } parsed)
+            return;
+
+        if (parsed.Root == PathRoot.Context)
             problems.Error(path.Location, $"'changed' can't be used on a context ('{path.Text}'): contexts have no previous state.");
+        else if (parsed.Property.Length == 0)
+            problems.Error(path.Location, $"'changed' needs a property, not the whole state: '{path.Text}'.");
     }
 }

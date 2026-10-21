@@ -109,6 +109,14 @@ public class RuleValidatorSchemaTests
     }
 
     [Fact]
+    public async Task ValidateAsync_ComparedPaths_AreReportedOnceInDocumentOrder()
+    {
+        var result = await Validate(Rule(Op("eq", Path("#now"), Path("Unknown"))));
+
+        Assert.Equal(["$.condition.operands[0].path", "$.condition.operands[1].path"], result.Errors.Select(e => e.Path));
+    }
+
+    [Fact]
     public async Task ValidateAsync_ContextWithoutSchema_IsAWarning()
     {
         var result = await Validate(Rule(Op("eq", Path("@legacy.anything"), Value(1))));

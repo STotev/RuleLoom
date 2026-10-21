@@ -144,6 +144,13 @@ public class RuleValidatorTests
     }
 
     [Fact]
+    public void Validate_ChangedOnAWholeState_IsAnError()
+    {
+        AssertSingleError(Validator.Validate(Rule(Op("changed", Path("$current")))), "$.condition.operands[0].path",
+            "'changed' needs a property, not the whole state: '$current'.");
+    }
+
+    [Fact]
     public void Validate_ChangedOnAContext_IsAnError()
     {
         AssertSingleError(Validator.Validate(Rule(Op("changed", Path("@customer.Tier")))), "$.condition.operands[0].path",

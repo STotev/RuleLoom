@@ -27,10 +27,17 @@ public enum PathRoot
 /// </summary>
 public sealed record RulePath
 {
-    // Paths come from a limited set of rules, so they're parsed once, like PathResolver's accessors.
-    private static readonly ConcurrentDictionary<string, (RulePath? Path, string? Error)> Cache = new();
+    // Valid paths are parsed once. The cache is bounded, since paths can come from rules submitted at run time.
+    private const int MaxCached = 10_000;
+    private static readonly ConcurrentDictionary<string, RulePath> Cache = new();
 
-    private RulePath(PathRoot root, string? context, string property) => (Root, Context, Property) = (root, context, property);
+    private readonly string[] _segments;
+
+    private RulePath(PathRoot root, string? context, string property)
+    {
+        (Root, Context, Property) = (root, context, property);
+        _segments = property.Length == 0 ? [] : property.Split('.');
+    }
 
     /// <summary>Where the path starts reading.</summary>
     public PathRoot Root { get; }
@@ -43,7 +50,7 @@ public sealed record RulePath
     public string Property { get; }
 
     /// <summary>The property's segments; empty for the whole state or context.</summary>
-    public IReadOnlyList<string> Segments => Property.Length == 0 ? [] : Property.Split('.');
+    public IReadOnlyList<string> Segments => _segments;
 
     /// <summary>
     /// The same property in the current or previous state, e.g. to compare both (<c>changed</c>).
@@ -72,9 +79,26 @@ public sealed record RulePath
     {
         ArgumentNullException.ThrowIfNull(path);
 
-        (result, error) = Cache.GetOrAdd(path, Read);
+        if (Cache.TryGetValue(path, out result))
+        {
+            error = null;
+            return true;
+        }
+
+        (result, error) = Read(path);
+
+        if (result is not null && Cache.Count < MaxCached)
+            Cache.TryAdd(path, result);
+
         return result is not null;
     }
+
+    /// <summary>Paths are equal when they read the same property from the same root.</summary>
+    public bool Equals(RulePath? other) =>
+        other is not null && (Root, Context, Property) == (other.Root, other.Context, other.Property);
+
+    /// <inheritdoc />
+    public override int GetHashCode() => HashCode.Combine(Root, Context, Property);
 
     private static (RulePath? Path, string? Error) Read(string path)
     {

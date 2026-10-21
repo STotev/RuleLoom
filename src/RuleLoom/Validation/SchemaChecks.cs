@@ -17,13 +17,13 @@ namespace RuleLoom.Validation;
 /// <c>null</c> when the provider describes none. Declared contexts without a registered provider are missing.</param>
 internal sealed class SchemaPaths(EventSchemaDefinition @event, IReadOnlyDictionary<string, ContextSchemaDefinition?> contexts)
 {
-    private readonly Dictionary<string, FieldDefinition?> _resolved = [];
+    private readonly Dictionary<PathNode, FieldDefinition?> _resolved = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>The field a path points at, or <c>null</c> when it's wrong, invalid or can't be checked.</summary>
     public FieldDefinition? Resolve(PathNode path, ValidationProblems problems)
     {
-        if (!_resolved.TryGetValue(path.Location, out var field))
-            _resolved[path.Location] = field = path.Parsed is { } parsed ? Resolve(parsed, path, problems) : null;
+        if (!_resolved.TryGetValue(path, out var field))
+            _resolved[path] = field = path.Parsed is { } parsed ? Resolve(parsed, path, problems) : null;
 
         return field;
     }
@@ -130,13 +130,15 @@ internal sealed class ComparisonTypeCheck(SchemaPaths paths) : RuleCheck
     private static readonly HashSet<Type> OrderingOperators =
         [typeof(GreaterThanOperator), typeof(GreaterThanOrEqualOperator), typeof(LessThanOperator), typeof(LessThanOrEqualOperator)];
 
-    public override void Operator(OperatorCondition condition, IConditionOperator? @operator, string location, ValidationProblems problems)
+    // After the operands: their paths have been resolved (and reported) by SchemaPathCheck, in document order.
+    public override void Operands(OperatorCondition condition, IConditionOperator? @operator, IReadOnlyList<PathNode?> operandPaths,
+        string location, ValidationProblems problems)
     {
         if (@operator is null || !ComparisonOperators.Contains(@operator.GetType()) || condition.Operands is not [var left, var right])
             return;
 
-        var leftField = Field(left, $"{location}.operands[0].path", @operator, problems);
-        var rightField = Field(right, $"{location}.operands[1].path", @operator, problems);
+        var leftField = operandPaths[0] is { } leftPath ? paths.Resolve(leftPath, problems) : null;
+        var rightField = operandPaths[1] is { } rightPath ? paths.Resolve(rightPath, problems) : null;
 
         var problem = (leftField, rightField, left, right) switch
         {
@@ -151,16 +153,6 @@ internal sealed class ComparisonTypeCheck(SchemaPaths paths) : RuleCheck
 
         if (problem is not null)
             problems.Warning(location, $"'{condition.Operator}' {problem}; the condition is never true.");
-    }
-
-    // Operands are resolved here before the walker reaches them; SchemaPaths reports each path's problems once.
-    private FieldDefinition? Field(ConditionNode operand, string location, IConditionOperator @operator, ValidationProblems problems)
-    {
-        if (operand is not PathOperand { Path: var text })
-            return null;
-
-        RulePath.TryParse(text, out var parsed, out var error);
-        return paths.Resolve(new PathNode(text, parsed, error, location, @operator), problems);
     }
 
     /// <summary>

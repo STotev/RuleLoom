@@ -91,5 +91,18 @@ public sealed record RulePath
   string overloads parse and delegate).
 - `RuleWalker` gives each check a schedule hook (after the action's condition, before its `referencePath`), so errors
   stay in document order within an action.
-- `ComparisonTypeCheck` resolves its operands through `SchemaPaths` when it meets the operator, before the walker
-  reaches the operands; `SchemaPaths` memoizes per path, so each path is resolved and reported once.
+- Checks are grouped by what they check: `ActionCheck` covers actions and their schedules, `PathSyntaxCheck` path
+  syntax, and `ChangedCheck` the built-in `changed`.
+- After code review:
+  - The walker gives checks a second operator hook after the operands (with the operands' parsed paths), so
+    `ComparisonTypeCheck` runs after `SchemaPathCheck` has resolved and reported them: errors stay in document order.
+    `SchemaPaths` memoizes per path node, not per location string.
+  - `changed` on a whole state (`$current`, `$previous`) is an error in the validator and the engine: it compared the
+    two state objects (always "changed" for two instances); before #107 it read a non-existent property.
+  - `ChangedOperator` throws `InvalidOperationException` for invalid paths, like `EvaluationContext.Resolve`.
+  - The parse cache keeps only valid paths, up to 10,000, since paths can come from rules submitted at run time.
+  - `Segments` is computed once; `RulePath` equality compares `Root`, `Context` and `Property`.
+  - **Breaking:** `EvaluationContext.Resolve(string)` (public since 0.5) throws for invalid paths it used to read as
+    `null` (`#…`, a bare `@`, a context after a state), so the PR is marked `feat!`.
+  - Not changed: `InState` allocates a small `RulePath` per `changed` evaluation; the old code built and split two
+    strings.

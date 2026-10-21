@@ -25,6 +25,14 @@ internal abstract class RuleCheck
     {
     }
 
+    /// <summary>
+    /// An operator node again, after its operands were visited, with the path operands (<c>null</c> for other operands).
+    /// </summary>
+    public virtual void Operands(OperatorCondition condition, IConditionOperator? @operator, IReadOnlyList<PathNode?> paths,
+        string location, ValidationProblems problems)
+    {
+    }
+
     public virtual void Path(PathNode path, ValidationProblems problems)
     {
     }
