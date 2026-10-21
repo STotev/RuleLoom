@@ -129,7 +129,7 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 | [#93](https://github.com/STotev/RuleLoom/issues/93) | Schema store and registration in `AddRuleLoom`; context references passed to providers | AFK | #92 | [#103](https://github.com/STotev/RuleLoom/pull/103) | [schema-store](specs/2026-10-19-schema-store-design.md) |
 | [#101](https://github.com/STotev/RuleLoom/issues/101) | Context schemas described with their providers | AFK | #93 | [#105](https://github.com/STotev/RuleLoom/pull/105) | [context-schemas](specs/2026-10-19-context-schemas-design.md) |
 | [#94](https://github.com/STotev/RuleLoom/issues/94) | Schema-aware rule validation with severities | AFK | #91, #92, #101 | [#106](https://github.com/STotev/RuleLoom/pull/106) | [schema-validation](specs/2026-10-21-schema-validation-design.md) |
-| [#107](https://github.com/STotev/RuleLoom/issues/107) | Parse rule paths once and restructure RuleValidator | AFK | #94 | — | — |
+| [#107](https://github.com/STotev/RuleLoom/issues/107) | Parse rule paths once and restructure RuleValidator | AFK | #94 | [#108](https://github.com/STotev/RuleLoom/pull/108) | [path-model](specs/2026-10-22-path-model-design.md) |
 | [#95](https://github.com/STotev/RuleLoom/issues/95) | Sample and guide for schemas and contexts | HITL | #91, #93, #94, #101, #107 | — | — |
 
 ---
