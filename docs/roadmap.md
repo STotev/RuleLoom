@@ -148,6 +148,7 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 | Path whitelisting for untrusted rules | Security, when end users author rules; comes with schema-based validation in **0.6** | analysis §13 |
 | Rule indexing by event type | Performance | analysis §9 |
 | Parse rule arrays rule by rule ([#81](https://github.com/STotev/RuleLoom/issues/81)) | One malformed rule rejects the whole `ParseMany` array today | 0.5 spike findings |
+| Package layering review (before 1.0) | `RuleLoom.Abstractions` holds implementation (JSON parser, `PathResolver`, `EvaluationContext`, value comparison, `RulePath`) and references `RuleLoom.Schemas`; an abstractions package is usually the one others reference. Decide what is contract and what moves to `RuleLoom` | #107 discussion |
 
 ### Scheduling follow-ups (deferred from PRD #1)
 | Item | Notes | Source |
