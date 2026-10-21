@@ -165,6 +165,30 @@ public class AddSchemasTests
         Assert.Equal(["A-1", "A-2"], provider.GetRequiredService<Accounts>().Loaded.Order());
     }
 
+    [Fact]
+    public async Task RuleValidator_WithSchemas_ChecksPathsAgainstTheStoreAndProviders()
+    {
+        var services = new ServiceCollection()
+            .AddSingleton<Accounts>()
+            .AddRuleLoom(r => r
+                .AddSchemas(s => s.Add<TransferMadeSchema>())
+                .AddContextProvider<AccountProvider>("account"));
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var validator = scope.ServiceProvider.GetRequiredService<RuleLoom.Validation.RuleValidator>();
+        var rule = RuleJsonParser.Parse("""
+            { "id": "r", "name": "R", "eventType": "TransferMade",
+              "condition": { "operator": "and", "operands": [
+                { "operator": "eq", "operands": [{ "path": "@toAccount.frozen" }, { "value": true }] },
+                { "operator": "eq", "operands": [{ "path": "@toAccount.frozn" }, { "value": true }] } ] } }
+            """);
+
+        var result = await validator.ValidateAsync(rule, TestContext.Current.CancellationToken);
+
+        Assert.Equal("$.condition.operands[1].operands[0].path", Assert.Single(result.Errors).Path);
+    }
+
     public sealed class TransferDto
     {
         public string FromAccountId { get; set; } = "";
