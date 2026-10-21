@@ -68,40 +68,31 @@ public class EvaluationContext
     /// </summary>
     /// <param name="path">The property path to resolve.</param>
     /// <returns>The resolved value, or null if the path doesn't exist.</returns>
-    /// <exception cref="InvalidOperationException">The path starts with an unknown <c>$</c> variable, or names a
-    /// context that has no provider or hasn't been loaded.</exception>
+    /// <exception cref="InvalidOperationException">The path isn't valid (<see cref="RulePath"/>), or names a context
+    /// that has no provider or hasn't been loaded.</exception>
     /// <exception cref="ContextLoadException">The context's provider failed.</exception>
-    public object? Resolve(string path)
+    public object? Resolve(string path) =>
+        RulePath.TryParse(path, out var parsed, out var error) ? Resolve(parsed) : throw new InvalidOperationException(error);
+
+    /// <summary>
+    /// Resolves a parsed path: its property on the current state, the previous state or a loaded context.
+    /// </summary>
+    /// <returns>The resolved value, or null if the path doesn't exist.</returns>
+    /// <exception cref="InvalidOperationException">The path names a context that has no provider or hasn't been
+    /// loaded.</exception>
+    /// <exception cref="ContextLoadException">The context's provider failed.</exception>
+    public object? Resolve(RulePath path)
     {
-        var parts = path.Split('.', 2);
+        ArgumentNullException.ThrowIfNull(path);
 
-        object? root = Current;
-        var remainingPath = path;
-
-        if (parts[0].StartsWith('@'))
+        var root = path.Root switch
         {
-            root = GetLoadedContext(parts[0][1..]);
-            remainingPath = parts.Length == 2 ? parts[1] : string.Empty;
-        }
-        else if (parts[0].StartsWith('$'))
-        {
-            if (parts[0].Equals("$previous", StringComparison.OrdinalIgnoreCase))
-            {
-                root = Previous;
-            }
-            else if (!parts[0].Equals("$current", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(
-                    $"Unknown variable '{parts[0]}' in path '{path}'. Use $current or $previous.");
-            }
+            PathRoot.Context => GetLoadedContext(path.Context!),
+            PathRoot.Previous => Previous,
+            _ => Current
+        };
 
-            remainingPath = parts.Length == 2 ? parts[1] : string.Empty;
-        }
-
-        if (root == null)
-            return null;
-
-        return PathResolver.Shared.Resolve(root, remainingPath);
+        return root is null ? null : PathResolver.Shared.Resolve(root, path.Property);
     }
 
     /// <summary>

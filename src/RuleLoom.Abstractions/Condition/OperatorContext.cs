@@ -98,6 +98,11 @@ public sealed class OperatorContext
     public object? Resolve(string path) => EvaluationContext.Resolve(path);
 
     /// <summary>
+    /// Resolves a parsed path against the current/previous state or a context (see <see cref="RulePath"/>).
+    /// </summary>
+    public object? Resolve(RulePath path) => EvaluationContext.Resolve(path);
+
+    /// <summary>
     /// Compares two values for equality with the shared comparison rules (<see cref="ValueComparer.AreEqual"/>).
     /// </summary>
     public bool AreEqual(object? left, object? right) => ValueComparer.AreEqual(left, right);

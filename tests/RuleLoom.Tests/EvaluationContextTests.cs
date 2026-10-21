@@ -119,6 +119,27 @@ public class EvaluationContextTests
         Assert.Contains("Use $current or $previous", ex.Message);
     }
 
+    [Theory]
+    [InlineData("#now", "reserved for functions")]
+    [InlineData("@", "needs a name after '@'")]
+    [InlineData("$previous.@customer.Tier", "Contexts have no current or previous state")]
+    public void Resolve_InvalidPath_ThrowsLikeTheParser(string path, string message)
+    {
+        var context = new EvaluationContext(CurrentPerson, PreviousPerson);
+
+        Assert.Contains(message, Assert.Throws<InvalidOperationException>(() => context.Resolve(path)).Message);
+    }
+
+    [Fact]
+    public void Resolve_ParsedPath_ReadsItsRoot()
+    {
+        var context = new EvaluationContext(CurrentPerson, PreviousPerson);
+        var path = RulePath.Parse("Name");
+
+        Assert.Equal(CurrentPerson.Name, context.Resolve(path));
+        Assert.Equal(PreviousPerson.Name, context.Resolve(path.InState(PathRoot.Previous)));
+    }
+
     private sealed class Person
     {
         public string Name { get; init; } = string.Empty;

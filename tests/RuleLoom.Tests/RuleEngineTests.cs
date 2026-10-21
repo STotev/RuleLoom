@@ -407,6 +407,24 @@ public class RuleEngineTests
         Assert.Equal(0, executor.ExecutionCount);
     }
 
+    [Theory]
+    [InlineData("#now", "reserved for functions")]
+    [InlineData("$previous.@customer.Tier", "Contexts have no current or previous state")]
+    public async Task ExecuteAsync_InvalidPathInARuleBuiltInCode_FailsTheRule(string path, string message)
+    {
+        var engine = new RuleEngine(Conditions.Evaluator(), new TestActionFactory(new Dictionary<string, IAction>()));
+        var rule = new RuleDefinition
+        {
+            Id = "r", Name = "R", EventType = "Event",
+            Condition = Conditions.Op("eq", Conditions.Path(path), Conditions.Value(1))
+        };
+
+        var result = (await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken)).Rules[0];
+
+        Assert.Equal(RuleExecutionStatus.Failed, result.Status);
+        Assert.Contains(message, result.Error!.Message);
+    }
+
     private static RuleDefinition CreateRule(string name, string actionType, int priority = 1) =>
         new()
         {
