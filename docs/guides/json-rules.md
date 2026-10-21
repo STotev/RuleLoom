@@ -270,6 +270,12 @@ whichever way its path is written: `Price`, `$current.Price` and `$previous.Pric
 Paths follow the **runtime** value: a property declared as `object`, an interface or a base type is read through
 whatever it holds, including JSON.
 
+Custom operators read paths with `RulePath` rather than taking the string apart:
+`RulePath.Parse(ctx.GetPath(0))` gives its `Root` (`Current`, `Previous` or `Context`), the `Context` name and the
+`Property`; `path.InState(PathRoot.Previous)` is the same property in the previous state, and `ctx.Resolve(path)` reads
+it. Invalid paths (`#…`, a bare `@`, unknown `$` variables, `$previous.@x`) are rejected by the parser, by
+`RuleValidator` and, in rules built in code, by the engine, which fails the rule.
+
 ## Contexts
 
 A rule often needs data beyond the event's subject: the order's customer, the warehouse, the people watching an ad.

@@ -83,3 +83,13 @@ public sealed record RulePath
 - Roadmap backlog: review the packages' layering before 1.0 (Abstractions holds implementation such as the parser,
   `PathResolver`, `EvaluationContext` and value comparison, and references Schemas; an abstractions package is usually
   the one others reference).
+
+## Deviations
+
+- `ChangedOperator` needed the same property in both states without rebuilding `"$current.x"` strings, so the API gained
+  `RulePath.InState(PathRoot)` and `Resolve(RulePath)` overloads on `EvaluationContext` and `OperatorContext` (the
+  string overloads parse and delegate).
+- `RuleWalker` gives each check a schedule hook (after the action's condition, before its `referencePath`), so errors
+  stay in document order within an action.
+- `ComparisonTypeCheck` resolves its operands through `SchemaPaths` when it meets the operator, before the walker
+  reaches the operands; `SchemaPaths` memoizes per path, so each path is resolved and reported once.
