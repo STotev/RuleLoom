@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file. It is generated
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/) — do not edit it by hand.
 
+## [0.6.0](https://github.com/STotev/RuleLoom/compare/v0.5.0...v0.6.0) (2026-10-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* parse rule paths once with RulePath and walk rules once in RuleValidator ([#108](https://github.com/STotev/RuleLoom/issues/108))
+* load related data with context providers and @ paths ([#99](https://github.com/STotev/RuleLoom/issues/99))
+
+### Features
+
+* add a schema store and pass context references to providers ([#103](https://github.com/STotev/RuleLoom/issues/103)) ([de154a6](https://github.com/STotev/RuleLoom/commit/de154a640950b90e3a49e4e146c26cbc787ae67c))
+* describe contexts in their providers and store them with event schemas ([#105](https://github.com/STotev/RuleLoom/issues/105)) ([ac62673](https://github.com/STotev/RuleLoom/commit/ac62673a62659229aa2b17504f1a7b76d6c8bb19))
+* describe events with schema classes and export them as JSON Schema ([#100](https://github.com/STotev/RuleLoom/issues/100)) ([8f4f2fa](https://github.com/STotev/RuleLoom/commit/8f4f2fae8f308b3cb904178490b755728fd4cc85))
+* load related data with context providers and @ paths ([#99](https://github.com/STotev/RuleLoom/issues/99)) ([6f8f2fe](https://github.com/STotev/RuleLoom/commit/6f8f2fea9897f5f98bc8c611e8f540fb4b0b1c65))
+* parse rule paths once with RulePath and walk rules once in RuleValidator ([#108](https://github.com/STotev/RuleLoom/issues/108)) ([907f331](https://github.com/STotev/RuleLoom/commit/907f331b9ca955b95b345ab87805f8f52e38cc81))
+* rebuild the previous state from changed fields ([#97](https://github.com/STotev/RuleLoom/issues/97)) ([0288649](https://github.com/STotev/RuleLoom/commit/02886490ddc669f6bc61231186794d3047357158))
+* validate rule paths against event and context schemas ([#106](https://github.com/STotev/RuleLoom/issues/106)) ([bc199ff](https://github.com/STotev/RuleLoom/commit/bc199ff3ef87eb8867131b5c98d41379f6189e66))
+
 ## [0.5.0](https://github.com/STotev/RuleLoom/compare/v0.4.0...v0.5.0) (2026-10-15)
 
 
