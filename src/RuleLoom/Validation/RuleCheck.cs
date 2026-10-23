@@ -54,8 +54,7 @@ internal abstract class RuleCheck
 /// <param name="Parsed">The parsed path, or <c>null</c> when it isn't valid.</param>
 /// <param name="Error">Why it isn't valid.</param>
 /// <param name="Location">Its JSONPath in the rule.</param>
-/// <param name="Parent">The registered operator the path is an operand of, if any.</param>
-internal sealed record PathNode(string Text, RulePath? Parsed, string? Error, string Location, IConditionOperator? Parent);
+internal sealed record PathNode(string Text, RulePath? Parsed, string? Error, string Location);
 
 /// <summary>
 /// The errors and warnings found so far, in document order.

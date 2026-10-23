@@ -37,7 +37,7 @@ internal sealed class RuleWalker(IReadOnlyDictionary<string, IConditionOperator>
                 check.Schedule(schedule, location, problems);
 
             if (schedule.ReferencePath is { } referencePath)
-                Path(referencePath, $"{location}.schedule.referencePath", parent: null, problems);
+                Path(referencePath, $"{location}.schedule.referencePath", problems);
         }
 
         return problems.ToResult();
@@ -71,7 +71,7 @@ internal sealed class RuleWalker(IReadOnlyDictionary<string, IConditionOperator>
                     Operator(nested, operandLocation, problems);
                     break;
                 case PathOperand operand:
-                    paths[index] = Path(operand.Path, $"{operandLocation}.path", @operator, problems);
+                    paths[index] = Path(operand.Path, $"{operandLocation}.path", problems);
                     break;
             }
         }
@@ -80,10 +80,10 @@ internal sealed class RuleWalker(IReadOnlyDictionary<string, IConditionOperator>
             check.Operands(condition, @operator, paths, location, problems);
     }
 
-    private PathNode Path(string text, string location, IConditionOperator? parent, ValidationProblems problems)
+    private PathNode Path(string text, string location, ValidationProblems problems)
     {
         RulePath.TryParse(text, out var parsed, out var error);
-        var node = new PathNode(text, parsed, error, location, parent);
+        var node = new PathNode(text, parsed, error, location);
 
         foreach (var check in checks)
             check.Path(node, problems);
