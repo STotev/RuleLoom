@@ -104,8 +104,16 @@ public class RuleValidatorSchemaTests
 
         var result = await Validate(rule);
 
-        Assert.Equal(["$.condition.operands[1].operator", "$.actions[0].action", "$.condition.operands[0].operands[0].path"],
-            result.Errors.Select(e => e.Path));
+        Assert.Equal(["$.condition.operands[0].operands[0].path", "$.condition.operands[1].operator", "$.actions[0].action"],
+            result.Errors.Select(e => e.Path));   // document order
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ComparedPaths_AreReportedOnceInDocumentOrder()
+    {
+        var result = await Validate(Rule(Op("eq", Path("#now"), Path("Unknown"))));
+
+        Assert.Equal(["$.condition.operands[0].path", "$.condition.operands[1].path"], result.Errors.Select(e => e.Path));
     }
 
     [Fact]

@@ -14,4 +14,6 @@ public sealed class GreaterThanOperator : IConditionOperator
 
     public bool Evaluate(OperatorContext context) =>
         context.TryCompare(context.GetValue(0), context.GetValue(1), out var result) && result > 0;
+
+    public void ValidateOperands(OperandValidationContext context) => ComparedOperands.Validate(context, ordering: true);
 }

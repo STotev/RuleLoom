@@ -1,3 +1,4 @@
+using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
 
@@ -42,11 +43,8 @@ internal static class ContextReferences
 
     private static void AddPath(string? path, HashSet<string> names)
     {
-        if (path is null || !path.StartsWith('@'))
-            return;
-
-        var name = path[1..].Split('.', 2)[0];
-        if (name.Length > 0)
-            names.Add(name);
+        // Invalid paths fail when the rule resolves them.
+        if (path is not null && RulePath.TryParse(path, out var parsed, out _) && parsed.Root == PathRoot.Context)
+            names.Add(parsed.Context!);
     }
 }

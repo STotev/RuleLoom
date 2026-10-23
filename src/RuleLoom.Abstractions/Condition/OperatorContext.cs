@@ -89,13 +89,17 @@ public sealed class OperatorContext
     /// <exception cref="InvalidOperationException">The operand is not a path.</exception>
     public string GetPath(int index) => GetOperand(index) is PathOperand path
         ? path.Path
-        : throw new InvalidOperationException(
-            $"Operator '{OperatorName}' expects a path at operand {index}, but got {GetOperand(index).GetType().Name}.");
+        : throw new InvalidOperationException(OperandMessages.ExpectsPath(OperatorName, index, GetOperand(index)));
 
     /// <summary>
     /// Resolves any path against the current/previous state, as a path operand would.
     /// </summary>
     public object? Resolve(string path) => EvaluationContext.Resolve(path);
+
+    /// <summary>
+    /// Resolves a parsed path against the current/previous state or a context (see <see cref="RulePath"/>).
+    /// </summary>
+    public object? Resolve(RulePath path) => EvaluationContext.Resolve(path);
 
     /// <summary>
     /// Compares two values for equality with the shared comparison rules (<see cref="ValueComparer.AreEqual"/>).

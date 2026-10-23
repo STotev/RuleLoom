@@ -1,3 +1,4 @@
+using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Values;
 
@@ -11,18 +12,27 @@ public class ChangedOperator : IConditionOperator
 
     public bool Evaluate(OperatorContext context)
     {
-        var property = WithoutScope(context.GetPath(0));
+        var text = context.GetPath(0);
 
-        if (property.StartsWith('@'))
-            throw new InvalidOperationException($"'changed' can't be used on context '{property}': contexts have no previous state.");
+        if (!RulePath.TryParse(text, out var path, out var error))
+            throw new InvalidOperationException(error);
 
-        return !ValueComparer.AreEqual(context.Resolve($"$current.{property}"), context.Resolve($"$previous.{property}"));
+        if (Problem(path, text) is { } problem)
+            throw new InvalidOperationException(problem);
+
+        // The operand may already name a state ("$current.Price"); changed always compares both.
+        return !ValueComparer.AreEqual(context.Resolve(path.InState(PathRoot.Current)), context.Resolve(path.InState(PathRoot.Previous)));
     }
 
-    // The operand may already name a state ("$current.Price"); changed always compares both, so keep the property.
-    private static string WithoutScope(string path) =>
-        path.StartsWith("$current.", StringComparison.OrdinalIgnoreCase) ||
-        path.StartsWith("$previous.", StringComparison.OrdinalIgnoreCase)
-            ? path[(path.IndexOf('.') + 1)..]
-            : path;
+    public void ValidateOperands(OperandValidationContext context)
+    {
+        if (context.RequirePath(0) is { } path && Problem(path, ((PathOperand)context.GetOperand(0)).Path) is { } problem)
+            context.Error(0, problem);
+    }
+
+    // changed compares a property's current and previous value: a context has no previous state, a whole state no property.
+    private static string? Problem(RulePath path, string text) =>
+        path.Root == PathRoot.Context ? $"'changed' can't be used on a context ('{text}'): contexts have no previous state."
+        : path.Property.Length == 0 ? $"'changed' needs a property, not the whole state: '{text}'."
+        : null;
 }

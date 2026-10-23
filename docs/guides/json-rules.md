@@ -270,6 +270,25 @@ whichever way its path is written: `Price`, `$current.Price` and `$previous.Pric
 Paths follow the **runtime** value: a property declared as `object`, an interface or a base type is read through
 whatever it holds, including JSON.
 
+Custom operators read paths with `RulePath` rather than taking the string apart:
+`RulePath.Parse(ctx.GetPath(0))` gives its `Root` (`Current`, `Previous` or `Context`), the `Context` name and the
+`Property`; `path.InState(PathRoot.Previous)` is the same property in the previous state, and `ctx.Resolve(path)` reads
+it. Invalid paths (`#…`, a bare `@`, unknown `$` variables, `$previous.@x`) are rejected by the parser, by
+`RuleValidator` and, in rules built in code, by the engine, which fails the rule.
+
+A custom operator can also check its operands when rules are validated, by implementing `ValidateOperands`. The
+validator calls it with a valid operand count and adds the locations:
+
+```csharp
+public void ValidateOperands(OperandValidationContext context)
+{
+    if (context.GetPath(0) is null)
+        context.Error(0, "'between' expects a path first.");
+    if (context.GetField(0) is { Type: not (FieldType.Integer or FieldType.Number) })   // with schemas
+        context.Warning("'between' compares numbers.");
+}
+```
+
 ## Contexts
 
 A rule often needs data beyond the event's subject: the order's customer, the warehouse, the people watching an ad.

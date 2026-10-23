@@ -144,10 +144,60 @@ public class RuleValidatorTests
     }
 
     [Fact]
+    public void Validate_ChangedOnAWholeState_IsAnError()
+    {
+        AssertSingleError(Validator.Validate(Rule(Op("changed", Path("$current")))), "$.condition.operands[0].path",
+            "'changed' needs a property, not the whole state: '$current'.");
+    }
+
+    [Fact]
     public void Validate_ChangedOnAContext_IsAnError()
     {
         AssertSingleError(Validator.Validate(Rule(Op("changed", Path("@customer.Tier")))), "$.condition.operands[0].path",
             "'changed' can't be used on a context ('@customer.Tier'): contexts have no previous state.");
+    }
+
+    [Fact]
+    public void Validate_ChangedWithAValue_IsAnErrorAtTheOperand()
+    {
+        AssertSingleError(Validator.Validate(Rule(Op("changed", Value(1)))), "$.condition.operands[0]",
+            "Operator 'changed' expects a path at operand 0, but got ValueOperand.");
+    }
+
+    [Fact]
+    public void Validate_CustomOperator_ReportsItsOwnOperandProblems()
+    {
+        var validator = new RuleValidator([new BetweenOperator()], new DirectActionFactory([]));
+
+        var result = validator.Validate(Rule(Op("between", Path("Price"), Value(10), Value(1))));
+
+        Assert.Equal(new RuleValidationError("$.condition.operands[0].path", "Use a number field."), Assert.Single(result.Errors));
+        Assert.Equal(new RuleValidationError("$.condition", "The lower bound is above the upper bound."), Assert.Single(result.Warnings));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Validate_OperatorValidationFails_IsAnErrorNotAnException(bool throws)
+    {
+        var validator = new RuleValidator([new FaultyOperator(throws)], new DirectActionFactory([]));
+
+        var result = validator.Validate(Rule(Op("faulty", Value(1))));
+
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("$.condition", error.Path);
+        Assert.StartsWith("Operator 'faulty' couldn't validate its operands:", error.Message);
+    }
+
+    [Fact]
+    public void Validate_OperandCountOutOfRange_DoesNotAskTheOperator()
+    {
+        var validator = new RuleValidator([new BetweenOperator()], new DirectActionFactory([]));
+
+        var result = validator.Validate(Rule(Op("between", Path("Price"))));
+
+        Assert.Equal("$.condition.operands", Assert.Single(result.Errors).Path);
+        Assert.Empty(result.Warnings);
     }
 
     [Fact]
@@ -176,6 +226,36 @@ public class RuleValidatorTests
 
     private static ActionDefinition Action(string type, ConditionNode? condition = null, ScheduleMetadata? schedule = null) =>
         new() { Action = type, Condition = condition, Schedule = schedule };
+
+    private sealed class BetweenOperator : IConditionOperator
+    {
+        public string Name => "between";
+        public int MinOperands => 3;
+        public int MaxOperands => 3;
+        public bool Evaluate(OperatorContext context) => true;
+
+        public void ValidateOperands(OperandValidationContext context)
+        {
+            context.Error(0, "Use a number field.");
+            if (context.GetOperand(1) is ValueOperand { Value: int low } && context.GetOperand(2) is ValueOperand { Value: int high } && low > high)
+                context.Warning("The lower bound is above the upper bound.");
+        }
+    }
+
+    private sealed class FaultyOperator(bool throws) : IConditionOperator
+    {
+        public string Name => "faulty";
+        public int MinOperands => 1;
+        public int MaxOperands => 1;
+        public bool Evaluate(OperatorContext context) => true;
+
+        public void ValidateOperands(OperandValidationContext context)
+        {
+            if (throws)
+                throw new InvalidOperationException("boom");
+            context.Error(5, "An operand that doesn't exist.");
+        }
+    }
 
     private sealed class NoOpAction : IAction
     {

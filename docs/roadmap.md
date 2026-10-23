@@ -129,7 +129,7 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 | [#93](https://github.com/STotev/RuleLoom/issues/93) | Schema store and registration in `AddRuleLoom`; context references passed to providers | AFK | #92 | [#103](https://github.com/STotev/RuleLoom/pull/103) | [schema-store](specs/2026-10-19-schema-store-design.md) |
 | [#101](https://github.com/STotev/RuleLoom/issues/101) | Context schemas described with their providers | AFK | #93 | [#105](https://github.com/STotev/RuleLoom/pull/105) | [context-schemas](specs/2026-10-19-context-schemas-design.md) |
 | [#94](https://github.com/STotev/RuleLoom/issues/94) | Schema-aware rule validation with severities | AFK | #91, #92, #101 | [#106](https://github.com/STotev/RuleLoom/pull/106) | [schema-validation](specs/2026-10-21-schema-validation-design.md) |
-| [#107](https://github.com/STotev/RuleLoom/issues/107) | Parse rule paths once and restructure RuleValidator | AFK | #94 | — | — |
+| [#107](https://github.com/STotev/RuleLoom/issues/107) | Parse rule paths once and restructure RuleValidator | AFK | #94 | [#108](https://github.com/STotev/RuleLoom/pull/108) | [path-model](specs/2026-10-22-path-model-design.md) |
 | [#95](https://github.com/STotev/RuleLoom/issues/95) | Sample and guide for schemas and contexts | HITL | #91, #93, #94, #101, #107 | — | — |
 
 ---
@@ -148,6 +148,7 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 | Path whitelisting for untrusted rules | Security, when end users author rules; comes with schema-based validation in **0.6** | analysis §13 |
 | Rule indexing by event type | Performance | analysis §9 |
 | Parse rule arrays rule by rule ([#81](https://github.com/STotev/RuleLoom/issues/81)) | One malformed rule rejects the whole `ParseMany` array today | 0.5 spike findings |
+| Package layering review (before 1.0) | `RuleLoom.Abstractions` holds implementation (JSON parser, `PathResolver`, `EvaluationContext`, value comparison, `RulePath`) and references `RuleLoom.Schemas`; an abstractions package is usually the one others reference. Decide what is contract and what moves to `RuleLoom` | #107 discussion |
 
 ### Scheduling follow-ups (deferred from PRD #1)
 | Item | Notes | Source |
