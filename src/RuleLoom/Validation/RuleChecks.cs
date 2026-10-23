@@ -66,7 +66,17 @@ internal sealed class OperatorCheck(SchemaPaths? schemaPaths) : RuleCheck
 
         var context = new OperandValidationContext(condition,
             schemaPaths is null ? null : index => paths[index] is { } path ? schemaPaths.Resolve(path, problems) : null);
-        @operator.ValidateOperands(context);
+
+        // The validator never throws for a rule: an operator whose validation fails is reported at the operator.
+        try
+        {
+            @operator.ValidateOperands(context);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            problems.Error(location, $"Operator '{condition.Operator}' couldn't validate its operands: {ex.Message}");
+            return;
+        }
 
         foreach (var problem in context.Problems)
         {

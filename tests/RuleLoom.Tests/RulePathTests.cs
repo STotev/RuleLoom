@@ -46,4 +46,32 @@ public class RulePathTests
         Assert.Throws<InvalidOperationException>(() => RulePath.Parse("@customer.Tier").InState(PathRoot.Previous));
         Assert.Throws<ArgumentException>(() => path.InState(PathRoot.Context));
     }
+
+    [Theory]
+    [InlineData("Price", "Price")]
+    [InlineData("$Current.Price", "Price")]
+    [InlineData("$CURRENT", "$current")]
+    [InlineData("$Previous.Address.City", "$previous.Address.City")]
+    [InlineData("@customer.Tier", "@customer.Tier")]
+    public void ToString_WritesTheCanonicalPath(string text, string canonical)
+    {
+        Assert.Equal(canonical, RulePath.Parse(text).ToString());
+    }
+
+    [Fact]
+    public void Segments_CantBeChangedThroughTheSharedInstance()
+    {
+        var segments = RulePath.Parse("Address.City").Segments;
+
+        Assert.IsNotType<string[]>(segments);
+        Assert.Equal(["Address", "City"], segments);
+    }
+
+    [Fact]
+    public void InState_ReturnsTheSameOtherStateEachTime()
+    {
+        var path = RulePath.Parse("Price");
+
+        Assert.Same(path.InState(PathRoot.Previous), path.InState(PathRoot.Previous));
+    }
 }

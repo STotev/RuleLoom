@@ -41,21 +41,42 @@ public sealed class OperandValidationContext
     public RulePath? GetPath(int index) =>
         GetOperand(index) is PathOperand operand && RulePath.TryParse(operand.Path, out var path, out _) ? path : null;
 
+    /// <summary>
+    /// The parsed path of the operand at <paramref name="index"/>, reporting an error when it isn't a path (the same
+    /// message <see cref="OperatorContext.GetPath"/> throws when the rule runs). <c>null</c> when it isn't a path or the
+    /// path isn't valid (the validator reports invalid paths itself).
+    /// </summary>
+    public RulePath? RequirePath(int index)
+    {
+        if (GetOperand(index) is PathOperand)
+            return GetPath(index);
+
+        Error(index, OperandMessages.ExpectsPath(OperatorName, index, GetOperand(index)));
+        return null;
+    }
+
     /// <summary>The schema field the path operand at <paramref name="index"/> points at; <c>null</c> without schemas,
     /// for other operands, and for paths that can't be checked.</summary>
-    public FieldDefinition? GetField(int index) => _fields?.Invoke(index);
+    public FieldDefinition? GetField(int index) => _fields?.Invoke(CheckIndex(index));
 
     /// <summary>Reports an error at the operand at <paramref name="index"/>.</summary>
-    public void Error(int index, string message) => _problems.Add(new(index, message, IsWarning: false));
+    public void Error(int index, string message) => _problems.Add(new(CheckIndex(index), message, IsWarning: false));
 
     /// <summary>Reports an error at the operator.</summary>
     public void Error(string message) => _problems.Add(new(null, message, IsWarning: false));
 
     /// <summary>Reports a warning (the rule stays valid) at the operand at <paramref name="index"/>.</summary>
-    public void Warning(int index, string message) => _problems.Add(new(index, message, IsWarning: true));
+    public void Warning(int index, string message) => _problems.Add(new(CheckIndex(index), message, IsWarning: true));
 
     /// <summary>Reports a warning (the rule stays valid) at the operator.</summary>
     public void Warning(string message) => _problems.Add(new(null, message, IsWarning: true));
+
+    private int CheckIndex(int index)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, OperandCount);
+        return index;
+    }
 }
 
 /// <summary>

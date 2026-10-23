@@ -26,9 +26,7 @@ public class ChangedOperator : IConditionOperator
 
     public void ValidateOperands(OperandValidationContext context)
     {
-        if (context.GetOperand(0) is not PathOperand operand)
-            context.Error(0, $"Operator '{context.OperatorName}' expects a path at operand 0, but got {context.GetOperand(0).GetType().Name}.");
-        else if (context.GetPath(0) is { } path && Problem(path, operand.Path) is { } problem)
+        if (context.RequirePath(0) is { } path && Problem(path, ((PathOperand)context.GetOperand(0)).Path) is { } problem)
             context.Error(0, problem);
     }
 

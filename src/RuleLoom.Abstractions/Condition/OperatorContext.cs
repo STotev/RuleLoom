@@ -89,8 +89,7 @@ public sealed class OperatorContext
     /// <exception cref="InvalidOperationException">The operand is not a path.</exception>
     public string GetPath(int index) => GetOperand(index) is PathOperand path
         ? path.Path
-        : throw new InvalidOperationException(
-            $"Operator '{OperatorName}' expects a path at operand {index}, but got {GetOperand(index).GetType().Name}.");
+        : throw new InvalidOperationException(OperandMessages.ExpectsPath(OperatorName, index, GetOperand(index)));
 
     /// <summary>
     /// Resolves any path against the current/previous state, as a path operand would.

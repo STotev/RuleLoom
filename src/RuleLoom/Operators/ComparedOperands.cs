@@ -3,7 +3,6 @@ using System.Globalization;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Values;
 using RuleLoom.Schemas;
-using RuleLoom.Validation;
 
 namespace RuleLoom.Operators;
 

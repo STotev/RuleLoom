@@ -25,19 +25,18 @@ public enum PathRoot
 /// (contexts have no state, so not after <c>$current</c>/<c>$previous</c>); other <c>$</c> names are reserved, and
 /// <c>#</c> is reserved for functions. Parse a <see cref="Condition.PathOperand"/>'s path with <see cref="Parse"/>.
 /// </summary>
-public sealed record RulePath
+public sealed class RulePath : IEquatable<RulePath>
 {
-    // Valid paths are parsed once. The cache is bounded, since paths can come from rules submitted at run time.
+    // Valid paths are parsed once. Paths can come from rules submitted at run time, so the cache starts over when it
+    // reaches about MaxCached entries (the count is approximate under concurrency).
     private const int MaxCached = 10_000;
     private static readonly ConcurrentDictionary<string, RulePath> Cache = new();
+    private static int _cachedCount;
 
-    private readonly string[] _segments;
+    private IReadOnlyList<string>? _segments;
+    private RulePath? _otherState;
 
-    private RulePath(PathRoot root, string? context, string property)
-    {
-        (Root, Context, Property) = (root, context, property);
-        _segments = property.Length == 0 ? [] : property.Split('.');
-    }
+    private RulePath(PathRoot root, string? context, string property) => (Root, Context, Property) = (root, context, property);
 
     /// <summary>Where the path starts reading.</summary>
     public PathRoot Root { get; }
@@ -50,7 +49,7 @@ public sealed record RulePath
     public string Property { get; }
 
     /// <summary>The property's segments; empty for the whole state or context.</summary>
-    public IReadOnlyList<string> Segments => _segments;
+    public IReadOnlyList<string> Segments => _segments ??= Property.Length == 0 ? [] : Array.AsReadOnly(Property.Split('.'));
 
     /// <summary>
     /// The same property in the current or previous state, e.g. to compare both (<c>changed</c>).
@@ -66,7 +65,7 @@ public sealed record RulePath
         if (Root == PathRoot.Context)
             throw new InvalidOperationException($"Context '@{Context}' has no current or previous state.");
 
-        return Root == state ? this : new RulePath(state, null, Property);
+        return Root == state ? this : _otherState ??= new RulePath(state, null, Property);
     }
 
     /// <summary>Parses <paramref name="path"/>.</summary>
@@ -87,8 +86,16 @@ public sealed record RulePath
 
         (result, error) = Read(path);
 
-        if (result is not null && Cache.Count < MaxCached)
+        if (result is not null)
+        {
+            if (Interlocked.Increment(ref _cachedCount) > MaxCached)
+            {
+                Cache.Clear();
+                Interlocked.Exchange(ref _cachedCount, 1);
+            }
+
             Cache.TryAdd(path, result);
+        }
 
         return result is not null;
     }
@@ -98,7 +105,23 @@ public sealed record RulePath
         other is not null && (Root, Context, Property) == (other.Root, other.Context, other.Property);
 
     /// <inheritdoc />
+    public override bool Equals(object? obj) => Equals(obj as RulePath);
+
+    /// <inheritdoc />
     public override int GetHashCode() => HashCode.Combine(Root, Context, Property);
+
+    /// <summary>The path in its canonical form, e.g. <c>Price</c>, <c>$previous.Price</c> or <c>@customer.Tier</c>.</summary>
+    public override string ToString()
+    {
+        var root = Root switch
+        {
+            PathRoot.Context => $"@{Context}",
+            PathRoot.Previous => "$previous",
+            _ => Property.Length == 0 ? "$current" : null
+        };
+
+        return root is null ? Property : Property.Length == 0 ? root : $"{root}.{Property}";
+    }
 
     private static (RulePath? Path, string? Error) Read(string path)
     {

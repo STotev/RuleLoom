@@ -135,3 +135,16 @@ public sealed record OperandProblem(int? Operand, string Message, bool IsWarning
     `null` (`#…`, a bare `@`, a context after a state), so the PR is marked `feat!`.
   - Not changed: `InState` allocates a small `RulePath` per `changed` evaluation; the old code built and split two
     strings.
+- After the second code review:
+  - `RuleValidator` never throws for a rule: an operator whose `ValidateOperands` throws (or reports an operand index
+    that doesn't exist) gets an error at the operator. `OperandValidationContext` checks operand indexes.
+  - `OperandValidationContext.RequirePath(index)` reports a non-path operand with the same message
+    `OperatorContext.GetPath` throws at run time (one shared source in Abstractions).
+  - `RulePath` is a sealed class (not a record): `Segments` is read-only and computed on first use, `ToString()` writes
+    the canonical path, and `InState` keeps the other-state path on the instance.
+  - The parse cache counts entries with `Interlocked` and starts over at about 10,000, so paths in use get cached again.
+  - The field-type names used in messages live in their own file in `RuleLoom`, shared by the validator and the
+    operators.
+  - Kept as designed: an operator's `ValidateOperands` only runs with an operand count within its limits (so operators
+    can index operands safely; other problems show once the count is fixed), and `GetPath` re-reads the parsed path
+    from the cache rather than taking it from the walker (same instance, no extra public constructor parameter).

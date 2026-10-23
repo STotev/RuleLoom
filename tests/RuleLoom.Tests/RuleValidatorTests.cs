@@ -175,6 +175,20 @@ public class RuleValidatorTests
         Assert.Equal(new RuleValidationError("$.condition", "The lower bound is above the upper bound."), Assert.Single(result.Warnings));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Validate_OperatorValidationFails_IsAnErrorNotAnException(bool throws)
+    {
+        var validator = new RuleValidator([new FaultyOperator(throws)], new DirectActionFactory([]));
+
+        var result = validator.Validate(Rule(Op("faulty", Value(1))));
+
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("$.condition", error.Path);
+        Assert.StartsWith("Operator 'faulty' couldn't validate its operands:", error.Message);
+    }
+
     [Fact]
     public void Validate_OperandCountOutOfRange_DoesNotAskTheOperator()
     {
@@ -225,6 +239,21 @@ public class RuleValidatorTests
             context.Error(0, "Use a number field.");
             if (context.GetOperand(1) is ValueOperand { Value: int low } && context.GetOperand(2) is ValueOperand { Value: int high } && low > high)
                 context.Warning("The lower bound is above the upper bound.");
+        }
+    }
+
+    private sealed class FaultyOperator(bool throws) : IConditionOperator
+    {
+        public string Name => "faulty";
+        public int MinOperands => 1;
+        public int MaxOperands => 1;
+        public bool Evaluate(OperatorContext context) => true;
+
+        public void ValidateOperands(OperandValidationContext context)
+        {
+            if (throws)
+                throw new InvalidOperationException("boom");
+            context.Error(5, "An operand that doesn't exist.");
         }
     }
 
