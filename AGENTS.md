@@ -75,18 +75,20 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 
 | Project | Path | Role |
 |---|---|---|
-| `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models: what the engine runs (operators, actions, context providers). **No dependencies outside `RuleLoom.Schemas` and .NET**; extensions describe themselves with Schemas' builders (`ContextDescription<T>`) |
-| `RuleLoom` | `src/RuleLoom` | Default implementation: engine, evaluator, operators, actions, scheduling |
-| `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Descriptions: event schemas (`EventSchema<T>` classes) and context schemas (`ContextDescription<T>`), generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`). **No dependencies at all** (not even Abstractions); producers use it without the engine; `RuleLoom.Abstractions` and `RuleLoom` reference it. `ISchemaStore` + `InMemorySchemaStore` |
-| `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(...)`: DI registration of engine, evaluator, actions, operators, context providers, validator, schemas (`AddSchemas`) |
+| `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models: what the engine runs (operators, actions, context providers), the `Catalog` and its registrations, `ActionDescriptor<T>`, the factory contracts. **No dependencies outside `RuleLoom.Schemas` and .NET** |
+| `RuleLoom` | `src/RuleLoom` | Default implementation: `CatalogBuilder`, engine, evaluator, operators, actions, direct factories, scheduling, validation |
+| `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Descriptions: event schemas (`EventSchema<T>` classes) and context schemas (`ContextSchema<T>`), generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`); the catalog document and store (`CatalogDocument`, `ICatalogStore` + `InMemoryCatalogStore`). **No dependencies at all** (not even Abstractions); producers and store packages use it without the engine; `RuleLoom.Abstractions` and `RuleLoom` reference it |
+| `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(r => r.AddCatalog(...).UseStore<T>())`: the catalog (built at startup), engine, validator and factories |
 | `RuleLoom.Tests` | `tests/RuleLoom.Tests` | xUnit unit tests |
 | `RuleLoom.Tests.Integration` | `tests/RuleLoom.Tests.Integration` | xUnit end-to-end tests |
 | `RuleLoom.Schemas.Tests` | `tests/RuleLoom.Schemas.Tests` | xUnit tests of schema building and JSON |
 | `RuleLoom.Extensions.DependencyInjection.Tests` | `tests/RuleLoom.Extensions.DependencyInjection.Tests` | xUnit tests of DI registration (uses the real container) |
 | `RuleLoom.Samples.Console` | `samples/RuleLoom.Samples.Console` | Usage sample |
+| `RuleLoom.Samples.AspNetCore` | `samples/RuleLoom.Samples.AspNetCore` | Web sample: per-tenant JSON rules, Quartz for scheduled actions |
 
-Namespaces follow folders: `RuleLoom.Abstractions.{Action,Condition,Rule,Scheduling,Values}` and
-`RuleLoom.{Engine,Evaluators,Operators,Actions,Scheduling,Validation}` (there is no `RuleLoom.Core`).
+Namespaces follow folders: `RuleLoom.Abstractions.{Action,Condition,Context,Rule,Scheduling,Values}` and
+`RuleLoom.{Engine,Evaluators,Operators,Actions,Contexts,Scheduling,Validation}` (there is no `RuleLoom.Core`);
+`Catalog` (in `RuleLoom.Abstractions`) and `CatalogBuilder` (in `RuleLoom`) sit at the roots.
 
 Versioning is from git tags via MinVer (`Directory.Build.props`); release-please creates the tags. Package metadata
 is in `src/Directory.Build.props` (the package README is `src/PACKAGE.md`, the icon `docs/assets/icon.png`); when a
@@ -106,19 +108,31 @@ environment `nuget`) and attaches the packages to the GitHub release.
         action condition false            → Skipped
         Schedule with Mode != Immediate   → ScheduleCalculator → Scheduled (executor NOT called;
                                             also listed in ScheduledActions) / calculation error → Failed
-        no executor for action.Type       → Failed
-        otherwise                         → executor.ExecuteAsync → its ActionResult (exception/null → Failed)
+        action name not in the catalog    → Failed
+        otherwise                         → IActionFactory.Create(registration).ExecuteAsync → its ActionResult
+                                            (factory or action exception / null result → Failed)
+  → event types not in the catalog still run (the catalog describes; it doesn't gate execution)
   → failures are reported in the result, never written to the console;
     OperationCanceledException always propagates (partial results are discarded)
 ```
 
 ### Key concepts
 
+- **Catalog** (`Catalog`, glossary in `GLOSSARY.md`, decisions in `docs/adr/`): the immutable vocabulary rules are
+  written in: event schemas (with the contexts they declare), context provider registrations (name, type, schema),
+  operator instances and action registrations (name, type, label, description). Built by `CatalogBuilder`
+  (`Build()`, or `BuildAsync(ICatalogStore)`: code plus the store's event/context schemas, code wins, saved back with
+  upserts); the `Catalog` constructor enforces the invariants: broken links in code throw (duplicate names, unusable
+  operator/action names, a declared context without a provider, a `ReferencedBy` path that isn't a field), the same in
+  stored entries become `Problems` that fail only the rules using them. `TryGetEvent/ContextProvider/Operator/Action`,
+  `TryGetContext(eventType, name)` (only declared contexts), `ToDocument()`/`ToJson()` for UIs and stores.
+  Registration is separate from invocation: the engine finds names in the catalog and asks an `IActionFactory` /
+  `IContextProviderFactory` to `Create(registration)`; factories never resolve names.
 - **Conditions** are trees of `ConditionNode`: `OperatorCondition` (operator name + operands),
   `PathOperand`, `ValueOperand`. Built-in operators: `eq`, `changed`, `and`, `or`, `not`, `gt`, `gte`, `lt`, `lte`.
 - **Names ignore case** (`OrdinalIgnoreCase`): operator names, action names, event types and property path
-  segments (exact-case property match wins; ambiguous case-insensitive matches resolve to `null`). Registering
-  operators or action names that differ only in case throws. String values stay case-sensitive.
+  segments (exact-case property match wins; ambiguous case-insensitive matches resolve to `null`). Operator, action,
+  provider or event names that differ only in case fail the catalog's build. String values stay case-sensitive.
 - **Paths** are parsed once by `RulePath` (`Root` Current/Previous/Context, `Context`, `Property`; cached; the only
   place that knows the syntax: never split path strings elsewhere) and resolve via `PathResolver` (compiled, cached
   expressions): `"Price"` = current,
@@ -130,26 +144,32 @@ environment `nuget`) and attaches the packages to the GitHub release.
   CLR type (properties declared as `object`/interfaces/base types). A `PreviousState.FromChanges(current, changes)` passed
   as the previous state is an overlay: paths are looked up in the JSON `changes` (old values of changed fields) first,
   then in `current`. `#` paths are reserved for functions.
-- **Contexts**: `@name.Path` reads related data loaded by an `IContextProvider` registered under `name`
-  (`IContextProviderFactory`: `DirectContextProviderFactory` or DI's `AddContextProvider<T>(name)`, Scoped). The
-  engine prefetches the contexts its rules use (conditions, action conditions, schedule reference paths; collected by
+- **Contexts**: `@name.Path` reads related data the event's schema declares (`Context("name")`, loaded by the provider
+  registered under `LoadedBy(...)` or else `name`; `CatalogBuilder.AddContextProvider<T>(name)`). Undeclared contexts,
+  and contexts on event types not in the catalog, fail the rules that use them. The `EvaluationContext` resolves the
+  declared `ReferencedBy` on the current state and passes it as `ContextRequest.Reference` (`GetReference<T>()`; null
+  without one); providers are created per load by the `IContextProviderFactory`. The engine prefetches the contexts its rules use (conditions, action conditions, schedule reference paths; collected by
   `ContextReferences`) once per event, in parallel, into the `EvaluationContext` cache; actions use
   `GetContextAsync(name)`. A failed load throws `ContextLoadException` when resolved, failing only the rules that use it.
   Contexts have no previous state (`$previous.@x` is a parse error; `changed` on a context throws).
-- **Actions** are referenced in rules as `"action": "<name>"` (`ActionDefinition.Action`) and resolved by name through
-  `IActionFactory` (`DirectActionFactory` for non-DI use), which also lists its `ActionNames`. Names
-  belong to the registration: `ActionNames.GetDefaultName(type)` gives `[ActionName]` or the class name minus an
-  `Action` suffix in kebab-case; `Add(executor, name)` overrides it. Built-in action: `console-log` (`ConsoleLogAction`, for development; not registered by `AddRuleLoom`).
-- **DI** (`AddRuleLoom`): one shared registry per service collection, so it can be called repeatedly. Operators
-  and `IConditionEvaluator` are Singleton (built-ins included; `AddOperator`/`RemoveOperator`/`RemoveBuiltInOperators` apply
-  in call order); actions, `IActionFactory` (`ServiceProviderActionFactory`), `RuleEngine` and
-  `RuleValidator` are Scoped. `AddAction<T>(name?)` registers under the default or given name.
+- **Actions** are referenced in rules as `"action": "<name>"` (`ActionDefinition.Action`), found in the catalog and
+  created by an `IActionFactory` (`DirectActionFactory` for non-DI use: added instances by type, else a parameterless
+  constructor). Names belong to the registration: `ActionNames.GetDefaultName(type)` gives `[ActionName]` or the class
+  name minus an `Action` suffix in kebab-case; `AddAction<T>(name)` overrides it. Built-in action: `console-log`
+  (`ConsoleLogAction`, for development; not added by default).
+- **DI** (`AddRuleLoom`): one shared `CatalogBuilder` per service collection (`AddCatalog(c => ...)`, callable
+  repeatedly); `UseStore<T>()` (Scoped) / `UseStore(instance)`. The catalog is built at startup by a hosted service (or
+  `serviceProvider.StartRuleLoomAsync()` without a host) into an internal holder; `Catalog`, `IActionFactory` /
+  `IContextProviderFactory` (`ActivatorUtilities.GetServiceOrCreateInstance`: registered services as registered, others
+  created with scope dependencies and not disposed by the scope), `RuleEngine` and `RuleValidator` are Scoped;
+  resolving them before startup throws.
 - **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
-  `RuleValidator` (`RuleLoom.Validation`; one `RuleWalker` pass handing each node to small `RuleCheck`s) checks a rule against the registered operators and actions
-  (unknown names, operand counts, incomplete schedules), returning every error with a JSONPath location.
-  `ValidateAsync` also checks paths when the injected `ISchemaStore` has the event's schema (`SchemaPathCheck`; operators get their operands' fields):
-  unknown fields/contexts, unregistered providers, paths into lists → `Errors`; comparisons of built-in operators
-  that can't match and contexts without a schema → `Warnings` (`IsValid` ignores warnings).
+  `RuleValidator(catalog).Validate` (`RuleLoom.Validation`; one `RuleWalker` pass handing each node to small
+  `RuleCheck`s) checks a rule against the catalog: event type not in the catalog, unknown operators/actions, operand
+  counts, incomplete schedules, and paths against the event's and contexts' schemas (`SchemaPathCheck`; operators get
+  their operands' fields): unknown fields/contexts, undeclared or broken contexts, paths into lists → `Errors`;
+  comparisons of built-in operators that can't match and contexts without a schema → `Warnings` (`IsValid` ignores
+  warnings). Every problem comes with a JSONPath location.
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
   in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now. UTC only.
   `ReferencePath` values convert via `ValueConverter` (`DateTime`/`DateTimeOffset`, or strict ISO 8601 strings).
@@ -161,25 +181,20 @@ environment `nuget`) and attaches the packages to the GitHub release.
   and other features must use them rather than `object.Equals` or ad-hoc parsing.
 - **Schemas** (`RuleLoom.Schemas`): `class XSchema : EventSchema<TDto>` configures `Event(name)` (required),
   `Field(o => o.A.B)` (`Label`/`Description`/`Ignore`) and `Context(name)` (a relation: `ReferencedBy(o => o.Id)` or
-  `o => new { o.A, o.B }`; context fields are described with their provider); `Build(options)`
+  `o => new { o.A, o.B }`; `LoadedBy(provider)`); `Build(options)`
   generates an `EventSchemaDefinition` from how `TDto` is serialized (Web defaults unless options are given; numbers
   not typed as strings; null-oblivious types non-nullable), adds configured titles and descriptions (no automatic labels) and
   `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`). `ToJson()`/`Parse` round-trip;
-  field names are JSON names. Contexts are described by their providers: `ContextDescription<T>` (`Label`/`Description`/
-  `Field(...)`) builds a `ContextSchemaDefinition` (`x-ruleloom-context`; `IsMany` for collections); both inherit
-  `SchemaDefinition` (`Label`, `Description`, `Fields`, `ToJson`). `SchemaCollection` gathers event schema classes
-  (assembly scan) into a `SchemaSet` (`Events`, `Contexts`; `ToJson()` one array, `SchemaSet.Parse`).
-  `ISchemaStore` keeps both: `Get/List/SaveEventAsync`, `Get/List/SaveContextAsync`.
-  `ISchemaStore` (+ `InMemorySchemaStore`) keeps schemas where the engine runs; DI's `AddSchemas(s => s.Add<T>() /
-  AddFromAssemblyOf<T>() / AddJson(json) / UseStore<T>())` registers sources and storage separately; registered
-  providers' schemas (`IContextProvider.GetSchema(name)`) are sources too, read from a scope: the in-memory store
-  starts with the sources (created on first use); your own store gets them at startup (`SchemaSourcesStartup` hosted service, or
-  `serviceProvider.SaveRuleLoomSchemasAsync()` without a host). `RuleLoom` references `RuleLoom.Schemas`:
-  `RuleEngine` takes an optional `ISchemaStore` and wraps the context providers (`SchemaReferencingProviders`): the
-  event's schema picks the provider (`Context("toAccount").LoadedBy("account")`, else the context name) and its declared
-  reference is resolved on the current state and passed as `ContextRequest.Reference`
-  (`GetReference<T>()`); null without one. Storage is RuleLoom-provided (in-memory now; publishing and storage packages
-  in 0.7).
+  field names are JSON names. Context data is described by its type: `class XSchema : ContextSchema<T>` (constructor:
+  `Label`/`Description`/`Field(...)`) builds a `ContextSchemaDefinition` under the provider's name
+  (`x-ruleloom-context`; `IsMany` for collections); both inherit `SchemaDefinition` (`Label`, `Description`, `Fields`,
+  `ToJson`). Schemas describe data; descriptors (`ActionDescriptor<TAction>`) describe code. `CatalogBuilder` finds
+  descriptions next to what they describe (the action's / provider's / data type's assembly, or `AddFromAssemblyOf`;
+  public types only; two for one type fail the build), or takes them explicitly (`AddAction<T, TDescriptor>`,
+  `AddContextProvider<T, TSchema>`). `SchemaCollection` gathers event schema classes (assembly scan) into a
+  `CatalogDocument` holding only events, without the engine (producers). `CatalogDocument` (`Events`, `Contexts`,
+  `Operators`, `Actions`, `Problems`; every section optional; `ToJson`/`Parse`) is the format of stores, UIs and later
+  publishing; `ICatalogStore` (`LoadAsync`, `SaveAsync` upserting per entry, never deleting; `InMemoryCatalogStore`).
 - **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is
   validated before deserialization (`RuleJsonValidator`); invalid rules throw `RuleParseException` (a `JsonException`)
   whose `Path` is the JSONPath of the problem. `Id`, `Name`, `EventType` and `Condition` are required, and every condition
@@ -201,10 +216,17 @@ environment `nuget`) and attaches the packages to the GitHub release.
   (`SendEmailAction` → `send-email`) or `[ActionName("...")]`; read parameters with
   `action.GetParameter<T>(name)` / `TryGetParameter<T>` (plain CLR values, converted via `ValueConverter`);
   return `ActionResult.Success()` or `ActionResult.Failed(...)`.
+- **Action descriptor**: `class XDescriptor : ActionDescriptor<XAction>` (constructor: `Label`, `Description`; parameters
+  in 0.7), shipped next to the action.
 - **Context provider**: derive from `ContextProvider<TContext>` / `CollectionContextProvider<TItem>` (typed `LoadAsync`;
-  override `Describe(ContextDescription<T>)` for labels and ignores; the type gives the schema) or implement
-  `IContextProvider` (`ValueTask<object?> GetAsync(ContextRequest, CancellationToken)`; no schema unless `GetSchema` is
-  implemented); read the subject with `request.Resolve(path)`; return the context, a collection, or `null` (not found). Actions read contexts with `GetContextAsync<T>(name)`.
+  the type gives the schema, a `ContextSchema<T>` adds labels and ignores) or implement `IContextProvider`
+  (`ValueTask<object?> GetAsync(ContextRequest, CancellationToken)`; no schema unless the store holds one); read the
+  declared reference with `request.GetReference<T>()` or the subject with `request.Resolve(path)`; return the context, a
+  collection, or `null` (not found). Actions read contexts with `GetContextAsync<T>(name)`.
+- **Factories**: implement `IActionFactory` / `IContextProviderFactory` (`Create(registration)`) to create instances
+  another way (e.g. another container).
+- **Catalog store**: implement `ICatalogStore` (in `RuleLoom.Schemas`); `SaveAsync` must upsert per entry and never
+  delete.
 
 ## Code Style
 
@@ -231,6 +253,8 @@ All documentation lives in `docs/` (index: `docs/README.md`):
 - `docs/specs/` — authoritative design specs (`YYYY-MM-DD-<topic>-design.md`), each with a
   Deviations section once implemented.
 - `docs/proposals/` — designs not yet scheduled. `docs/guides/` — user-facing guides.
+- `GLOSSARY.md` (repo root) — the domain language, one meaning per term; `docs/adr/` — short records of hard-to-reverse
+  decisions. Use the glossary's terms in code, docs and issues.
 - Skills that write specs or plans elsewhere by default (e.g. `docs/superpowers/specs/`, `./plans/`)
   must write to `docs/specs/` instead.
 - `CHANGELOG.md` is generated by release-please from the squash-merged PR titles. Never edit it in a

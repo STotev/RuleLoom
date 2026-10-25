@@ -3,7 +3,7 @@
 **Issue:** [#109 The catalog: one registry for the engine, validator and UI](https://github.com/STotev/RuleLoom/issues/109)
 **Parent PRD:** [#87 Schemas and contexts (0.6)](https://github.com/STotev/RuleLoom/issues/87)
 **Date:** 2026-10-25
-**Status:** Draft
+**Status:** Implemented
 **Decisions recorded in:** [`GLOSSARY.md`](../../GLOSSARY.md),
 [ADR 0001](../adr/0001-catalog-store-is-a-source-code-wins.md),
 [ADR 0002](../adr/0002-registration-separate-from-invocation.md)
@@ -143,8 +143,8 @@ These keep the later producer/consumer setup additive. None of them adds behavio
 
 public abstract class ContextSchema<T> : IContextSchema            // replaces ContextDescription<T>
 {
-    protected ContextSchema<T> Label(string label);
-    protected ContextSchema<T> Description(string description);
+    protected void Label(string label);
+    protected void Description(string description);
     protected FieldBuilder Field<TProperty>(Expression<Func<T, TProperty>> property);
     public ContextSchemaDefinition Build(string name, bool isMany = false, JsonSerializerOptions? options = null);
 }
@@ -245,8 +245,8 @@ public interface IActionDescriptor                                  // lets the 
 
 public abstract class ActionDescriptor<TAction> : IActionDescriptor where TAction : IAction
 {
-    protected ActionDescriptor<TAction> Label(string label);
-    protected ActionDescriptor<TAction> Description(string description);
+    protected void Label(string label);
+    protected void Description(string description);
 }
 
 public interface IConditionOperator
@@ -357,7 +357,11 @@ public sealed class CustomerSchema : ContextSchema<Customer>
 
 public sealed class SendEmailDescriptor : ActionDescriptor<SendEmailAction>
 {
-    public SendEmailDescriptor() => Label("Send email").Description("Sends a templated email.");
+    public SendEmailDescriptor()
+    {
+        Label("Send email");
+        Description("Sends a templated email.");
+    }
 }
 
 // Without DI
@@ -408,4 +412,22 @@ services.AddRuleLoom(o => o
 
 ## Deviations
 
-None yet.
+- **`Label` and `Description` return `void`** on `ContextSchema<T>` and `ActionDescriptor<TAction>`, not the builder.
+  A subclass can't chain a protected method through a base-typed result (`Label("x").Description("y")` is CS1540), so
+  every user would have hit it. Each call is its own statement.
+- **Context schemas are also found in the data type's assembly**, not only the provider's: a package may ship the type
+  with its schema while the provider lives in the app (or the other way round). Discovery sees **public** types only,
+  so a non-public description is used only when given explicitly.
+- **Registrations sit in their kind's namespace**: `ActionRegistration` in `RuleLoom.Abstractions.Action`,
+  `ContextProviderRegistration` in `RuleLoom.Abstractions.Context` (like `IAction` and `IContextProvider`); `Catalog` and
+  `CatalogContext` are at the root.
+- **`EvaluationContext` takes the catalog**: `new EvaluationContext(current, previous, eventType, catalog,
+  contextProviders)` replaces the constructor that took a provider factory. Contexts are looked up through
+  `Catalog.TryGetContext`, the declared reference is resolved there (it was `SchemaReferencingProviders`), and a provider
+  that can't be created fails the load like a provider exception (`ContextLoadException`). `ContextRequest.Name` is the
+  declared context name.
+- **`FieldDefinition.Find(fields, name)`** is public in `RuleLoom.Schemas`: the property-path lookup rule (exact case
+  wins, else one case-insensitive match) is shared by the catalog's `ReferencedBy` check and the validator, instead of
+  being written twice.
+- **The ASP.NET Core sample got event schemas** (`Events.cs`): rules on events that aren't in the catalog are now
+  invalid, so without them every sample rule would have been rejected. Its schema export/import story is #95's.

@@ -41,8 +41,8 @@ the rules for them.
 
 | Layer | What belongs here |
 |---|---|
-| **Core library** | Engine, operators, conditions, value comparison, path resolution (on .NET objects *and* JSON), JSON rule format and parsing, validation, results, scheduling *calculation*, action naming, the schema model and builder, the transport-free catalogue, the schema store contract (`ISchemaStore`) with an in-memory store, contracts consumers build on |
-| **Optional packages** | DI (`RuleLoom.Extensions.DependencyInjection`, done), ASP.NET Core endpoints for the catalogue and schema registration, schema publishing (HTTP first) and schema storage packages (e.g. PostgreSQL), a state snapshotter (EF Core integration later) and, later still, an operations dashboard with storage implementations |
+| **Core library** | Engine, operators, conditions, value comparison, path resolution (on .NET objects *and* JSON), JSON rule format and parsing, validation, results, scheduling *calculation*, action naming, the schema model and builder, the transport-free catalog (with its document and the catalog store contract `ICatalogStore`, with an in-memory store), contracts consumers build on |
+| **Optional packages** | DI (`RuleLoom.Extensions.DependencyInjection`, done), ASP.NET Core endpoints for the catalog and schema registration, schema publishing (HTTP first) and schema storage packages (e.g. PostgreSQL), a state snapshotter (EF Core integration later) and, later still, an operations dashboard with storage implementations |
 | **Consumer-built** | The service that runs the rules and its hosting, transport between services, **rule storage**, **multi-tenancy**, a custom schema store if the shipped ones don't fit, auth on the endpoints, dispatching scheduled actions (unless they use an integration package) |
 | **Separate projects** | The **end-user rule-authoring UI**, built by the maintainer as its own project on top of the REST API above |
 
@@ -68,7 +68,7 @@ For schemas the reference is Swagger / Swashbuckle: schemas generated at runtime
 | **Contexts** | An event has a **subject** (what changed: current and previous state, sent by the producer) and named **contexts**: related entities such as an order's customer or an ad's watchers, current state only, single or a collection, wherever they live (another service, the same service's repository). Rules use `@name.Path`. The engine loads a context through a **context provider** registered by name (`AddContextProvider<T>("customer")`), prefetched once per event when rules use it; actions load any context on demand. The **event schema declares the relation**: `Context("customer").ReferencedBy(o => o.CustomerId)` (and, when one provider serves several contexts, `Context("toAccount").LoadedBy("account")`), or a composite reference `ReferencedBy(o => new { o.Address.Country, o.Address.Postcode })` (EF Core style), optional for contexts that need none. The engine passes the resolved reference to the provider, so one provider serves several contexts and events. A **context's fields are described with its provider** (from `ContextProvider<T>`'s type), once, where the data comes from. The model is the same in a monolith, a single service or a service shared by others (PRD #87) | Rules need data from several entities, but shipping whole aggregates with every event is expensive. Previous state matters only for the subject, so related data can be loaded fresh and only when used. The producer knows how its event relates to other entities; the provider knows their shape |
 | **Path sigils** | `$` for RuleLoom's variables (`$current`, `$previous`, later `$event`), `@` for consumer-defined contexts, `#` reserved for functions | Consumer names never collide with built-ins |
 | **Smaller previous state** | Producers may send `current` plus only the **changed fields** with their old values; the engine rebuilds `$previous`. A full previous state still works (PRD #87) | Halves typical event payloads without losing `changed` and `$previous` |
-| **Catalogue and REST API** | Core gets a transport-free **catalogue** (event schemas, operators with operand counts, actions with parameters, validate a rule) and DTOs. An optional ASP.NET Core package maps it: `app.MapRuleLoom("/ruleloom")` → `GET schemas`, `GET operators`, `GET actions`, `POST rules/validate`, `POST schemas` (registration), returning the route group so the consumer adds auth and versioning. **No rule CRUD** | The authoring UI needs discovery and validation; rule storage is the consumer's, so the UI saves through the consumer's API, which calls RuleLoom to validate |
+| **Catalog and REST API** | Core gets a transport-free **catalog** (event schemas, operators with operand counts, actions with parameters, validate a rule) and DTOs. An optional ASP.NET Core package maps it: `app.MapRuleLoom("/ruleloom")` → `GET schemas`, `GET operators`, `GET actions`, `POST rules/validate`, `POST schemas` (registration), returning the route group so the consumer adds auth and versioning. **No rule CRUD** | The authoring UI needs discovery and validation; rule storage is the consumer's, so the UI saves through the consumer's API, which calls RuleLoom to validate |
 | **State snapshotter** | Starts as a small **explicit API** that captures previous and current state (as JSON, optionally through the schema DTO mapping). EF Core change-tracking integration is a later optional package if there's demand | Explicit capture works anywhere; JSON snapshots need no classes on the receiving side |
 | **Execution history** | Near term: a small core **observer hook** (or OpenTelemetry activities/metrics; to choose in its PRD) so consumers can record results wherever they like. The **operations dashboard** and an execution store with optional implementations come later, Hangfire-style | Consumers already get `RuleEngineResult`; a hook covers recording without committing the library to storage yet |
 | **Event envelope** | A `RuleEvent` contract in Abstractions: `EventType`, `Current`, `Previous`, plus optional `EventId`, `Subject`, `Source`, `OccurredAt` and consumer-defined `Metadata` (e.g. a tenant ID). `ExecuteAsync(RuleEvent, rules)` is added beside the existing overloads; actions read it from `EvaluationContext.Event`, and rules reach it with `$event.` paths (`$event.Metadata.region`, `$event.OccurredAt`). The library defines the contract and its JSON shape, never the transport; deduplication by `EventId` stays with the consumer or transport. Planned for 0.7 | Decided after the ASP.NET Core spike (#70, findings in its [spec](specs/2026-10-14-aspnetcore-sample-design.md#findings)): tenant and entity ID had no place in the library, actions couldn't see them, and duplicate events re-ran actions without an ID to deduplicate on. `Subject` also gives scheduled-action keys their entity part |
@@ -109,22 +109,22 @@ know what a tenant is; a name could equally be a region or a product line):
 
 ```csharp
 foreach (var tenant in tenants)
-    services.AddRuleLoom(tenant, rules => rules.AddAction<SendEmailAction>());
+    services.AddRuleLoom(tenant, rules => rules.AddCatalog(catalog => catalog.AddAction<SendEmailAction>()));
 
 var engine = provider.GetRequiredKeyedService<RuleEngine>(tenantId);
 ```
 
-- **What would differ per instance:** the registered operators and actions (so the catalogue, authoring UI and
+- **What would differ per instance:** the catalog (its operators and actions, so the authoring UI and
   `RuleValidator` only offer what that tenant has), action implementations or settings (e.g. each tenant's SMTP),
-  the `ISchemaStore`, the `TimeProvider` or a default time zone (ties into the time semantics review), and later the
+  the catalog store, the `TimeProvider` or a default time zone (ties into the time semantics review), and later the
   execution history.
 - **Today's alternative** (Quartz's "group per tenant"): one shared engine, with the tenant ID in the event's
   metadata (`RuleEvent.Metadata`). The ASP.NET Core spike worked this way without friction, so it showed no need
   for named instances yet.
 - **Costs:** `AddRuleLoom` keeps one shared registry per service collection today, so it would need keyed
-  registrations; the catalogue endpoints would need to know the instance (e.g. `MapRuleLoom("/{tenant}/ruleloom")`);
+  registrations; the catalog endpoints would need to know the instance (e.g. `MapRuleLoom("/{tenant}/ruleloom")`);
   adding instances at runtime (Quartz's `ISchedulerRuntime`) is a further step.
-- **When to decide:** before the catalogue and endpoints (0.6–0.7) settle their shape.
+- **When to decide:** before the catalog and endpoints (0.6–0.7) settle their shape.
 
 ### Typed rule consumers and dispatch (in-process, post-1.0)
 Raised 2026-10-09, inspired by MassTransit consumers and FluentValidation. For a domain service using the engine
@@ -172,18 +172,18 @@ work in, with forms built from that application's schemas. Three needs are disti
 
 Options for scope:
 1. **Part of an event's identity**: the schema names its scope (e.g. `Event("OrderPlaced").In("orders")`), events are
-   keyed by *(scope, event type)*, rules carry the scope, the catalogue filters by it, and the engine matches only rules of
+   keyed by *(scope, event type)*, rules carry the scope, the catalog filters by it, and the engine matches only rules of
    the event's scope. Fits `RuleEvent.Source` (0.7) and removes the prefixing boilerplate.
 2. **Named instances** per application (above), when applications need different actions, operators or providers.
 3. Both: scopes for events and rules, named instances only where capabilities differ.
 
 A standard *(tenant, scope, event type)* key might also make an optional rule-store contract worthwhile, to cut the
-boilerplate of loading the right rules and schemas. **To decide in the 0.7 PRD**, with the catalogue and `RuleEvent`.
+boilerplate of loading the right rules and schemas. **To decide in the 0.7 PRD**, with the catalog and `RuleEvent`.
 
 ### Per-event overrides of context fields
 Raised 2026-10-18 during #92. A context's fields are described once, with its provider; an event may want to hide some
 of them or label them differently for its rule authors (e.g. ignore a customer's internal fields for one event, or call
-"tier" "Buyer tier" on a marketplace event). Not in 0.6; to consider with the 0.7 catalogue.
+"tier" "Buyer tier" on a marketplace event). Not in 0.6; to consider with the 0.7 catalog.
 
 ### `AutoMap()`: opt-in conventions for schemas
 Raised 2026-10-19, inspired by Elasticsearch's `AutoMap()` for index templates (a mapping built from a POCO). Schemas are

@@ -3,7 +3,7 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.5 → 0.6](#05--06): paths starting with `@` or `#` are no longer property names
+- [0.5 → 0.6](#05--06): the engine, validator and DI run on a catalog; paths starting with `@` or `#` are no longer property names
 - [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
 - [0.3 → 0.4](#03--04): actions are named by registration, `IAction`, dependency injection
 - [0.2 → 0.3](#02--03): API hardening (results, operators, validation, paths, parameters)
@@ -13,12 +13,73 @@ first, with what to change. Each version's GitHub release notes link the pull re
 
 ## 0.5 → 0.6
 
+### The engine, the validator and `AddRuleLoom` run on a catalog
+
+What rules can use (event schemas, context providers, operators and actions) now lives in one `Catalog`, built once
+with `CatalogBuilder` and fixed afterwards. Names are looked up in the catalog; factories only create instances from
+the catalog's registrations.
+
+Without DI:
+
+```csharp
+// 0.5
+var engine = new RuleEngine(
+    new ConditionEvaluator(BuiltInOperators.Create()),
+    new DirectActionFactory().Add(new SendEmailAction(mailer), "notify"));
+var validator = new RuleValidator(BuiltInOperators.Create(), actionFactory);
+
+// 0.6
+var catalog = new CatalogBuilder()                 // starts with the built-in operators
+    .AddAction<SendEmailAction>("notify")
+    .Build();
+var engine = new RuleEngine(catalog, new DirectActionFactory().Add(new SendEmailAction(mailer)));
+var validator = new RuleValidator(catalog);
+```
+
+With DI, the registration methods move into `AddCatalog`:
+
+```csharp
+// 0.5
+services.AddRuleLoom(rules => rules.AddAction<SendEmailAction>().AddOperator<ContainsOperator>());
+
+// 0.6
+services.AddRuleLoom(rules => rules.AddCatalog(catalog => catalog
+    .AddAction<SendEmailAction>()
+    .AddOperator<ContainsOperator>()));
+```
+
+| 0.5 | 0.6 |
+|---|---|
+| `new RuleEngine(evaluator, actionFactory, timeProvider)` | `new RuleEngine(catalog, actions?, contextProviders?, timeProvider?)` |
+| `new ConditionEvaluator(operators)` | `new ConditionEvaluator(catalog)`; the engine builds its own |
+| `new RuleValidator(operators, actionFactory)` | `new RuleValidator(catalog)` |
+| `IActionFactory.TryGetAction(name, out action)`, `ActionNames` | `IActionFactory.Create(ActionRegistration)`; names are in `catalog.Actions` / `catalog.TryGetAction(name, ...)` |
+| `DirectActionFactory.Add(action, name?)` | `DirectActionFactory.Add(action)`: an instance per type; types with a parameterless constructor need none. The name goes on `CatalogBuilder.AddAction<T>(name)` |
+| `RuleLoomBuilder.AddAction`/`AddOperator`/`RemoveOperator`/`RemoveBuiltInOperators` | the same methods on `CatalogBuilder`, inside `AddCatalog(...)` |
+| `IConditionEvaluator` registered by `AddRuleLoom` | not registered; resolve `RuleEngine` (or `Catalog`) |
+| Operators created by DI (`AddOperator<T>()` with constructor dependencies) | operators need a parameterless constructor, or add an instance: `AddOperator(new MyOperator(...))` |
+
+Other changes:
+
+- **The catalog is built when the host starts.** A broken catalog (two actions with the same name, an event declaring a
+  context without a provider) stops the app from starting. In an app without a host, call
+  `await serviceProvider.StartRuleLoomAsync()` once at startup; resolving `RuleEngine` before that throws.
+- **Actions are no longer registered as services by `AddRuleLoom`.** They're created in each scope with their
+  dependencies, or resolved as registered when you register the type yourself. Register disposable actions yourself,
+  so the scope disposes them.
+- **Rules on an event type that isn't in the catalog are invalid.** `RuleValidator.Validate` reports
+  `Event type 'X' isn't in the catalog.` at `$.eventType`. The engine still runs them. Add an `EventSchema<T>` for
+  each event you validate rules for (`AddEvent<T>()` or `AddFromAssemblyOf<T>()`).
+
+What to change: build a catalog (or move registrations into `AddCatalog`), pass it to the engine and the validator,
+and add event schemas for the events your rules are validated against.
+
 ### Paths starting with `@` or `#` are no longer property names
 
 `@name` now reads a [context](json-rules.md#contexts) (related data loaded by a provider), and `#` is reserved for
 functions. Before, `"@type"` or `"#tag"` at the start of a path read a property with that name.
 
-- `@name...` at the start of a path, without a provider registered for `name`, now fails the rule.
+- `@name...` at the start of a path, on an event whose schema doesn't declare the context `name`, now fails the rule.
 - Paths starting with `#`, and `@` right after `$current.`/`$previous.`, are rejected when the rule is parsed.
 - `@` and `#` later in a path (`Payload.@type`) still read properties.
 

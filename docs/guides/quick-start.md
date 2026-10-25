@@ -16,8 +16,9 @@ dotnet add package RuleLoom.Extensions.DependencyInjection   # optional: service
 
 | Package | Use it for |
 |---|---|
-| `RuleLoom.Abstractions` | Contracts and models (no dependencies) |
-| `RuleLoom` | The engine, built-in operators, `ConsoleLogAction`, `RuleValidator` |
+| `RuleLoom.Schemas` | Event and context schemas, the catalog document and store (no dependencies) |
+| `RuleLoom.Abstractions` | Contracts and models, including the `Catalog` |
+| `RuleLoom` | The engine, `CatalogBuilder`, built-in operators, `ConsoleLogAction`, `RuleValidator` |
 | `RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(...)` |
 
 ## Your first rule
@@ -26,10 +27,9 @@ dotnet add package RuleLoom.Extensions.DependencyInjection   # optional: service
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
+using RuleLoom;
 using RuleLoom.Actions;
 using RuleLoom.Engine;
-using RuleLoom.Evaluators;
-using RuleLoom.Operators;
 
 var rule = new RuleDefinition
 {
@@ -44,9 +44,12 @@ var rule = new RuleDefinition
     Actions = [new ActionDefinition { Action = "console-log", Parameters = { ["message"] = "Price dropped!" } }]
 };
 
-var engine = new RuleEngine(
-    new ConditionEvaluator(BuiltInOperators.Create()),   // eq, changed, and, or, not, gt, gte, lt, lte
-    new DirectActionFactory([new ConsoleLogAction()]));         // registered as "console-log"
+// The catalog: what rules can use. It starts with the operators eq, changed, and, or, not, gt, gte, lt, lte.
+var catalog = new CatalogBuilder()
+    .AddAction<ConsoleLogAction>()                          // registered as "console-log"
+    .Build();
+
+var engine = new RuleEngine(catalog);
 
 var previous = new { Price = 120m };
 var current = new { Price = 99m };
@@ -65,6 +68,10 @@ if (result.HasFailures) { /* log or alert */ }
 ```
 
 Failures are reported in the result, not thrown: one broken rule or action doesn't stop the others.
+
+The **catalog** is the vocabulary rules are written in: event types (with their schemas), context providers,
+operators and actions. It's built once and fixed afterwards; the engine and the validator run on it, and
+`catalog.ToJson()` describes it for an authoring UI.
 
 ## Rules in JSON
 
@@ -115,8 +122,29 @@ public sealed class SendEmailAction(IEmailService email) : IAction         // "a
 }
 ```
 
-Use `[ActionName("notify")]` on the class for a different default, or give a name when registering:
-`new DirectActionFactory().Add(new SendEmailAction(email), "notify")`.
+Add it to the catalog with `AddAction<SendEmailAction>()`. Use `[ActionName("notify")]` on the class for a different
+default, or give a name when adding it: `AddAction<SendEmailAction>("notify")`.
+
+The engine creates actions with an `IActionFactory`. Without DI, `DirectActionFactory` creates actions that have a
+parameterless constructor and returns the instances you add for the others:
+
+```csharp
+var engine = new RuleEngine(catalog, new DirectActionFactory().Add(new SendEmailAction(email)));
+```
+
+Describe an action for authoring UIs with an `ActionDescriptor<TAction>` next to it; the catalog finds it in the
+action's assembly:
+
+```csharp
+public sealed class SendEmailDescriptor : ActionDescriptor<SendEmailAction>
+{
+    public SendEmailDescriptor()
+    {
+        Label("Send email");
+        Description("Sends a templated email.");
+    }
+}
+```
 
 An action can have its own `condition` (evaluated after the rule's) and a `schedule`:
 
@@ -141,33 +169,38 @@ public sealed class ContainsOperator : IConditionOperator
         ctx.GetValue(0) is string text && ctx.GetValue(1) is string part && text.Contains(part, StringComparison.Ordinal);
 }
 
-var evaluator = new ConditionEvaluator([.. BuiltInOperators.Create(), new ContainsOperator()]);
+var catalog = new CatalogBuilder().AddOperator<ContainsOperator>().Build();
 ```
 
-`ctx.GetValue(i)` reads a value, `ctx.Test(i)` a condition, `ctx.GetPath(i)` a path, and `ctx.AreEqual` /
+`RemoveOperator("name")` and `RemoveBuiltInOperators()` adjust the operator set, in call order. `ctx.GetValue(i)` reads a value, `ctx.Test(i)` a condition, `ctx.GetPath(i)` a path, and `ctx.AreEqual` /
 `ctx.TryCompare` use the shared comparison rules. Unit-test an operator by building an `OperatorContext` yourself:
 `new OperatorContext(condition, new EvaluationContext(new { Title = "Summer sale" }))`.
 
 ## Dependency injection
 
 ```csharp
-services.AddRuleLoom(rules => rules
-    .AddAction<SendEmailAction>()            // resolved per scope, so it can inject scoped services
-    .AddOperator<ContainsOperator>());       // built-in operators are registered automatically
+services.AddRuleLoom(rules => rules.AddCatalog(catalog => catalog
+    .AddAction<SendEmailAction>()            // created in each scope, so it can inject scoped services
+    .AddOperator<ContainsOperator>()));      // built-in operators are included
 
 // In a request or message-handler scope:
 var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
 ```
 
-`RemoveOperator("name")` and `RemoveBuiltInOperators()` adjust the operator set; `AddAction<T>("name")` registers an
-action under another name.
+The catalog is built when the host starts, so a broken catalog stops the app from starting; in an app without a host
+(e.g. a plain console app), call `await serviceProvider.StartRuleLoomAsync()` once at startup. Actions and context
+providers are created in the scope: as registered, when you register their type yourself (do so for disposable ones),
+otherwise with their dependencies from the scope.
 
 ## Contexts: related data
 
-Rules can use data related to the event's subject, loaded only when a rule needs it:
+Rules can use data related to the event's subject, loaded only when a rule needs it. The event's schema declares
+the context (next section) and a provider loads it:
 
 ```csharp
-services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("customer"));
+services.AddRuleLoom(rules => rules.AddCatalog(catalog => catalog
+    .AddEvent<OrderPlacedSchema>()                         // declares Context("customer")
+    .AddContextProvider<CustomerProvider>("customer")));
 ```
 
 ```json
@@ -179,8 +212,8 @@ See [Contexts](json-rules.md#contexts) for writing providers and how loading wor
 ## Event schemas
 
 Describe each event in a schema class (package `RuleLoom.Schemas`): its fields come from your DTO, and it declares the
-contexts it relates to and how it refers to them. Register schemas where the engine runs, so providers receive each
-event's reference:
+contexts it relates to and how it refers to them. Add the schemas to the catalog, so providers receive each event's
+reference and the validator checks paths:
 
 ```csharp
 public sealed class TransferMadeSchema : EventSchema<TransferDto>
@@ -194,45 +227,47 @@ public sealed class TransferMadeSchema : EventSchema<TransferDto>
     }
 }
 
-services.AddRuleLoom(rules => rules
-    .AddSchemas(s => s.AddFromAssemblyOf<TransferMadeSchema>())     // sources; kept in memory unless .UseStore<MyStore>()
-    .AddContextProvider<AccountProvider>("account"));                // loads both accounts, each with its own reference
+services.AddRuleLoom(rules => rules.AddCatalog(catalog => catalog
+    .AddFromAssemblyOf<TransferMadeSchema>()                         // event schemas, actions and their descriptions
+    .AddContextProvider<AccountProvider>("account")));               // loads both accounts, each with its own reference
 ```
 
-With your own store (`.UseStore<MyStore>()`), the sources are saved into it when the app starts; in an app without a
-host (e.g. a plain console app), call `await serviceProvider.SaveRuleLoomSchemasAsync()` once at startup.
-A context is described by the provider that loads it; every event that relates to it shares the description. A typed
-provider's fields come from its type; `Describe` adds labels and leaves fields out:
+A context's data is described by its type: a typed provider's fields come from what it loads, and a
+`ContextSchema<T>` (found next to the provider or its type) adds labels and leaves fields out. Every provider of the
+type, and every event that relates to it, shares the schema:
 
 ```csharp
 public sealed class AccountProvider(IAccounts accounts) : ContextProvider<AccountDto>
 {
     protected override async ValueTask<AccountDto?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
         await accounts.FindAsync(request.GetReference<string>()!, cancellationToken);
+}
 
-    protected override void Describe(ContextDescription<AccountDto> context)
+public sealed class AccountSchema : ContextSchema<AccountDto>
+{
+    public AccountSchema()
     {
-        context.Label("Account");
-        context.Field(a => a.Balance).Label("Balance");
-        context.Field(a => a.InternalRiskScore).Ignore();
+        Label("Account");
+        Field(a => a.Balance).Label("Balance");
+        Field(a => a.InternalRiskScore).Ignore();
     }
 }
 ```
 
-With `AddSchemas`, each provider's description is saved into the store under the name it's registered with (`account`).
-For a collection, derive from `CollectionContextProvider<TItem>`. `new SchemaCollection().AddFromAssemblyOf<TransferMadeSchema>().ToJson()`
-exports event schemas as JSON Schema documents, for another service or an authoring UI.
+For a collection, derive from `CollectionContextProvider<TItem>`. To keep the catalog in a database, implement
+`ICatalogStore` and add `.UseStore<MyStore>()`: the catalog is built from your code plus what the store holds (code
+wins), and saved back, at startup. `catalog.ToJson()` writes everything as one document for an authoring UI.
 
 ## Validating rules before saving them
 
 ```csharp
-var validator = new RuleValidator(operators, actionFactory);     // or resolve RuleValidator from DI
+var validator = new RuleValidator(catalog);                       // or resolve RuleValidator from DI
 foreach (var error in validator.Validate(rule).Errors)
     Console.WriteLine($"{error.Path}: {error.Message}");          // e.g. "$.actions[0].action: No action is registered under the name 'send-sms'."
 ```
 
-With schemas registered (`AddSchemas`), `await validator.ValidateAsync(rule)` also checks the rule's paths against
-its event's schema and its contexts' schemas, and reports comparisons that can never match as `Warnings`.
+The rule's event type must be in the catalog. Its paths are checked against the event's schema and its contexts'
+schemas, and comparisons that can never match are reported as `Warnings`.
 
 ## Next steps
 

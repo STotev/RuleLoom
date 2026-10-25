@@ -33,7 +33,7 @@ runs or schedules their actions.
 ```
 
 ```csharp
-services.AddRuleLoom(rules => rules.AddAction<SendEmailAction>());   // "send-email"
+services.AddRuleLoom(rules => rules.AddCatalog(catalog => catalog.AddAction<SendEmailAction>()));   // "send-email"
 
 var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
 var result = await engine.ExecuteAsync("ProductUpdated", current, previous, [RuleJsonParser.Parse(json)]);
