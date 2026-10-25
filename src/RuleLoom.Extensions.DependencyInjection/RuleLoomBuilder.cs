@@ -1,25 +1,21 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using RuleLoom.Abstractions.Action;
-using RuleLoom.Abstractions.Condition;
-using RuleLoom.Abstractions.Context;
 using RuleLoom.Schemas;
 
 namespace RuleLoom.Extensions.DependencyInjection;
 
 /// <summary>
-/// Registers actions, operators and context providers for <c>AddRuleLoom</c>. The built-in operators are registered automatically;
-/// operator additions and removals apply in call order.
+/// Configures RuleLoom for <c>AddRuleLoom</c>: the catalog (events, context providers, operators, actions) and where it
+/// is kept.
 /// </summary>
 public sealed class RuleLoomBuilder
 {
-    private readonly RuleLoomRegistry _registry;
+    private readonly CatalogBuilder _catalog;
 
-    internal RuleLoomBuilder(IServiceCollection services, RuleLoomRegistry registry)
+    internal RuleLoomBuilder(IServiceCollection services, CatalogBuilder catalog)
     {
         Services = services;
-        _registry = registry;
+        _catalog = catalog;
     }
 
     /// <summary>
@@ -28,95 +24,34 @@ public sealed class RuleLoomBuilder
     public IServiceCollection Services { get; }
 
     /// <summary>
-    /// Registers <typeparamref name="TAction"/> (Scoped) under <paramref name="name"/>, or under its default name
-    /// (<see cref="Abstractions.Action.ActionNames.GetDefaultName"/>) when omitted. The same type may be registered
-    /// under several names.
+    /// Configures the catalog. Every call (also from other <c>AddRuleLoom</c> calls) configures the same builder; the
+    /// catalog is built once, at startup.
     /// </summary>
-    /// <exception cref="ArgumentException">The name is already used by another action (names are case-insensitive).</exception>
-    public RuleLoomBuilder AddAction<TAction>(string? name = null) where TAction : class, IAction
+    public RuleLoomBuilder AddCatalog(Action<CatalogBuilder> configure)
     {
-        _registry.AddAction(name ?? Abstractions.Action.ActionNames.GetDefaultName(typeof(TAction)), typeof(TAction));
-        Services.TryAddScoped<TAction>();
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(_catalog);
         return this;
     }
 
     /// <summary>
-    /// Registers <typeparamref name="TProvider"/> (Scoped) as the provider of the context <paramref name="name"/>,
-    /// which rules use as <c>@name</c>. The same type may provide several contexts. With <see cref="AddSchemas"/>, the
-    /// context's schema (<see cref="IContextProvider.GetSchema"/>) is saved into the schema store under this name.
+    /// Keeps the catalog in <typeparamref name="TStore"/> (Scoped, e.g. over a <c>DbContext</c>): it is built from code
+    /// plus what the store holds, and saved back, at startup.
     /// </summary>
-    /// <exception cref="ArgumentException">The name is already used by another provider (names are case-insensitive).</exception>
-    public RuleLoomBuilder AddContextProvider<TProvider>(string name) where TProvider : class, IContextProvider
+    public RuleLoomBuilder UseStore<TStore>() where TStore : class, ICatalogStore
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        _registry.AddContextProvider(name, typeof(TProvider));
-        Services.TryAddScoped<TProvider>();
+        Services.Replace(ServiceDescriptor.Scoped<ICatalogStore, TStore>());
         return this;
     }
 
     /// <summary>
-    /// Registers schemas: their sources (event schema classes, exported JSON, and the contexts registered providers
-    /// describe) and where they're kept, an <see cref="ISchemaStore"/> (the in-memory store, Singleton, or your own with
-    /// <see cref="SchemaRegistration.UseStore{TStore}"/>, Scoped). The in-memory store starts with the sources; your own
-    /// store gets them at startup (a hosted service, or <c>SaveRuleLoomSchemasAsync()</c> in apps without a host). The
-    /// engine reads the store, so context providers receive each event's declared reference. Call it once; a later call
-    /// replaces the configuration.
+    /// Keeps the catalog in <paramref name="store"/> (e.g. an <see cref="InMemoryCatalogStore"/>, which must be one
+    /// instance to keep its contents).
     /// </summary>
-    /// <remarks>Providers' descriptions are read when the store is first used (in-memory) or at startup (your own store),
-    /// from a scope that resolves each provider once.</remarks>
-    /// <exception cref="InvalidOperationException">Two sources describe the same event type.</exception>
-    public RuleLoomBuilder AddSchemas(Action<SchemaRegistration>? configure = null)
+    public RuleLoomBuilder UseStore(ICatalogStore store)
     {
-        var registration = new SchemaRegistration();
-        configure?.Invoke(registration);
-
-        // Built now, so mistakes in schema classes or JSON surface when the app is configured.
-        var sources = new SchemaSources(registration.BuildSources(), registration.SerializerOptions, _registry);
-        Services.Replace(ServiceDescriptor.Singleton(sources));
-
-        if (registration.StoreType is { } storeType)
-        {
-            Services.Replace(ServiceDescriptor.Scoped(typeof(ISchemaStore), storeType));
-            Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SchemaSourcesStartup>());
-        }
-        else
-        {
-            Services.Replace(ServiceDescriptor.Singleton<ISchemaStore>(services =>
-            {
-                using var scope = services.CreateScope();
-                return new InMemorySchemaStore(sources.Collect(scope.ServiceProvider));
-            }));
-        }
-
-        return this;
-    }
-
-    /// <summary>
-    /// Adds <typeparamref name="TOperator"/> (Singleton). Its name must not clash with an operator that is still
-    /// registered: to swap out an operator, remove it first (<c>RemoveOperator("eq").AddOperator&lt;MyEquals&gt;()</c>).
-    /// </summary>
-    public RuleLoomBuilder AddOperator<TOperator>() where TOperator : class, IConditionOperator
-    {
-        _registry.AddOperator(typeof(TOperator));
-        return this;
-    }
-
-    /// <summary>
-    /// Removes the operators registered so far (built-in or added) whose name matches, ignoring case.
-    /// </summary>
-    public RuleLoomBuilder RemoveOperator(string name)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        _registry.RemoveOperator(name);
-        return this;
-    }
-
-    /// <summary>
-    /// Removes all built-in operators, keeping operators added so far. Use it to start from a fully custom set.
-    /// </summary>
-    public RuleLoomBuilder RemoveBuiltInOperators()
-    {
-        _registry.RemoveBuiltInOperators();
+        ArgumentNullException.ThrowIfNull(store);
+        Services.Replace(ServiceDescriptor.Singleton(store));
         return this;
     }
 }

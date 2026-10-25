@@ -1,11 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
-using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Engine;
-using RuleLoom.Extensions.DependencyInjection;
+using RuleLoom.Schemas;
 using RuleLoom.Validation;
 
 namespace RuleLoom.Extensions.DependencyInjection.Tests;
@@ -23,34 +23,33 @@ public class AddRuleLoomTests
     """;
 
     [Fact]
-    public void AddRuleLoom_RegistersCoreServicesWithExpectedLifetimes()
+    public void AddRuleLoom_RegistersServicesWithExpectedLifetimes()
     {
-        var services = new ServiceCollection().AddRuleLoom(rules => rules.AddAction<SendEmailAction>());
+        var services = new ServiceCollection().AddRuleLoom();
 
-        Assert.Equal(ServiceLifetime.Singleton, Lifetime<IConditionEvaluator>(services));
         Assert.Equal(ServiceLifetime.Singleton, Lifetime<TimeProvider>(services));
+        Assert.Equal(ServiceLifetime.Scoped, Lifetime<Catalog>(services));
         Assert.Equal(ServiceLifetime.Scoped, Lifetime<IActionFactory>(services));
+        Assert.Equal(ServiceLifetime.Scoped, Lifetime<IContextProviderFactory>(services));
         Assert.Equal(ServiceLifetime.Scoped, Lifetime<RuleEngine>(services));
         Assert.Equal(ServiceLifetime.Scoped, Lifetime<RuleValidator>(services));
-        Assert.Equal(ServiceLifetime.Scoped, Lifetime<SendEmailAction>(services));
+        Assert.Single(services, d => d.ServiceType == typeof(IHostedService));
     }
 
     [Fact]
-    public void AddRuleLoom_CalledTwice_AddsCoreServicesOnceAndKeepsAllActions()
+    public async Task AddRuleLoom_CalledTwice_ConfiguresOneCatalog()
     {
         var services = new ServiceCollection()
-            .AddSingleton<IEmailSender, Outbox>()
-            .AddRuleLoom(rules => rules.AddAction<SendEmailAction>())
-            .AddRuleLoom(rules => rules.AddAction<AuditAction>());
+            .AddRuleLoom(rules => rules.AddCatalog(c => c.AddAction<SendEmailAction>()))
+            .AddRuleLoom(rules => rules.AddCatalog(c => c.AddAction<AuditAction>()).AddCatalog(c => c.AddAction<SendEmailAction>()));
 
         Assert.Single(services, d => d.ServiceType == typeof(RuleEngine));
-        Assert.Single(services, d => d.ServiceType == typeof(IConditionEvaluator));
+        Assert.Single(services, d => d.ServiceType == typeof(IHostedService));
 
-        using var provider = Build(services);
+        await using var provider = await StartAsync(services);
         using var scope = provider.CreateScope();
-        var factory = scope.ServiceProvider.GetRequiredService<IActionFactory>();
 
-        Assert.Equal(["audit", "send-email"], factory.ActionNames.Order());
+        Assert.Equal(["send-email", "audit"], scope.ServiceProvider.GetRequiredService<Catalog>().Actions.Select(a => a.Name));
     }
 
     [Fact]
@@ -65,155 +64,103 @@ public class AddRuleLoomTests
     }
 
     [Fact]
-    public async Task RuleEngine_FromScope_RunsRuleWithActionThatHasDependencies()
+    public void Catalog_BeforeStartup_Throws()
+    {
+        using var provider = Build(new ServiceCollection().AddRuleLoom());
+        using var scope = provider.CreateScope();
+
+        var error = Assert.Throws<InvalidOperationException>(() => scope.ServiceProvider.GetRequiredService<RuleEngine>());
+
+        Assert.StartsWith("RuleLoom hasn't started", error.Message);
+    }
+
+    [Fact]
+    public async Task HostStart_BuildsTheCatalog_AndEveryScopeSharesIt()
+    {
+        await using var provider = Build(new ServiceCollection().AddRuleLoom(rules => rules.AddCatalog(c => c.AddEvent<UserCreatedSchema>()
+            .AddContextProvider<CustomerProvider>("customer"))));
+
+        foreach (var hostedService in provider.GetServices<IHostedService>())
+            await hostedService.StartAsync(TestContext.Current.CancellationToken);
+        await provider.StartRuleLoomAsync(TestContext.Current.CancellationToken);
+
+        using var first = provider.CreateScope();
+        using var second = provider.CreateScope();
+        Assert.Same(first.ServiceProvider.GetRequiredService<Catalog>(), second.ServiceProvider.GetRequiredService<Catalog>());
+        Assert.Equal(["UserCreated"], first.ServiceProvider.GetRequiredService<Catalog>().Events.Select(e => e.EventType));
+    }
+
+    [Fact]
+    public async Task HostStart_BrokenCatalog_Throws()
+    {
+        await using var provider = Build(new ServiceCollection().AddRuleLoom(rules => rules.AddCatalog(c => c.AddEvent<UserCreatedSchema>())));
+        var startup = Assert.Single(provider.GetServices<IHostedService>());
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => startup.StartAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains("No context provider is registered under 'customer'", error.Message);
+    }
+
+    [Fact]
+    public async Task StartRuleLoomAsync_WithoutAddRuleLoom_Throws()
+    {
+        await using var provider = new ServiceCollection().BuildServiceProvider();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.StartRuleLoomAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task RuleEngine_FromScope_RunsActionsAndContextsWithTheirDependencies()
     {
         var outbox = new Outbox();
         var services = new ServiceCollection()
             .AddSingleton<IEmailSender>(outbox)
-            .AddRuleLoom(rules => rules.AddAction<SendEmailAction>());
+            .AddRuleLoom(rules => rules.AddCatalog(c => c
+                .AddEvent<UserCreatedSchema>()
+                .AddAction<SendEmailAction>()
+                .AddContextProvider<CustomerProvider>("customer")));
 
-        using var provider = Build(services);
+        await using var provider = await StartAsync(services);
         using var scope = provider.CreateScope();
         var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
+        var rule = RuleJsonParser.Parse(Json.Replace("\"path\": \"Tier\"", "\"path\": \"@customer.Tier\""));
 
-        var result = await engine.ExecuteAsync(
-            "UserCreated", new { Tier = "vip" }, [RuleJsonParser.Parse(Json)], TestContext.Current.CancellationToken);
+        var result = await engine.ExecuteAsync("UserCreated", new UserDto("u-1", "c-1", "basic"), [rule], TestContext.Current.CancellationToken);
 
         Assert.False(result.HasFailures);
         Assert.Equal(["vip-welcome"], outbox.Sent);
     }
 
     [Fact]
-    public async Task RuleEngine_FromScope_LoadsContextsFromScopedProviders()
+    public async Task Factories_UseRegisteredServices_AndCreateTheRestPerCall()
     {
+        var audit = new AuditAction();
         var services = new ServiceCollection()
             .AddSingleton<IEmailSender, Outbox>()
-            .AddRuleLoom(rules => rules
-                .AddAction<SendEmailAction>()
-                .AddContextProvider<CustomerProvider>("customer"));
+            .AddSingleton(audit)
+            .AddRuleLoom(rules => rules.AddCatalog(c => c.AddAction<AuditAction>().AddAction<SendEmailAction>()));
 
-        using var provider = Build(services);
+        await using var provider = await StartAsync(services);
         using var scope = provider.CreateScope();
-        var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
-        var rule = RuleJsonParser.Parse(Json.Replace("\"path\": \"Tier\"", "\"path\": \"@customer.Tier\""));
-
-        var result = await engine.ExecuteAsync("UserCreated", new { CustomerId = "c-1" }, [rule], TestContext.Current.CancellationToken);
-
-        Assert.False(result.HasFailures);
-        Assert.Equal(RuleExecutionStatus.Matched, result.Rules[0].Status);
-    }
-
-    [Fact]
-    public void ContextProviders_AreScopedAndNamesIgnoreCase()
-    {
-        var services = new ServiceCollection().AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("customer"));
-
-        using var provider = Build(services);
-        IContextProvider? first, again, other;
-
-        using (var scope = provider.CreateScope())
-        {
-            var factory = scope.ServiceProvider.GetRequiredService<IContextProviderFactory>();
-            factory.TryGetProvider("customer", out first);
-            factory.TryGetProvider("CUSTOMER", out again);
-            Assert.Equal(["customer"], factory.ProviderNames);
-        }
-
-        using (var scope = provider.CreateScope())
-            scope.ServiceProvider.GetRequiredService<IContextProviderFactory>().TryGetProvider("customer", out other);
-
-        Assert.NotNull(first);
-        Assert.Same(first, again);
-        Assert.NotSame(first, other);
-        Assert.Equal(ServiceLifetime.Scoped, Lifetime<CustomerProvider>(services));
-    }
-
-    [Fact]
-    public void AddContextProvider_NameTakenByAnotherType_Throws()
-    {
-        var services = new ServiceCollection();
-
-        services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("customer"));
-
-        Assert.Throws<ArgumentException>(() => services.AddRuleLoom(rules => rules.AddContextProvider<OtherProvider>("Customer")));
-    }
-
-    [Fact]
-    public void Actions_AreScoped_NewInstancePerScope()
-    {
-        var services = new ServiceCollection()
-            .AddSingleton<IEmailSender, Outbox>()
-            .AddRuleLoom(rules => rules.AddAction<SendEmailAction>());
-
-        using var provider = Build(services);
-        IAction? first, again, other;
-
-        using (var scope = provider.CreateScope())
-        {
-            var factory = scope.ServiceProvider.GetRequiredService<IActionFactory>();
-            factory.TryGetAction("send-email", out first);
-            factory.TryGetAction("SEND-EMAIL", out again);
-        }
-
-        using (var scope = provider.CreateScope())
-            scope.ServiceProvider.GetRequiredService<IActionFactory>().TryGetAction("send-email", out other);
-
-        Assert.NotNull(first);
-        Assert.Same(first, again);
-        Assert.NotSame(first, other);
-    }
-
-    [Fact]
-    public void AddAction_WithName_RegistersUnderThatNameAndTypeCanHaveSeveralNames()
-    {
-        var services = new ServiceCollection()
-            .AddSingleton<IEmailSender, Outbox>()
-            .AddRuleLoom(rules => rules.AddAction<SendEmailAction>().AddAction<SendEmailAction>("notify"));
-
-        using var provider = Build(services);
-        using var scope = provider.CreateScope();
+        var catalog = scope.ServiceProvider.GetRequiredService<Catalog>();
         var factory = scope.ServiceProvider.GetRequiredService<IActionFactory>();
+        catalog.TryGetAction("audit", out var auditRegistration);
+        catalog.TryGetAction("send-email", out var sendEmailRegistration);
 
-        Assert.Equal(["notify", "send-email"], factory.ActionNames.Order());
-        Assert.True(factory.TryGetAction("notify", out var executor));
-        Assert.IsType<SendEmailAction>(executor);
-        Assert.False(factory.TryGetAction("unknown", out _));
+        Assert.Same(audit, factory.Create(auditRegistration!));
+        Assert.NotSame(factory.Create(sendEmailRegistration!), factory.Create(sendEmailRegistration!));
     }
 
     [Fact]
-    public void AddAction_SameTypeAndNameTwice_IsRegisteredOnce()
-    {
-        var services = new ServiceCollection().AddRuleLoom(rules => rules.AddAction<AuditAction>().AddAction<AuditAction>());
-
-        Assert.Single(services, d => d.ServiceType == typeof(AuditAction));
-    }
-
-    [Fact]
-    public void AddAction_NameTakenByAnotherType_Throws()
-    {
-        var ex = Assert.Throws<ArgumentException>(() => new ServiceCollection().AddRuleLoom(rules =>
-            rules.AddAction<SendEmailAction>().AddAction<AuditAction>("send-email")));
-
-        Assert.StartsWith("Action name 'send-email' is already registered for SendEmailAction; can't register AuditAction under it.", ex.Message);
-    }
-
-    [Fact]
-    public void AddAction_NameDifferingOnlyInCase_Throws()
-    {
-        var ex = Assert.Throws<ArgumentException>(() => new ServiceCollection().AddRuleLoom(rules =>
-            rules.AddAction<AuditAction>().AddAction<SendEmailAction>("AUDIT")));
-
-        Assert.StartsWith("Action name 'AUDIT' conflicts with 'audit' (names are case-insensitive).", ex.Message);
-    }
-
-    [Fact]
-    public void RuleValidator_FromScope_KnowsRegisteredActionsAndOperators()
+    public async Task RuleValidator_FromScope_ChecksAgainstTheCatalog()
     {
         var services = new ServiceCollection()
-            .AddSingleton<IEmailSender, Outbox>()
-            .AddRuleLoom(rules => rules.AddAction<SendEmailAction>());
+            .AddRuleLoom(rules => rules.AddCatalog(c => c
+                .AddEvent<UserCreatedSchema>()
+                .AddAction<SendEmailAction>()
+                .AddContextProvider<CustomerProvider>("customer")));
 
-        using var provider = Build(services);
+        await using var provider = await StartAsync(services);
         using var scope = provider.CreateScope();
         var validator = scope.ServiceProvider.GetRequiredService<RuleValidator>();
 
@@ -223,7 +170,14 @@ public class AddRuleLoomTests
         Assert.Equal(["$.condition.operator", "$.actions[0].action"], validator.Validate(unknown).Errors.Select(e => e.Path));
     }
 
-    private static ServiceProvider Build(IServiceCollection services) =>
+    internal static async Task<ServiceProvider> StartAsync(IServiceCollection services)
+    {
+        var provider = Build(services);
+        await provider.StartRuleLoomAsync(TestContext.Current.CancellationToken);
+        return provider;
+    }
+
+    internal static ServiceProvider Build(IServiceCollection services) =>
         services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
 
     private static ServiceLifetime Lifetime<T>(IServiceCollection services) =>
@@ -250,16 +204,21 @@ public sealed class SendEmailAction(IEmailSender sender) : IAction
     }
 }
 
-public sealed class CustomerProvider : IContextProvider
+public sealed record UserDto(string Id, string CustomerId, string Tier);
+
+public sealed class UserCreatedSchema : EventSchema<UserDto>
 {
-    public ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken) =>
-        ValueTask.FromResult<object?>(new { Id = request.Resolve("CustomerId"), Tier = "vip" });
+    public UserCreatedSchema()
+    {
+        Event("UserCreated");
+        Context("customer").ReferencedBy(u => u.CustomerId);
+    }
 }
 
-public sealed class OtherProvider : IContextProvider
+public sealed class CustomerProvider(TimeProvider clock) : IContextProvider
 {
     public ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken) =>
-        ValueTask.FromResult<object?>(null);
+        ValueTask.FromResult<object?>(new { Id = request.GetReference<string>(), Tier = "vip", LoadedAt = clock.GetUtcNow() });
 }
 
 public sealed class AuditAction : IAction

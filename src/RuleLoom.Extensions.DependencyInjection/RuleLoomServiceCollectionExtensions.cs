@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
-using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
 using RuleLoom.Engine;
-using RuleLoom.Evaluators;
 using RuleLoom.Extensions.DependencyInjection;
 using RuleLoom.Validation;
 
@@ -15,51 +15,48 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class RuleLoomServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the rule engine, its evaluator (with the built-in operators), the action factory and the rule
-    /// validator, and applies <paramref name="configure"/>. Safe to call more than once: core services are added once,
-    /// and each call adds its actions and operators.
+    /// Registers the rule engine, the rule validator and the factories they create actions and context providers with,
+    /// and applies <paramref name="configure"/>. Safe to call more than once: every call configures the same catalog.
+    /// The catalog is built when the host starts (or by <c>StartRuleLoomAsync()</c> in apps without a host); a broken
+    /// catalog stops the app from starting.
     /// </summary>
     /// <remarks>
-    /// Lifetimes: operators and <see cref="IConditionEvaluator"/> are Singleton; actions, context providers,
-    /// <see cref="IActionFactory"/>, <see cref="IContextProviderFactory"/>, <see cref="RuleEngine"/> and
-    /// <see cref="RuleValidator"/> are Scoped.
+    /// Lifetimes: <see cref="Catalog"/>, <see cref="IActionFactory"/>, <see cref="IContextProviderFactory"/>,
+    /// <see cref="RuleEngine"/> and <see cref="RuleValidator"/> are Scoped. Actions and context providers are created in
+    /// the scope: as registered when their type is registered, otherwise with their dependencies from the scope.
     /// <see cref="TimeProvider.System"/> is registered if no <see cref="TimeProvider"/> is.
     /// </remarks>
     public static IServiceCollection AddRuleLoom(this IServiceCollection services, Action<RuleLoomBuilder>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        var registry = GetOrAddRegistry(services);
+        var holder = GetOrAddHolder(services);
 
         services.TryAddSingleton(TimeProvider.System);
-        services.TryAddSingleton(sp => new RuleLoomOperators(registry.BuildOperators(sp)));
-        services.TryAddSingleton<IConditionEvaluator>(sp => new ConditionEvaluator(sp.GetRequiredService<RuleLoomOperators>().All));
-        services.TryAddScoped<IActionFactory>(sp => new ServiceProviderActionFactory(sp, registry));
-        services.TryAddScoped<IContextProviderFactory>(sp => new ServiceProviderContextProviderFactory(sp, registry));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, CatalogStartup>());
+        services.TryAddScoped(sp => sp.GetRequiredService<CatalogHolder>().Current ?? throw new InvalidOperationException(
+            "RuleLoom hasn't started: the catalog is built when the host starts, or by StartRuleLoomAsync() in apps without a host."));
+        services.TryAddScoped<IActionFactory>(sp => new ServiceProviderActionFactory(sp));
+        services.TryAddScoped<IContextProviderFactory>(sp => new ServiceProviderContextProviderFactory(sp));
         services.TryAddScoped(sp => new RuleEngine(
-            sp.GetRequiredService<IConditionEvaluator>(),
-            sp.GetRequiredService<IActionFactory>(),
-            sp.GetRequiredService<TimeProvider>(),
-            sp.GetRequiredService<IContextProviderFactory>(),
-            sp.GetService<RuleLoom.Schemas.ISchemaStore>()));
-        services.TryAddScoped(sp => new RuleValidator(
-            sp.GetRequiredService<RuleLoomOperators>().All,
+            sp.GetRequiredService<Catalog>(),
             sp.GetRequiredService<IActionFactory>(),
             sp.GetRequiredService<IContextProviderFactory>(),
-            sp.GetService<RuleLoom.Schemas.ISchemaStore>()));
+            sp.GetRequiredService<TimeProvider>()));
+        services.TryAddScoped(sp => new RuleValidator(sp.GetRequiredService<Catalog>()));
 
-        configure?.Invoke(new RuleLoomBuilder(services, registry));
+        configure?.Invoke(new RuleLoomBuilder(services, holder.Builder));
 
         return services;
     }
 
-    private static RuleLoomRegistry GetOrAddRegistry(IServiceCollection services)
+    private static CatalogHolder GetOrAddHolder(IServiceCollection services)
     {
-        if (services.FirstOrDefault(d => d.ServiceType == typeof(RuleLoomRegistry))?.ImplementationInstance is RuleLoomRegistry existing)
+        if (services.FirstOrDefault(d => d.ServiceType == typeof(CatalogHolder))?.ImplementationInstance is CatalogHolder existing)
             return existing;
 
-        var registry = new RuleLoomRegistry();
-        services.AddSingleton(registry);
-        return registry;
+        var holder = new CatalogHolder();
+        services.AddSingleton(holder);
+        return holder;
     }
 }

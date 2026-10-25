@@ -4,28 +4,20 @@ using RuleLoom.Abstractions.Action;
 namespace RuleLoom.Extensions.DependencyInjection;
 
 /// <summary>
-/// Resolves actions registered with <see cref="RuleLoomBuilder.AddAction{TAction}"/> from the current scope, so
-/// each scope gets its own action instances and actions can use scoped services.
+/// Creates actions in the current scope: the registered service when the action's type is registered, otherwise a new
+/// instance with its dependencies from the scope. Instances that aren't registered aren't disposed with the scope, so
+/// register disposable actions yourself.
 /// </summary>
 public sealed class ServiceProviderActionFactory : IActionFactory
 {
     private readonly IServiceProvider _services;
-    private readonly RuleLoomRegistry _registry;
 
-    internal ServiceProviderActionFactory(IServiceProvider services, RuleLoomRegistry registry)
+    internal ServiceProviderActionFactory(IServiceProvider services) => _services = services;
+
+    /// <inheritdoc />
+    public IAction Create(ActionRegistration action)
     {
-        _services = services;
-        _registry = registry;
-    }
-
-    public IReadOnlyCollection<string> ActionNames => _registry.ActionNames;
-
-    public bool TryGetAction(string name, out IAction? action)
-    {
-        action = _registry.TryGetActionType(name, out var actionType)
-            ? (IAction)_services.GetRequiredService(actionType!)
-            : null;
-
-        return action is not null;
+        ArgumentNullException.ThrowIfNull(action);
+        return (IAction)ActivatorUtilities.GetServiceOrCreateInstance(_services, action.Type);
     }
 }
