@@ -84,7 +84,7 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 | `RuleLoom.Schemas.Tests` | `tests/RuleLoom.Schemas.Tests` | xUnit tests of schema building and JSON |
 | `RuleLoom.Extensions.DependencyInjection.Tests` | `tests/RuleLoom.Extensions.DependencyInjection.Tests` | xUnit tests of DI registration (uses the real container) |
 | `RuleLoom.Samples.Console` | `samples/RuleLoom.Samples.Console` | Usage sample |
-| `RuleLoom.Samples.AspNetCore` | `samples/RuleLoom.Samples.AspNetCore` | Web sample: per-tenant JSON rules, Quartz for scheduled actions |
+| `RuleLoom.Samples.AspNetCore` | `samples/RuleLoom.Samples.AspNetCore` | Web sample: per-tenant JSON rules, contexts, the catalog document (`GET /catalog`), Quartz for scheduled actions |
 
 Namespaces follow folders: `RuleLoom.Abstractions.{Action,Condition,Context,Rule,Scheduling,Values}` and
 `RuleLoom.{Engine,Evaluators,Operators,Actions,Contexts,Scheduling,Validation}` (there is no `RuleLoom.Core`);
