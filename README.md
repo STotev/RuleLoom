@@ -117,6 +117,8 @@ Add your own by implementing `IConditionOperator`; see the [quick start](docs/gu
 
 - [Quick start](docs/guides/quick-start.md): rules in code and JSON, actions, operators, DI, validation
 - [JSON rule format](docs/guides/json-rules.md): the format, paths, rules on JSON state, comparison rules, scheduling
+- [Schemas and contexts](docs/guides/schemas-and-contexts.md): describing events, contexts and actions in a catalog,
+  validating rules against it, and the catalog document for authoring UIs
 - [Upgrading](docs/guides/upgrading.md): breaking changes by version, with before/after examples
 - Samples: a [console sample](samples/RuleLoom.Samples.Console/) and a
   [ASP.NET Core sample](samples/RuleLoom.Samples.AspNetCore/) (JSON events over HTTP, rules per tenant, Quartz.NET)
@@ -126,8 +128,9 @@ Add your own by implementing `IConditionOperator`; see the [quick start](docs/gu
 ## Status
 
 RuleLoom is **pre-1.0**: the API is settling, and minor versions can contain breaking changes, each listed in the
-[upgrading guide](docs/guides/upgrading.md). Next on the [roadmap](docs/roadmap.md): event schemas and a fluent rule
-builder (0.6), hosting packages and an event envelope (0.7), and support for running scheduled actions later (0.8).
+[upgrading guide](docs/guides/upgrading.md). Next on the [roadmap](docs/roadmap.md): event schemas, contexts and the
+catalog (0.6), action parameters, hosting packages and an event envelope (0.7), and support for running scheduled
+actions later (0.8).
 
 ## Contributing
 

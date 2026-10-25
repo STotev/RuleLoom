@@ -272,5 +272,6 @@ schemas, and comparisons that can never match are reported as `Warnings`.
 ## Next steps
 
 - [JSON rule guide](json-rules.md): the rule format in depth
+- [Schemas and contexts](schemas-and-contexts.md): building a catalog step by step, with the ASP.NET Core sample
 - [Console sample](../../samples/RuleLoom.Samples.Console/): runnable examples of everything above
 - [Roadmap](../roadmap.md): what's next
