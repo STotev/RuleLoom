@@ -11,9 +11,9 @@ namespace RuleLoom.Samples.AspNetCore;
 /// </summary>
 /// <remarks>
 /// RuleLoom has no entry point for running one action later, so this repeats what the engine does for an immediate
-/// action: find the executor by name, run it, and turn exceptions into a failed result.
+/// action: find the action in the catalog by name, create it, run it, and turn exceptions into a failed result.
 /// </remarks>
-public sealed class RunScheduledActionJob(IActionFactory actionFactory, ILogger<RunScheduledActionJob> logger) : IJob
+public sealed class RunScheduledActionJob(Catalog catalog, IActionFactory actionFactory, ILogger<RunScheduledActionJob> logger) : IJob
 {
     public const string TenantIdKey = "tenantId";
     public const string ScheduledActionKey = "scheduledAction";
@@ -36,12 +36,12 @@ public sealed class RunScheduledActionJob(IActionFactory actionFactory, ILogger<
 
     private async Task<ActionResult> RunAsync(ActionDefinition action, EvaluationContext state, CancellationToken cancellationToken)
     {
-        if (!actionFactory.TryGetAction(action.Action, out var executor))
+        if (!catalog.TryGetAction(action.Action, out var registration))
             return ActionResult.Failed(new InvalidOperationException($"No action named '{action.Action}' is registered."));
 
         try
         {
-            return await executor!.ExecuteAsync(action, state, cancellationToken);
+            return await actionFactory.Create(registration).ExecuteAsync(action, state, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

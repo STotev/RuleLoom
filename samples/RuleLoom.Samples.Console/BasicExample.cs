@@ -3,8 +3,6 @@ using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Actions;
 using RuleLoom.Engine;
-using RuleLoom.Evaluators;
-using RuleLoom.Operators;
 
 namespace RuleLoom.Samples.Console;
 
@@ -51,9 +49,8 @@ internal static class BasicExample
             ]
         };
 
-        var engine = new RuleEngine(
-            new ConditionEvaluator(BuiltInOperators.Create()),
-            new DirectActionFactory([new ConsoleLogAction()]));
+        var catalog = new CatalogBuilder().AddAction<ConsoleLogAction>().Build();
+        var engine = new RuleEngine(catalog);
 
         var previous = new CarAd { Title = "2019 Volvo V60", Price = 23_500m, MarketValue = 22_500m, Status = AdStatus.Active };
         var current = previous with { Price = 21_500m };

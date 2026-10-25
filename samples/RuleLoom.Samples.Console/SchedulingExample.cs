@@ -4,8 +4,6 @@ using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
 using RuleLoom.Actions;
 using RuleLoom.Engine;
-using RuleLoom.Evaluators;
-using RuleLoom.Operators;
 
 namespace RuleLoom.Samples.Console;
 
@@ -47,9 +45,8 @@ internal static class SchedulingExample
             ]
         };
 
-        var engine = new RuleEngine(
-            new ConditionEvaluator(BuiltInOperators.Create()),
-            new DirectActionFactory([new ConsoleLogAction()]));
+        var catalog = new CatalogBuilder().AddAction<ConsoleLogAction>().Build();
+        var engine = new RuleEngine(catalog);
 
         var invoice = new Invoice
         {

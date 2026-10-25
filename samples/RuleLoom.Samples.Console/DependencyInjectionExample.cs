@@ -33,9 +33,10 @@ internal static class DependencyInjectionExample
     {
         var services = new ServiceCollection()
             .AddSingleton<IMailer, ConsoleMailer>()
-            .AddRuleLoom(rules => rules.AddAction<NotifyCustomerAction>());
+            .AddRuleLoom(rules => rules.AddCatalog(catalog => catalog.AddAction<NotifyCustomerAction>()));
 
-        using var provider = services.BuildServiceProvider();
+        await using var provider = services.BuildServiceProvider();
+        await provider.StartRuleLoomAsync();   // a host does this at startup
         using var scope = provider.CreateScope();
 
         var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();

@@ -59,7 +59,8 @@ the jobs handed to Quartz. An unknown tenant gets a 404.
 
 | File | Role |
 |---|---|
-| `Program.cs` | Registers RuleLoom (`AddRuleLoom` with `send-email` and `console-log`) and Quartz; maps `POST /events` |
+| `Program.cs` | Registers RuleLoom (`AddRuleLoom` with a catalog of the event schemas, `send-email` and `console-log`) and Quartz; maps `POST /events` |
+| `Events.cs` | The events the app raises and their schemas: rules on other event types are rejected |
 | `TenantRuleStore.cs` | Reads, parses and validates a tenant's rule files |
 | `ActionScheduler.cs` | One Quartz job per scheduled action, keyed `{tenant}/{entity}/{rule}/{action index}`; the same event sent again replaces the pending job |
 | `RunScheduledActionJob.cs` | Runs the action when due, with the state of the event that scheduled it (conditions aren't checked again) |
