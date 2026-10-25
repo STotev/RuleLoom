@@ -128,9 +128,9 @@ Add your own by implementing `IConditionOperator`; see the [quick start](docs/gu
 ## Status
 
 RuleLoom is **pre-1.0**: the API is settling, and minor versions can contain breaking changes, each listed in the
-[upgrading guide](docs/guides/upgrading.md). Next on the [roadmap](docs/roadmap.md): event schemas, contexts and the
-catalog (0.6), action parameters, hosting packages and an event envelope (0.7), and support for running scheduled
-actions later (0.8).
+[upgrading guide](docs/guides/upgrading.md). 0.6 adds event schemas, contexts and the catalog. Next on the
+[roadmap](docs/roadmap.md): action parameters, hosting packages and an event envelope (0.7), and support for running
+scheduled actions later (0.8).
 
 ## Contributing
 

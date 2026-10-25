@@ -1,6 +1,6 @@
 # RuleLoom Roadmap
 
-**Last reviewed**: 2026-10-07
+**Last reviewed**: 2026-10-25
 
 The single overview of what has been built, what is next, and what is planned but not yet scheduled.
 Details live in GitHub issues and in [`specs/`](specs/); this page links to them rather than repeating them.
@@ -96,30 +96,14 @@ envelope and shaped 0.6–0.8.
 | [#77](https://github.com/STotev/RuleLoom/issues/77) | Require a rule id (spike follow-up) | AFK | [#79](https://github.com/STotev/RuleLoom/pull/79) | [required-rule-id](specs/2026-10-14-required-rule-id-design.md) |
 | [#78](https://github.com/STotev/RuleLoom/issues/78) | Rename `LogAction` to `ConsoleLogAction` (spike follow-up) | AFK | [#80](https://github.com/STotev/RuleLoom/pull/80) | [console-log-action](specs/2026-10-15-console-log-action-design.md) |
 
-### Tooling
-CI on PRs (build + test, TRX and Cobertura artifacts), release-please + MinVer versioning with squash-merged PR
-titles, central package management, issue/PR templates, Claude Code setup (`AGENTS.md`, `.claude/settings.json`).
-From 0.5.0: NuGet packages published by the release workflow with trusted publishing, packed on every PR; protected
-`main` (PRs and the CI check required).
-
----
-
-## 🎯 Milestones
-
-Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
-becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *Done*); its spike's
-[findings](specs/2026-10-14-aspnetcore-sample-design.md#findings) shaped 0.6–0.8 below.
-
-| Milestone | Contents | Notes |
-|---|---|---|
-| **0.6: Schemas and contexts** ([PRD #87](https://github.com/STotev/RuleLoom/issues/87)) | New `RuleLoom.Schemas` package: event schema classes (`EventSchema<T>`) with inference from DTOs and JSON Schema output; the **catalog** (events, contexts, operators, actions; `CatalogDocument`, `ICatalogStore` + in-memory store); **contexts** (`@customer.Tier`) loaded by consumer-registered context providers, prefetched once per event; previous state rebuilt from changed fields; schema-aware `RuleValidator` (unknown paths and contexts are errors, type mismatches warnings); `#` reserved for functions | Detail under [Schema & validation](#schema--validation) below |
-| **0.7: Authoring surface & hosting** | The transport-free catalog moved into 0.6 as the [catalog](specs/2026-10-25-catalog-design.md); **action parameter descriptors** on `ActionDescriptor<T>` (parameters that are values or paths); every context declaration naming its provider in the catalog document ([finding](specs/2026-10-25-schemas-contexts-sample-design.md#findings)); `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration endpoints); **schema publishing** (`UseSchemaPublishing(p => p.UseHttp(...))`) and **storage packages** (e.g. PostgreSQL); optional build-time schema generation; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape) | Optional packages; no rule CRUD. The PRD also decides **scopes** (applications / bounded contexts) and rule groups, see the vision |
-| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
-| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides, a **documentation site** built from `docs/` with more extensive examples (see below) | 1.0 marks a stable API; packages are already published from 0.5.0 |
-| **After 0.7** | **Fluent rule builder** producing `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the schema builder's expression → path translation | Mainly for in-process users; placed once 0.7 settles |
-| **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
-
-### 0.6 — PRD [#87](https://github.com/STotev/RuleLoom/issues/87)
+### Schemas, contexts & the catalog — PRD [#87](https://github.com/STotev/RuleLoom/issues/87) ✅ (ships in 0.6.0)
+Event schemas (`EventSchema<T>`, inferred from DTOs, JSON Schema 2020-12) in the dependency-free `RuleLoom.Schemas`;
+**contexts** (`@customer.Tier`) declared by event schemas and loaded by context providers, once per event; previous state
+rebuilt from changed fields; rule paths parsed once (`RulePath`) and validated against the event's and contexts'
+schemas; and the **catalog**, the one vocabulary the engine, the validator and an authoring UI run on (`CatalogBuilder`,
+`CatalogDocument`, `ICatalogStore`; decisions in [`GLOSSARY.md`](../GLOSSARY.md) and [`adr/`](adr/)). Scoped to one
+application first; the ASP.NET Core sample and the [schemas and contexts guide](guides/schemas-and-contexts.md) show it
+together.
 
 | Issue | Slice | Type | Blocked by | PR | Spec |
 |---|---|---|---|---|---|
@@ -131,7 +115,29 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 | [#94](https://github.com/STotev/RuleLoom/issues/94) | Schema-aware rule validation with severities | AFK | #91, #92, #101 | [#106](https://github.com/STotev/RuleLoom/pull/106) | [schema-validation](specs/2026-10-21-schema-validation-design.md) |
 | [#107](https://github.com/STotev/RuleLoom/issues/107) | Parse rule paths once and restructure RuleValidator | AFK | #94 | [#108](https://github.com/STotev/RuleLoom/pull/108) | [path-model](specs/2026-10-22-path-model-design.md) |
 | [#109](https://github.com/STotev/RuleLoom/issues/109) | The catalog: one immutable registry of event schemas, context providers, operators and actions that the engine, validator and UI run on; catalog store | HITL | #107 | [#110](https://github.com/STotev/RuleLoom/pull/110) | [catalog](specs/2026-10-25-catalog-design.md) |
-| [#95](https://github.com/STotev/RuleLoom/issues/95) | Sample and guide for schemas and contexts, built on the catalog | HITL | #91, #93, #94, #101, #107, #109 | — | [schemas-contexts-sample](specs/2026-10-25-schemas-contexts-sample-design.md) |
+| [#95](https://github.com/STotev/RuleLoom/issues/95) | Sample and guide for schemas and contexts, built on the catalog | HITL | #91, #93, #94, #101, #107, #109 | [#111](https://github.com/STotev/RuleLoom/pull/111) | [schemas-contexts-sample](specs/2026-10-25-schemas-contexts-sample-design.md) |
+
+### Tooling
+CI on PRs (build + test, TRX and Cobertura artifacts), release-please + MinVer versioning with squash-merged PR
+titles, central package management, issue/PR templates, Claude Code setup (`AGENTS.md`, `.claude/settings.json`).
+From 0.5.0: NuGet packages published by the release workflow with trusted publishing, packed on every PR; protected
+`main` (PRs and the CI check required).
+
+---
+
+## 🎯 Milestones
+
+Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
+becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66) and **0.6** is done (PRD #87), see *Done*;
+the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings) shaped 0.7–0.8 below.
+
+| Milestone | Contents | Notes |
+|---|---|---|
+| **0.7: Authoring surface & hosting** | The transport-free catalog moved into 0.6 as the [catalog](specs/2026-10-25-catalog-design.md); **action parameter descriptors** on `ActionDescriptor<T>` (parameters that are values or paths); every context declaration naming its provider in the catalog document ([finding](specs/2026-10-25-schemas-contexts-sample-design.md#findings)); `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration endpoints); **schema publishing** (`UseSchemaPublishing(p => p.UseHttp(...))`) and **storage packages** (e.g. PostgreSQL); optional build-time schema generation; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape) | Optional packages; no rule CRUD. The PRD also decides **scopes** (applications / bounded contexts) and rule groups, see the vision |
+| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
+| **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides, a **documentation site** built from `docs/` with more extensive examples (see below) | 1.0 marks a stable API; packages are already published from 0.5.0 |
+| **After 0.7** | **Fluent rule builder** producing `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the schema builder's expression → path translation | Mainly for in-process users; placed once 0.7 settles |
+| **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
 
 ---
 
