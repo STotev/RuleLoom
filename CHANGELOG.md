@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file. It is generated
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/) — do not edit it by hand.
 
+## [0.6.0](https://github.com/STotev/RuleLoom/compare/v0.5.0...v0.6.0) (2026-10-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* the engine, the validator and `AddRuleLoom` run on a catalog. Build one with `CatalogBuilder` (or `AddCatalog` in `AddRuleLoom`), and register actions in it. `IActionFactory.Create` now receives the action's registration instead of a name ([#110](https://github.com/STotev/RuleLoom/issues/110))
+* paths starting with `@` or `#` are no longer property names: `@` reads a context, and `#` is reserved for functions ([#99](https://github.com/STotev/RuleLoom/issues/99), [#108](https://github.com/STotev/RuleLoom/issues/108))
+
+The [upgrading guide](https://github.com/STotev/RuleLoom/blob/main/docs/guides/upgrading.md#05--06) has before/after examples.
+
+### Features
+
+* **event schemas**: describe events with `EventSchema<T>` classes. Their fields come from your DTOs and are written as JSON Schema. They live in the new `RuleLoom.Schemas` package, which has no dependencies ([#100](https://github.com/STotev/RuleLoom/issues/100))
+* **contexts**: rules read related data such as `@customer.Tier`. It's declared by the event's schema and loaded by context providers, once per event and only when a rule uses it. `ContextSchema<T>` describes the data's fields ([#99](https://github.com/STotev/RuleLoom/issues/99), [#103](https://github.com/STotev/RuleLoom/issues/103), [#105](https://github.com/STotev/RuleLoom/issues/105), [#110](https://github.com/STotev/RuleLoom/issues/110))
+* **validation against schemas**: `RuleValidator` reports paths that aren't fields of the event or of its contexts, with their locations. Comparisons that can never match are warnings ([#106](https://github.com/STotev/RuleLoom/issues/106), [#108](https://github.com/STotev/RuleLoom/issues/108))
+* **the catalog**: one vocabulary of events, contexts, operators and actions, used by the engine, the validator and rule-authoring UIs. `catalog.ToJson()` writes it as one document, and an optional catalog store keeps it outside the app ([#110](https://github.com/STotev/RuleLoom/issues/110))
+* **previous state from changed fields**: `PreviousState.FromChanges(current, changes)` rebuilds the previous state from the old values of the fields that changed ([#97](https://github.com/STotev/RuleLoom/issues/97))
+* a [schemas and contexts guide](https://github.com/STotev/RuleLoom/blob/main/docs/guides/schemas-and-contexts.md), and the ASP.NET Core sample shows contexts and the catalog document ([#111](https://github.com/STotev/RuleLoom/issues/111))
+
 ## [0.5.0](https://github.com/STotev/RuleLoom/compare/v0.4.0...v0.5.0) (2026-10-15)
 
 
