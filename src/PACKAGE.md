@@ -43,6 +43,7 @@ var result = await engine.ExecuteAsync("ProductUpdated", current, previous, [Rul
 
 - [Quick start](https://github.com/STotev/RuleLoom/blob/main/docs/guides/quick-start.md)
 - [JSON rule format](https://github.com/STotev/RuleLoom/blob/main/docs/guides/json-rules.md)
+- [Schemas and contexts](https://github.com/STotev/RuleLoom/blob/main/docs/guides/schemas-and-contexts.md)
 - [Samples](https://github.com/STotev/RuleLoom/tree/main/samples)
 - [Changelog](https://github.com/STotev/RuleLoom/blob/main/CHANGELOG.md) and
   [upgrading guide](https://github.com/STotev/RuleLoom/blob/main/docs/guides/upgrading.md)
