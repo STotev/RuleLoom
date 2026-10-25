@@ -2,8 +2,8 @@ using RuleLoom.Schemas;
 
 namespace RuleLoom.Samples.AspNetCore;
 
-// The events this app raises (sent as JSON in POST /events) and what rules on them can use. Rules on other event types
-// are rejected by the validator.
+// The events this app raises (sent as JSON in POST /events) and what rules on them can use: their fields and the contexts
+// they declare (Customers.cs). Rules on other event types are rejected by the validator.
 
 public sealed record Person(string Name, string Email);
 
@@ -13,12 +13,21 @@ public sealed record Ad(string Title, string Status, decimal Price, Person Selle
 
 public sealed class OrderPlacedSchema : EventSchema<Order>
 {
-    public OrderPlacedSchema() => Event("OrderPlaced").Label("Order placed");
+    public OrderPlacedSchema()
+    {
+        Event("OrderPlaced").Label("Order placed");
+        Context("customer").ReferencedBy(o => o.Customer.Email).Label("Customer");
+        Context("orderHistory").ReferencedBy(o => o.Customer.Email).Label("Earlier orders");
+    }
 }
 
 public sealed class OrderUpdatedSchema : EventSchema<Order>
 {
-    public OrderUpdatedSchema() => Event("OrderUpdated").Label("Order updated");
+    public OrderUpdatedSchema()
+    {
+        Event("OrderUpdated").Label("Order updated");
+        Context("customer").ReferencedBy(o => o.Customer.Email).Label("Customer");
+    }
 }
 
 public sealed class AdPublishedSchema : EventSchema<Ad>

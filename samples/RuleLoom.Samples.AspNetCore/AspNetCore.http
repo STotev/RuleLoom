@@ -4,9 +4,13 @@
 
 @baseUrl = http://localhost:5080
 
-### acme-shop: VIP order awaiting payment.
-### Matches "VIP order" (email now), "Big basket" (log) and "Payment reminder" (scheduled 1 minute before
-### PaymentDueAt, so about a minute from now). Every acme-shop response lists "Shipped SMS" as invalid.
+### The catalog document: events and their contexts, context schemas, operators and actions, as a rule-authoring UI reads them.
+GET {{baseUrl}}/catalog
+
+### acme-shop: VIP order awaiting payment from a gold customer.
+### Matches "VIP order" (email now; @customer.Tier is gold), "Big basket" (log), "Loyalty check" (3 earlier orders,
+### from the orderHistory context) and "Payment reminder" (scheduled 1 minute before PaymentDueAt, so about a minute
+### from now). Every acme-shop response lists "Silver upgrade" and "Shipped SMS" as invalid.
 < {%
     request.variables.set("paymentDueAt", new Date(Date.now() + 2 * 60 * 1000).toISOString());
 %}
@@ -24,6 +28,23 @@ Content-Type: application/json
     "ItemCount": 6,
     "PaymentDueAt": "{{paymentDueAt}}",
     "Customer": { "Name": "Ada", "Email": "ada@example.com" }
+  }
+}
+
+### acme-shop: the same order from a bronze customer. "VIP order" doesn't match; "Loyalty check" finds no earlier orders.
+POST {{baseUrl}}/events
+Content-Type: application/json
+
+{
+  "eventType": "OrderPlaced",
+  "tenantId": "acme-shop",
+  "entityId": "order-1002",
+  "current": {
+    "Number": "SO-1002",
+    "Status": "Paid",
+    "Total": 640.50,
+    "ItemCount": 2,
+    "Customer": { "Name": "Bob", "Email": "bob@example.com" }
   }
 }
 

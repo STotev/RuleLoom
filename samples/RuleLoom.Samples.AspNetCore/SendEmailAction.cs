@@ -22,3 +22,12 @@ public sealed class SendEmailAction(ILogger<SendEmailAction> logger) : IAction
         return Task.FromResult(ActionResult.Success($"Email sent to {to}."));
     }
 }
+
+public sealed class SendEmailDescriptor : ActionDescriptor<SendEmailAction>
+{
+    public SendEmailDescriptor()
+    {
+        Label("Send email");
+        Description("Emails the address at the path in 'to' with the 'subject'.");
+    }
+}

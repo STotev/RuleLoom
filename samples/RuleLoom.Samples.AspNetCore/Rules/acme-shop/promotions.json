@@ -9,6 +9,24 @@
     ]
   },
   {
+    "id": "loyalty-check",
+    "name": "Loyalty check",
+    "eventType": "OrderPlaced",
+    "condition": { "operator": "gte", "operands": [{ "path": "Total" }, { "value": 100 }] },
+    "actions": [
+      { "action": "loyalty-check" }
+    ]
+  },
+  {
+    "id": "silver-upgrade",
+    "name": "Silver upgrade (invalid: Teir is a typo)",
+    "eventType": "OrderPlaced",
+    "condition": { "operator": "eq", "operands": [{ "path": "@customer.Teir" }, { "value": "bronze" }] },
+    "actions": [
+      { "action": "console-log", "parameters": { "message": "Offer a silver upgrade" } }
+    ]
+  },
+  {
     "id": "shipped-sms",
     "name": "Shipped SMS (invalid: no send-sms action is registered)",
     "eventType": "OrderUpdated",

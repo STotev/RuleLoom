@@ -3,7 +3,13 @@
     "id": "vip-order",
     "name": "VIP order",
     "eventType": "OrderPlaced",
-    "condition": { "operator": "gte", "operands": [{ "path": "Total" }, { "value": 500 }] },
+    "condition": {
+      "operator": "and",
+      "operands": [
+        { "operator": "gte", "operands": [{ "path": "Total" }, { "value": 500 }] },
+        { "operator": "eq", "operands": [{ "path": "@customer.Tier" }, { "value": "gold" }] }
+      ]
+    },
     "actions": [
       { "action": "send-email", "parameters": { "to": "Customer.Email", "subject": "Thank you for your order: a gift is on its way" } }
     ]
