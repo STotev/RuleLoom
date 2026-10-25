@@ -1,6 +1,7 @@
 # Design: The Catalog
 
-**Issue:** to be created (under [PRD #87 Schemas and contexts (0.6)](https://github.com/STotev/RuleLoom/issues/87))
+**Issue:** [#109 The catalog: one registry for the engine, validator and UI](https://github.com/STotev/RuleLoom/issues/109)
+**Parent PRD:** [#87 Schemas and contexts (0.6)](https://github.com/STotev/RuleLoom/issues/87)
 **Date:** 2026-10-25
 **Status:** Draft
 **Decisions recorded in:** [`GLOSSARY.md`](../../GLOSSARY.md),

@@ -130,8 +130,8 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 | [#101](https://github.com/STotev/RuleLoom/issues/101) | Context schemas described with their providers | AFK | #93 | [#105](https://github.com/STotev/RuleLoom/pull/105) | [context-schemas](specs/2026-10-19-context-schemas-design.md) |
 | [#94](https://github.com/STotev/RuleLoom/issues/94) | Schema-aware rule validation with severities | AFK | #91, #92, #101 | [#106](https://github.com/STotev/RuleLoom/pull/106) | [schema-validation](specs/2026-10-21-schema-validation-design.md) |
 | [#107](https://github.com/STotev/RuleLoom/issues/107) | Parse rule paths once and restructure RuleValidator | AFK | #94 | [#108](https://github.com/STotev/RuleLoom/pull/108) | [path-model](specs/2026-10-22-path-model-design.md) |
-| — | The catalog: one immutable registry of event schemas, context providers, operators and actions that the engine, validator and UI run on; catalog store | HITL | #107 | — | [catalog](specs/2026-10-25-catalog-design.md) (draft) |
-| [#95](https://github.com/STotev/RuleLoom/issues/95) | Sample and guide for schemas and contexts, built on the catalog | HITL | #91, #93, #94, #101, #107, catalog | — | — |
+| [#109](https://github.com/STotev/RuleLoom/issues/109) | The catalog: one immutable registry of event schemas, context providers, operators and actions that the engine, validator and UI run on; catalog store | HITL | #107 | — | [catalog](specs/2026-10-25-catalog-design.md) (draft) |
+| [#95](https://github.com/STotev/RuleLoom/issues/95) | Sample and guide for schemas and contexts, built on the catalog | HITL | #91, #93, #94, #101, #107, #109 | — | — |
 
 ---
 
