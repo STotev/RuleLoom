@@ -3,35 +3,19 @@ using RuleLoom.Abstractions.Condition;
 
 namespace RuleLoom.Evaluators;
 
-public class ConditionEvaluator : IConditionEvaluator
+/// <summary>
+/// Evaluates conditions with the operators of a <see cref="Catalog"/>.
+/// </summary>
+public class ConditionEvaluator(Catalog catalog) : IConditionEvaluator
 {
-    private readonly Dictionary<string, IConditionOperator> _operators = new(StringComparer.OrdinalIgnoreCase);
-
-    public ConditionEvaluator(IEnumerable<IConditionOperator> operators)
-    {
-        ArgumentNullException.ThrowIfNull(operators);
-
-        foreach (var @operator in operators)
-        {
-            if (_operators.TryGetValue(@operator.Name, out var existing))
-            {
-                throw new ArgumentException(
-                    existing.Name == @operator.Name
-                        ? $"Operator '{@operator.Name}' is registered more than once."
-                        : $"Operator '{@operator.Name}' conflicts with '{existing.Name}' (names are case-insensitive).",
-                    nameof(operators));
-            }
-
-            _operators.Add(@operator.Name, @operator);
-        }
-    }
+    private readonly Catalog _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
 
     public bool Evaluate(EvaluationContext context, ConditionNode node)
     {
         if (node is not OperatorCondition op)
             throw new InvalidOperationException($"Expected an operator condition but got {node.GetType().Name}.");
 
-        if (!_operators.TryGetValue(op.Operator, out var @operator))
+        if (!_catalog.TryGetOperator(op.Operator, out var @operator))
             throw new InvalidOperationException($"Operator '{op.Operator}' not found");
 
         // Validate operand count

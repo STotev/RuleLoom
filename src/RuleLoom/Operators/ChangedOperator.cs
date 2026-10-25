@@ -7,6 +7,8 @@ namespace RuleLoom.Operators;
 public class ChangedOperator : IConditionOperator
 {
     public string Name => "changed";
+    public string Label => "changed";
+    public string Description => "True when the path's value differs between the previous and the current state.";
     public int MinOperands => 1;
     public int MaxOperands => 1;
 

@@ -4,8 +4,6 @@ using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
-using RuleLoom.Actions;
-using RuleLoom.Contexts;
 using RuleLoom.Operators;
 using RuleLoom.Schemas;
 using RuleLoom.Validation;
@@ -15,31 +13,16 @@ namespace RuleLoom.Tests;
 
 public class RuleValidatorSchemaTests
 {
-    private static readonly InMemorySchemaStore Store = new(new SchemaSet(
-        [new OrderPlacedSchema().Build()],
-        [
-            new ContextDescription<CustomerDto>().Build("customer"),
-            new ContextDescription<AccountDto>().Build("account"),
-            new ContextDescription<CustomerDto>().Build("watchers", isMany: true)
-        ]));
-
-    private static readonly DirectContextProviderFactory Providers = new DirectContextProviderFactory()
-        .Add(new FakeContextProvider((object?)null), "customer")
-        .Add(new FakeContextProvider((object?)null), "account")
-        .Add(new FakeContextProvider((object?)null), "watchers")
-        .Add(new FakeContextProvider((object?)null), "legacy");   // registered, but without a schema
-
-    private static readonly RuleValidator Validator = Create(Providers, Store);
+    private static readonly RuleValidator Validator = new(Catalog().Build());
 
     [Fact]
-    public async Task ValidateAsync_WithoutStoreOrSchema_ReturnsWhatValidateReturns()
+    public void Validate_EventNotInTheCatalog_IsAnErrorAndPathsArentChecked()
     {
-        var rule = Rule(Op("eq", Path("Totl"), Value(1)));
-        var withoutStore = Create(Providers, schemas: null);
-        var otherEvent = new RuleDefinition { Id = "rule", Name = "Rule", EventType = "Unknown", Condition = rule.Condition };
+        var rule = new RuleDefinition { Id = "rule", Name = "Rule", EventType = "Unknown", Condition = Op("eq", Path("Totl"), Value(1)) };
 
-        Assert.Equal(withoutStore.Validate(rule).Errors, (await withoutStore.ValidateAsync(rule, TestContext.Current.CancellationToken)).Errors);
-        Assert.True((await Validator.ValidateAsync(otherEvent, TestContext.Current.CancellationToken)).IsValid);
+        var result = Validator.Validate(rule);
+
+        Assert.Equal(new RuleValidationError("$.eventType", "Event type 'Unknown' isn't in the catalog."), Assert.Single(result.Errors));
     }
 
     [Theory]
@@ -56,9 +39,9 @@ public class RuleValidatorSchemaTests
     [InlineData("@customer.tier")]
     [InlineData("@billingAccount.balance")]
     [InlineData("@watchers")]
-    public async Task ValidateAsync_KnownPaths_AreValid(string path)
+    public void Validate_KnownPaths_AreValid(string path)
     {
-        var result = await Validate(Rule(Op("eq", Path(path), Value(null))));
+        var result = Validate(Rule(Op("eq", Path(path), Value(null))));
 
         Assert.Empty(result.Errors);
         Assert.Empty(result.Warnings);
@@ -77,49 +60,49 @@ public class RuleValidatorSchemaTests
     [InlineData("$previous.@customer.tier", "Contexts have no current or previous state; use '@customer.tier' instead of '$previous.@customer.tier'.")]
     [InlineData("$state.Total", "Unknown variable '$state' in path '$state.Total'. Use $current or $previous.")]
     [InlineData("#now", "Paths starting with '#' are reserved for functions: '#now'.")]
-    public async Task ValidateAsync_WrongPaths_AreErrorsAtTheirLocation(string path, string message)
+    public void Validate_WrongPaths_AreErrorsAtTheirLocation(string path, string message)
     {
-        var result = await Validate(Rule(Op("and", Op("eq", Path("Paid"), Value(true)), Op("eq", Path(path), Value(null)))));
+        var result = Validate(Rule(Op("and", Op("eq", Path("Paid"), Value(true)), Op("eq", Path(path), Value(null)))));
 
         Assert.False(result.IsValid);
         Assert.Equal(new RuleValidationError("$.condition.operands[1].operands[0].path", message), Assert.Single(result.Errors));
     }
 
     [Fact]
-    public async Task ValidateAsync_ChecksActionConditionsAndScheduleReferencePaths()
+    public void Validate_ChecksActionConditionsAndScheduleReferencePaths()
     {
         var rule = Rule(Op("eq", Path("Paid"), Value(true)),
             Action(Op("eq", Path("Nope"), Value(1))),
             Action(schedule: new ScheduleMetadata { Mode = ScheduleMode.Advance, Amount = 1, Unit = ScheduleUnit.Days, ReferencePath = "DueOnn" }));
 
-        var result = await Validate(rule);
+        var result = Validate(rule);
 
         Assert.Equal(["$.actions[0].condition.operands[0].path", "$.actions[1].schedule.referencePath"], result.Errors.Select(e => e.Path));
     }
 
     [Fact]
-    public async Task ValidateAsync_KeepsTheOtherErrorsAndReportsEverything()
+    public void Validate_KeepsTheOtherErrorsAndReportsEverything()
     {
         var rule = Rule(Op("and", Op("eq", Path("Totl"), Value(1)), Op("unknown")), new ActionDefinition { Action = "nope" });
 
-        var result = await Validate(rule);
+        var result = Validate(rule);
 
         Assert.Equal(["$.condition.operands[0].operands[0].path", "$.condition.operands[1].operator", "$.actions[0].action"],
             result.Errors.Select(e => e.Path));   // document order
     }
 
     [Fact]
-    public async Task ValidateAsync_ComparedPaths_AreReportedOnceInDocumentOrder()
+    public void Validate_ComparedPaths_AreReportedOnceInDocumentOrder()
     {
-        var result = await Validate(Rule(Op("eq", Path("#now"), Path("Unknown"))));
+        var result = Validate(Rule(Op("eq", Path("#now"), Path("Unknown"))));
 
         Assert.Equal(["$.condition.operands[0].path", "$.condition.operands[1].path"], result.Errors.Select(e => e.Path));
     }
 
     [Fact]
-    public async Task ValidateAsync_ContextWithoutSchema_IsAWarning()
+    public void Validate_ContextWithoutSchema_IsAWarning()
     {
-        var result = await Validate(Rule(Op("eq", Path("@legacy.anything"), Value(1))));
+        var result = Validate(Rule(Op("eq", Path("@legacy.anything"), Value(1))));
 
         Assert.True(result.IsValid);
         Assert.Equal(new RuleValidationError("$.condition.operands[0].path", "Context '@legacy' has no schema; paths into it aren't checked."),
@@ -127,9 +110,9 @@ public class RuleValidatorSchemaTests
     }
 
     [Fact]
-    public async Task ValidateAsync_ChangedOnAContext_IsAnError()
+    public void Validate_ChangedOnAContext_IsAnError()
     {
-        var result = await Validate(Rule(Op("changed", Path("@customer.tier"))));
+        var result = Validate(Rule(Op("changed", Path("@customer.tier"))));
 
         Assert.Equal("$.condition.operands[0].path", Assert.Single(result.Errors).Path);
     }
@@ -140,9 +123,9 @@ public class RuleValidatorSchemaTests
     [InlineData("eq", "Quantity", true)]
     [InlineData("gt", "PlacedAt", "yesterday")]
     [InlineData("eq", "Number", 5)]
-    public async Task ValidateAsync_ValuesThatCantMatch_AreWarnings(string @operator, string path, object value)
+    public void Validate_ValuesThatCantMatch_AreWarnings(string @operator, string path, object value)
     {
-        var result = await Validate(Rule(Op(@operator, Path(path), Value(value))));
+        var result = Validate(Rule(Op(@operator, Path(path), Value(value))));
 
         Assert.True(result.IsValid);
         Assert.Equal("$.condition", Assert.Single(result.Warnings).Path);
@@ -160,28 +143,28 @@ public class RuleValidatorSchemaTests
     [InlineData("gt", "Paid", false)]         // booleans are ordered
     [InlineData("eq", "Note", null)]
     [InlineData("eq", "Customer", "anything")]   // objects aren't checked
-    public async Task ValidateAsync_ValuesThatCanMatch_HaveNoWarnings(string @operator, string path, object? value)
+    public void Validate_ValuesThatCanMatch_HaveNoWarnings(string @operator, string path, object? value)
     {
-        var result = await Validate(Rule(Op(@operator, Value(value), Path(path))));
+        var result = Validate(Rule(Op(@operator, Value(value), Path(path))));
 
         Assert.Empty(result.Warnings);
     }
 
     [Fact]
-    public async Task ValidateAsync_OrderingAListOrObject_IsOneWarning()
+    public void Validate_OrderingAListOrObject_IsOneWarning()
     {
-        var result = await Validate(Rule(Op("gt", Path("Lines"), Path("Customer"))));
+        var result = Validate(Rule(Op("gt", Path("Lines"), Path("Customer"))));
 
         Assert.Equal("'gt' can't order a list; the condition is never true.", Assert.Single(result.Warnings).Message);
     }
 
     [Fact]
-    public async Task ValidateAsync_ValuesBuiltInCode_FollowTheComparisonRules()
+    public void Validate_ValuesBuiltInCode_FollowTheComparisonRules()
     {
-        var guid = await Validate(Rule(Op("eq", Path("Number"), Value(Guid.Empty))));
-        var dateOnly = await Validate(Rule(Op("eq", Path("PlacedAt"), Value(new DateOnly(2026, 10, 21)))));
-        var dateAsText = await Validate(Rule(Op("eq", Path("Number"), Value(new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc)))));
-        var list = await Validate(Rule(Op("eq", Path("Total"), Value(new List<object?> { 1, 2 }))));
+        var guid = Validate(Rule(Op("eq", Path("Number"), Value(Guid.Empty))));
+        var dateOnly = Validate(Rule(Op("eq", Path("PlacedAt"), Value(new DateOnly(2026, 10, 21)))));
+        var dateAsText = Validate(Rule(Op("eq", Path("Number"), Value(new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc)))));
+        var list = Validate(Rule(Op("eq", Path("Total"), Value(new List<object?> { 1, 2 }))));
 
         Assert.Single(guid.Warnings);
         Assert.Single(dateOnly.Warnings);
@@ -190,30 +173,33 @@ public class RuleValidatorSchemaTests
     }
 
     [Fact]
-    public async Task ValidateAsync_TwoPathsOfDifferentTypes_IsAWarning()
+    public void Validate_TwoPathsOfDifferentTypes_IsAWarning()
     {
-        var result = await Validate(Rule(Op("eq", Path("Total"), Path("Paid"))));
+        var result = Validate(Rule(Op("eq", Path("Total"), Path("Paid"))));
 
         Assert.Equal("'eq' compares a number with a boolean; the condition is never true.", Assert.Single(result.Warnings).Message);
     }
 
     [Fact]
-    public async Task ValidateAsync_CustomOperatorNamedLikeABuiltIn_IsNotTypeChecked()
+    public void Validate_CustomOperatorNamedLikeABuiltIn_IsNotTypeChecked()
     {
-        var validator = new RuleValidator([new CustomEquals(), new AndOperator()], Actions(), Providers, Store);
+        var validator = new RuleValidator(Catalog().Operators(new CustomEquals(), new AndOperator()).Build());
 
-        var result = await validator.ValidateAsync(Rule(Op("eq", Path("Total"), Value("100"))), TestContext.Current.CancellationToken);
+        var result = validator.Validate(Rule(Op("eq", Path("Total"), Value("100"))));
 
         Assert.Empty(result.Warnings);
     }
 
-    private static Task<RuleValidationResult> Validate(RuleDefinition rule) =>
-        Validator.ValidateAsync(rule, TestContext.Current.CancellationToken);
+    private static RuleValidationResult Validate(RuleDefinition rule) => Validator.Validate(rule);
 
-    private static RuleValidator Create(DirectContextProviderFactory providers, ISchemaStore? schemas) =>
-        new(BuiltInOperators.Create(), Actions(), providers, schemas);
-
-    private static DirectActionFactory Actions() => new DirectActionFactory().Add(new NoOpAction(), "log");
+    // OrderPlaced comes from a catalog store, so its context without a provider ('unregistered') is a catalog problem.
+    private static TestCatalog Catalog() => new TestCatalog()
+        .Action("log", new NoOpAction())
+        .Provider("customer", new FakeContextProvider((object?)null), new CustomerSchema().Build("customer"))
+        .Provider("account", new FakeContextProvider((object?)null), new AccountSchema().Build("account"))
+        .Provider("watchers", new FakeContextProvider((object?)null), new CustomerSchema().Build("watchers", isMany: true))
+        .Provider("legacy", new FakeContextProvider((object?)null))   // registered, but without a schema
+        .Stored(new CatalogDocument([new OrderPlacedSchema().Build()]));
 
     private static RuleDefinition Rule(ConditionNode condition, params ActionDefinition[] actions) =>
         new() { Id = "rule", Name = "Rule", EventType = "OrderPlaced", Condition = condition, Actions = [.. actions] };
@@ -276,6 +262,10 @@ public class RuleValidatorSchemaTests
             Context("unregistered");
         }
     }
+
+    public sealed class CustomerSchema : ContextSchema<CustomerDto>;
+
+    public sealed class AccountSchema : ContextSchema<AccountDto>;
 
     private sealed class CustomEquals : IConditionOperator
     {

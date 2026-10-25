@@ -9,6 +9,8 @@ namespace RuleLoom.Operators;
 public sealed class GreaterThanOrEqualOperator : IConditionOperator
 {
     public string Name => "gte";
+    public string Label => "greater than or equal to";
+    public string Description => "True when the first operand is greater than or equal to the second.";
     public int MinOperands => 2;
     public int MaxOperands => 2;
 

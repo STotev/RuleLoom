@@ -5,6 +5,8 @@ namespace RuleLoom.Operators;
 public class AndOperator : IConditionOperator
 {
     public string Name => "and";
+    public string Label => "all of";
+    public string Description => "True when every operand is true.";
     public int MinOperands => 1;
     public int MaxOperands => int.MaxValue;
 

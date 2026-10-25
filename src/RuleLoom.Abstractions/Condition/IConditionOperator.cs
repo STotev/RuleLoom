@@ -22,6 +22,16 @@ public interface IConditionOperator
     int MaxOperands { get; }
 
     /// <summary>
+    /// A readable name for authoring UIs (e.g. "equals"); <c>null</c> when the operator doesn't give one.
+    /// </summary>
+    string? Label => null;
+
+    /// <summary>
+    /// A longer explanation of what the operator tests; <c>null</c> when the operator doesn't give one.
+    /// </summary>
+    string? Description => null;
+
+    /// <summary>
     /// Evaluates the operator. Read operands through <paramref name="context"/>:
     /// <see cref="OperatorContext.GetValue"/> for values, <see cref="OperatorContext.Test"/> for conditions,
     /// <see cref="OperatorContext.GetPath"/> for paths.

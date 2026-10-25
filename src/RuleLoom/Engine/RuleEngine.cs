@@ -4,29 +4,32 @@ using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
+using RuleLoom.Actions;
 using RuleLoom.Contexts;
+using RuleLoom.Evaluators;
 using RuleLoom.Scheduling;
-using RuleLoom.Schemas;
 
 namespace RuleLoom.Engine;
 
+/// <summary>
+/// Runs rules on a <see cref="Catalog"/>: conditions use its operators, actions and contexts are found in it by name and
+/// created by the factories.
+/// </summary>
+/// <param name="catalog">The catalog the rules are written against.</param>
+/// <param name="actions">Creates actions; by default a <see cref="DirectActionFactory"/> without instances.</param>
+/// <param name="contextProviders">Creates context providers; by default a <see cref="DirectContextProviderFactory"/>
+/// without instances.</param>
+/// <param name="timeProvider">The clock schedules are computed with; the system clock by default.</param>
 public sealed class RuleEngine(
-    IConditionEvaluator conditionEvaluator,
-    IActionFactory actionFactory,
-    TimeProvider? timeProvider = null,
+    Catalog catalog,
+    IActionFactory? actions = null,
     IContextProviderFactory? contextProviders = null,
-    ISchemaStore? schemas = null)
+    TimeProvider? timeProvider = null)
 {
-    // With schemas, providers receive each event's declared reference to their context.
-    private readonly IContextProviderFactory? _contextProviders =
-        contextProviders is not null && schemas is not null ? new SchemaReferencingProviders(contextProviders, schemas) : contextProviders;
-
-    private readonly IConditionEvaluator _conditionEvaluator =
-        conditionEvaluator ?? throw new ArgumentNullException(nameof(conditionEvaluator));
-
-    private readonly IActionFactory _actionFactory =
-        actionFactory ?? throw new ArgumentNullException(nameof(actionFactory));
-
+    private readonly Catalog _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+    private readonly ConditionEvaluator _conditionEvaluator = new(catalog);
+    private readonly IActionFactory _actionFactory = actions ?? new DirectActionFactory();
+    private readonly IContextProviderFactory _contextProviders = contextProviders ?? new DirectContextProviderFactory();
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <summary>
@@ -50,11 +53,9 @@ public sealed class RuleEngine(
             .OrderByDescending(r => r.Priority)
             .ToList();
 
-        var context = _contextProviders is null
-            ? new EvaluationContext(current, previous)
-            : new EvaluationContext(current, previous, eventType, _contextProviders);
+        var context = new EvaluationContext(current, previous, eventType, _catalog, _contextProviders);
 
-        await PrefetchContextsAsync(context, matchingRules, cancellationToken);
+        await PrefetchContextsAsync(eventType, context, matchingRules, cancellationToken);
 
         foreach (var rule in matchingRules)
         {
@@ -113,17 +114,15 @@ public sealed class RuleEngine(
 
     /// <summary>
     /// Loads the contexts the rules use, in parallel. Failures stay cached in the context, so only the rules that
-    /// resolve a failed context fail.
+    /// resolve a failed context fail; contexts the event doesn't declare fail when a rule resolves them.
     /// </summary>
     private async Task PrefetchContextsAsync(
+        string eventType,
         EvaluationContext context,
         IReadOnlyList<RuleDefinition> rules,
         CancellationToken cancellationToken)
     {
-        if (_contextProviders is null)
-            return;
-
-        var names = ContextReferences.Collect(rules).Where(name => _contextProviders.TryGetProvider(name, out _));
+        var names = ContextReferences.Collect(rules).Where(name => _catalog.TryGetContext(eventType, name, out _, out _));
 
         await Task.WhenAll(names.Select(async name =>
         {
@@ -167,7 +166,7 @@ public sealed class RuleEngine(
             }
         }
 
-        if (!_actionFactory.TryGetAction(action.Action, out var executor) || executor is null)
+        if (!_catalog.TryGetAction(action.Action, out var registration))
         {
             var ex = new InvalidOperationException($"No action is registered under the name '{action.Action}'.");
 
@@ -176,6 +175,8 @@ public sealed class RuleEngine(
 
         try
         {
+            var executor = _actionFactory.Create(registration);
+
             // Guards against actions that return null despite the non-nullable contract.
             ActionResult? result = await executor.ExecuteAsync(action, context, cancellationToken);
 

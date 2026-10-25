@@ -2,7 +2,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Context;
-using RuleLoom.Contexts;
 
 namespace RuleLoom.Tests;
 
@@ -88,13 +87,13 @@ public class ContextTests
     }
 
     [Fact]
-    public void Resolve_UnregisteredContext_Throws()
+    public void Resolve_UndeclaredContext_Throws()
     {
         var context = Context(("customer", new FakeContextProvider(new { })));
 
         var error = Assert.Throws<InvalidOperationException>(() => context.Resolve("@warehouse.City"));
 
-        Assert.Contains("No context provider is registered for '@warehouse'", error.Message);
+        Assert.Equal("'@warehouse' is not a context of OrderPlaced.", error.Message);
     }
 
     [Fact]
@@ -108,7 +107,7 @@ public class ContextTests
     }
 
     [Fact]
-    public void Resolve_ContextPathWithoutProviders_Throws()
+    public void Resolve_ContextPathWithoutACatalog_Throws()
     {
         Assert.Throws<InvalidOperationException>(() => new EvaluationContext(Order).Resolve("@customer.Tier"));
     }
@@ -174,57 +173,14 @@ public class ContextTests
         Assert.Equal([new Customer("c-1", "Gold"), new Customer("c-2", "Basic")], watchers!);
     }
 
-    [Fact]
-    public void GetSchema_TypedProvider_DescribesItsTypeUnderTheGivenName()
-    {
-        var schema = ((IContextProvider)new CustomerProvider()).GetSchema("buyer")!;
-
-        Assert.Equal(("buyer", "Customer", false), (schema.Name, schema.Label, schema.IsMany));
-        Assert.Equal(["id", "tier"], schema.Fields.Select(f => f.Name));
-        Assert.Equal("Loyalty tier", schema.Fields[1].Label);
-    }
-
-    [Fact]
-    public void GetSchema_CollectionProvider_DescribesOneItem()
-    {
-        var schema = ((IContextProvider)new WatchersProvider()).GetSchema("watchers")!;
-
-        Assert.True(schema.IsMany);
-        Assert.Equal(["id"], schema.Fields.Select(f => f.Name));
-    }
-
-    [Fact]
-    public void GetSchema_UntypedProviders_HaveNoSchema()
-    {
-        Assert.Null(((IContextProvider)new FakeContextProvider(new { })).GetSchema("customer"));
-        Assert.Null(((IContextProvider)new JsonProvider()).GetSchema("customer"));
-    }
-
-    [Fact]
-    public void GetSchema_ProviderOfACollectionType_Throws()
-    {
-        Assert.Throws<InvalidOperationException>(() => ((IContextProvider)new ListProvider()).GetSchema("watchers"));
-    }
-
-    [Fact]
-    public void DirectContextProviderFactory_NamesIgnoreCaseAndDuplicatesThrow()
-    {
-        var provider = new FakeContextProvider(new { });
-        var factory = new DirectContextProviderFactory().Add(provider, "customer");
-
-        Assert.True(factory.TryGetProvider("CUSTOMER", out var found));
-        Assert.Same(provider, found);
-        Assert.Equal(["customer"], factory.ProviderNames);
-        Assert.Throws<ArgumentException>(() => factory.Add(provider, "Customer"));
-    }
-
+    // OrderPlaced declares every provider's context.
     private static EvaluationContext Context(params (string Name, IContextProvider Provider)[] providers)
     {
-        var factory = new DirectContextProviderFactory();
+        var catalog = new TestCatalog();
         foreach (var (name, provider) in providers)
-            factory.Add(provider, name);
+            catalog.Provider(name, provider);
 
-        return new EvaluationContext(Order, null, "OrderPlaced", factory);
+        return catalog.Event("OrderPlaced", [.. providers.Select(p => p.Name)]).Context(Order, null, "OrderPlaced");
     }
 
     private sealed record Customer(string Id, string Tier);
@@ -233,31 +189,11 @@ public class ContextTests
     {
         protected override ValueTask<Customer?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
             ValueTask.FromResult<Customer?>(new Customer((string)request.Resolve("CustomerId")!, "Gold"));
-
-        protected override void Describe(Schemas.ContextDescription<Customer> context)
-        {
-            context.Label("Customer");
-            context.Field(c => c.Tier).Label("Loyalty tier");
-        }
     }
 
     private sealed class WatchersProvider : CollectionContextProvider<Customer>
     {
         protected override ValueTask<IReadOnlyList<Customer>> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
             ValueTask.FromResult<IReadOnlyList<Customer>>([new Customer("c-1", "Gold"), new Customer("c-2", "Basic")]);
-
-        protected override void Describe(Schemas.ContextDescription<Customer> context) => context.Field(c => c.Tier).Ignore();
-    }
-
-    private sealed class JsonProvider : ContextProvider<JsonNode>
-    {
-        protected override ValueTask<JsonNode?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(JsonNode.Parse("{}"));
-    }
-
-    private sealed class ListProvider : ContextProvider<List<Customer>>
-    {
-        protected override ValueTask<List<Customer>?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
-            ValueTask.FromResult<List<Customer>?>([]);
     }
 }

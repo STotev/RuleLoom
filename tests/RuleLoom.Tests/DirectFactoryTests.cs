@@ -1,108 +1,79 @@
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
+using RuleLoom.Abstractions.Context;
 using RuleLoom.Actions;
+using RuleLoom.Contexts;
 
 namespace RuleLoom.Tests;
 
-public class DirectActionFactoryTests
+public class DirectFactoryTests
 {
     [Fact]
-    public void Constructor_WithExecutors_RegistersEachUnderItsDefaultName()
+    public void ActionFactory_AddedInstance_IsReturnedForEveryRegistrationOfItsType()
     {
         var sendEmail = new SendEmailAction();
         var factory = new DirectActionFactory([sendEmail, new ConsoleLogAction()]);
 
-        Assert.True(factory.TryGetAction("send-email", out var executor));
-        Assert.Same(sendEmail, executor);
-        Assert.Equal(["console-log", "send-email"], factory.ActionNames.Order());
+        Assert.Same(sendEmail, factory.Create(new ActionRegistration("send-email", typeof(SendEmailAction))));
+        Assert.Same(sendEmail, factory.Create(new ActionRegistration("notify", typeof(SendEmailAction))));
     }
 
     [Fact]
-    public void Add_WithName_RegistersUnderThatName()
+    public void ActionFactory_WithoutAnInstance_CreatesTheTypeEachTime()
     {
-        var sendEmail = new SendEmailAction();
-        var factory = new DirectActionFactory().Add(sendEmail, "notify");
+        var factory = new DirectActionFactory();
+        var registration = new ActionRegistration("send-email", typeof(SendEmailAction));
 
-        Assert.True(factory.TryGetAction("notify", out var executor));
-        Assert.Same(sendEmail, executor);
-        Assert.False(factory.TryGetAction("send-email", out _));
+        var first = factory.Create(registration);
+
+        Assert.IsType<SendEmailAction>(first);
+        Assert.NotSame(first, factory.Create(registration));
     }
 
     [Fact]
-    public void Add_SameExecutorUnderTwoNames_IsAllowed()
+    public void ActionFactory_WithoutAParameterlessConstructor_ThrowsNamingTheAction()
     {
-        var sendEmail = new SendEmailAction();
-        var factory = new DirectActionFactory().Add(sendEmail).Add(sendEmail, "notify");
+        var error = Assert.Throws<InvalidOperationException>(
+            () => new DirectActionFactory().Create(new ActionRegistration("mail", typeof(MailerAction))));
 
-        Assert.Equal(["notify", "send-email"], factory.ActionNames.Order());
+        Assert.Equal("Can't create MailerAction for 'mail': add an instance to the factory, or give it a public parameterless constructor.",
+            error.Message);
     }
 
     [Fact]
-    public void Add_AttributeName_IsUsedAsDefault()
+    public void ActionFactory_SameTypeAddedTwice_Throws()
     {
-        var factory = new DirectActionFactory().Add(new RenamedAction());
+        var factory = new DirectActionFactory().Add(new SendEmailAction());
 
-        Assert.Equal(["sms"], factory.ActionNames);
-    }
-
-    [Theory]
-    [InlineData("send-email")]
-    [InlineData("Send-Email")]
-    [InlineData("SEND-EMAIL")]
-    public void TryGetAction_NameInAnyCase_ReturnsExecutor(string name)
-    {
-        var sendEmail = new SendEmailAction();
-        var factory = new DirectActionFactory([sendEmail]);
-
-        Assert.True(factory.TryGetAction(name, out var executor));
-        Assert.Same(sendEmail, executor);
-    }
-
-    [Fact]
-    public void TryGetAction_UnknownName_ReturnsFalse()
-    {
-        var factory = new DirectActionFactory([new SendEmailAction()]);
-
-        Assert.False(factory.TryGetAction("unknown", out var executor));
-        Assert.Null(executor);
-    }
-
-    [Fact]
-    public void Constructor_NullExecutors_Throws()
-    {
+        Assert.Throws<ArgumentException>(() => factory.Add(new SendEmailAction()));
         Assert.Throws<ArgumentNullException>(() => new DirectActionFactory(null!));
     }
 
     [Fact]
-    public void Add_DuplicateName_ThrowsNamingIt()
+    public void ContextProviderFactory_ReturnsAddedInstancesAndCreatesOthers()
     {
-        var factory = new DirectActionFactory().Add(new SendEmailAction());
+        var customers = new FakeContextProvider(new { });
+        var factory = new DirectContextProviderFactory().Add(customers);
 
-        var ex = Assert.Throws<ArgumentException>(() => factory.Add(new ConsoleLogAction(), "send-email"));
-
-        Assert.StartsWith("Action name 'send-email' is registered more than once.", ex.Message);
+        Assert.Same(customers, factory.Create(new ContextProviderRegistration("customer", typeof(FakeContextProvider))));
+        Assert.IsType<SettingsProvider>(factory.Create(new ContextProviderRegistration("settings", typeof(SettingsProvider))));
+        Assert.Throws<ArgumentException>(() => factory.Add(new FakeContextProvider(new { })));
     }
 
-    [Fact]
-    public void Add_NameDifferingOnlyInCase_ThrowsNamingBoth()
-    {
-        var factory = new DirectActionFactory().Add(new ConsoleLogAction());
-
-        var ex = Assert.Throws<ArgumentException>(() => factory.Add(new SendEmailAction(), "Console-Log"));
-
-        Assert.StartsWith("Action name 'Console-Log' conflicts with 'console-log' (names are case-insensitive).", ex.Message);
-    }
-
-    private sealed class SendEmailAction : IAction
+    public sealed class SendEmailAction : IAction
     {
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
             CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success());
     }
 
-    [ActionName("sms")]
-    private sealed class RenamedAction : IAction
+    public sealed class MailerAction(string apiKey) : IAction
     {
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
-            CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success());
+            CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success(apiKey));
+    }
+
+    public sealed class SettingsProvider : IContextProvider
+    {
+        public ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken) => ValueTask.FromResult<object?>(null);
     }
 }

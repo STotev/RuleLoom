@@ -3,7 +3,6 @@ using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
-using RuleLoom.Actions;
 using RuleLoom.Engine;
 using static RuleLoom.Tests.Conditions;
 
@@ -21,7 +20,7 @@ public class RuleEngineResultTests
 
     public RuleEngineResultTests()
     {
-        _engine = new RuleEngine(Evaluator(), Factory(_ok), new FixedTimeProvider(Now));
+        _engine = Engine([_ok], new FixedTimeProvider(Now));
     }
 
     [Fact]
@@ -93,7 +92,7 @@ public class RuleEngineResultTests
     public async Task ExecuteAsync_ActionResults_AreStampedWithNameAndIndex()
     {
         var spoofing = new RecordingAction("spoofing", ActionResult.Success() with { ActionName = "other", ActionIndex = 99 });
-        var engine = new RuleEngine(Evaluator(), Factory(_ok, spoofing));
+        var engine = Engine([_ok, spoofing]);
         var rule = Rule("Identity", Always,
             actions: [Action("ok"), Action("missing"), Action("spoofing"), Action("ok", condition: Never)]);
 
@@ -107,7 +106,7 @@ public class RuleEngineResultTests
     [Fact]
     public async Task ExecuteAsync_ExecutorReturnsNull_FailsAction()
     {
-        var engine = new RuleEngine(Evaluator(), Factory(new RecordingAction("null-result", returnsNull: true)));
+        var engine = Engine([new RecordingAction("null-result", returnsNull: true)]);
 
         var result = await engine.ExecuteAsync("Event", new { }, [Rule("Null", Always, actions: [Action("null-result")])],
             TestContext.Current.CancellationToken);
@@ -210,7 +209,7 @@ public class RuleEngineResultTests
     {
         using var cts = new CancellationTokenSource();
         var cancelling = new RecordingAction("cancel", ActionResult.Success(), onExecute: cts.Cancel);
-        var engine = new RuleEngine(Evaluator(), Factory(_ok, cancelling));
+        var engine = Engine([_ok, cancelling]);
         var rule = Rule("Cancelled midway", Always, actions: [Action("cancel"), Action("ok")]);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
@@ -238,8 +237,8 @@ public class RuleEngineResultTests
         Assert.Equal(string.Empty, captured.ToString());
     }
 
-    private static DirectActionFactory Factory(params RecordingAction[] actions) =>
-        actions.Aggregate(new DirectActionFactory(), (factory, action) => factory.Add(action, action.Name));
+    private static RuleEngine Engine(RecordingAction[] actions, TimeProvider? timeProvider = null) =>
+        actions.Aggregate(new TestCatalog(), (catalog, action) => catalog.Action(action.Name, action)).Engine(timeProvider);
 
     private Task<RuleEngineResult> Execute(RuleDefinition[] rules) =>
         _engine.ExecuteAsync("Event", new { }, rules, TestContext.Current.CancellationToken);

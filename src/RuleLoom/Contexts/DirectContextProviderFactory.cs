@@ -3,37 +3,34 @@ using RuleLoom.Abstractions.Context;
 namespace RuleLoom.Contexts;
 
 /// <summary>
-/// Default non-DI context provider factory backed by provider instances, each registered under a name. Names are
-/// matched ignoring case.
+/// Default non-DI context provider factory: returns the instance added for a provider's type, or else creates the type
+/// with its parameterless constructor. Names stay in the catalog; the factory only knows types.
 /// </summary>
 public sealed class DirectContextProviderFactory : IContextProviderFactory
 {
-    private readonly Dictionary<string, IContextProvider> _providers = new(StringComparer.OrdinalIgnoreCase);
-
-    public IReadOnlyCollection<string> ProviderNames => _providers.Keys;
+    private readonly Dictionary<Type, IContextProvider> _providers = [];
 
     /// <summary>
-    /// Registers <paramref name="provider"/> for the context <paramref name="name"/> (used in rules as <c>@name</c>).
+    /// Returns <paramref name="provider"/> for every registration of its type.
     /// </summary>
-    /// <exception cref="ArgumentException">The name is already registered (names are case-insensitive).</exception>
-    public DirectContextProviderFactory Add(IContextProvider provider, string name)
+    /// <exception cref="ArgumentException">An instance of this type was already added.</exception>
+    public DirectContextProviderFactory Add(IContextProvider provider)
     {
         ArgumentNullException.ThrowIfNull(provider);
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        if (_providers.Keys.FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase)) is { } existing)
-        {
-            throw new ArgumentException(
-                existing == name
-                    ? $"Context name '{name}' is registered more than once."
-                    : $"Context name '{name}' conflicts with '{existing}' (names are case-insensitive).",
-                nameof(name));
-        }
+        if (!_providers.TryAdd(provider.GetType(), provider))
+            throw new ArgumentException($"An instance of {provider.GetType().Name} was already added.", nameof(provider));
 
-        _providers.Add(name, provider);
         return this;
     }
 
-    public bool TryGetProvider(string name, out IContextProvider? provider) =>
-        _providers.TryGetValue(name, out provider);
+    /// <inheritdoc />
+    public IContextProvider Create(ContextProviderRegistration provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        return _providers.TryGetValue(provider.Type, out var instance)
+            ? instance
+            : Activation.Create<IContextProvider>(provider.Type, provider.Name);
+    }
 }

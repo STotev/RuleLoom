@@ -8,7 +8,7 @@ namespace RuleLoom.Validation;
 /// Walks a rule once, in document order, and hands each part to every check: the rule, its condition, the actions with
 /// their conditions, and every path (condition operands and schedule reference paths).
 /// </summary>
-internal sealed class RuleWalker(IReadOnlyDictionary<string, IConditionOperator> operators, IReadOnlyList<RuleCheck> checks)
+internal sealed class RuleWalker(Catalog catalog, IReadOnlyList<RuleCheck> checks)
 {
     public RuleValidationResult Walk(RuleDefinition rule)
     {
@@ -54,7 +54,7 @@ internal sealed class RuleWalker(IReadOnlyDictionary<string, IConditionOperator>
 
     private void Operator(OperatorCondition condition, string location, ValidationProblems problems)
     {
-        var @operator = operators.GetValueOrDefault(condition.Operator);
+        var @operator = catalog.TryGetOperator(condition.Operator, out var found) ? found : null;
 
         foreach (var check in checks)
             check.Operator(condition, @operator, location, problems);
