@@ -4,7 +4,8 @@ using System.Text.Json;
 namespace RuleLoom.Schemas;
 
 /// <summary>
-/// Gathers event schema classes, builds them and writes them as JSON. Contexts are described by their providers.
+/// Gathers event schema classes, builds them and writes them as JSON, without the engine (e.g. in a service that only
+/// produces events). Catalogs use it for their event schemas.
 /// </summary>
 /// <param name="options">The serializer options the events are produced with; <see cref="JsonSerializerDefaults.Web"/>
 /// when omitted.</param>
@@ -47,20 +48,20 @@ public sealed class SchemaCollection(JsonSerializerOptions? options = null)
     public SchemaCollection AddFromAssemblyOf<T>() => AddFromAssembly(typeof(T).Assembly);
 
     /// <summary>
-    /// Builds every schema.
+    /// Builds every schema into a catalog document that holds only events.
     /// </summary>
     /// <exception cref="InvalidOperationException">An event type is described twice (ignoring case), or a schema is
     /// invalid.</exception>
-    public SchemaSet Build()
+    public CatalogDocument Build()
     {
         // One read-only copy for every schema, so they share the serializer's metadata.
         var shared = options is null ? null : SchemaGenerator.Freeze(options);
 
-        return new SchemaSet(_events.Select(s => s.Build(shared)), []);
+        return new CatalogDocument(_events.Select(s => s.Build(shared)));
     }
 
     /// <summary>
-    /// Builds every schema and writes them as one JSON array (read back with <see cref="SchemaSet.Parse"/>).
+    /// Builds every schema and writes them as a catalog document (read back with <see cref="CatalogDocument.Parse"/>).
     /// </summary>
     public string ToJson() => Build().ToJson();
 }

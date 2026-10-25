@@ -3,8 +3,6 @@ using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
-using RuleLoom.Actions;
-using RuleLoom.Contexts;
 using RuleLoom.Engine;
 using RuleLoom.Schemas;
 using static RuleLoom.Tests.Conditions;
@@ -13,9 +11,13 @@ namespace RuleLoom.Tests;
 
 public class ContextReferenceTests
 {
-    // The event's schema declares how it refers to each context (as written by EventSchema<T> classes).
-    private static readonly InMemorySchemaStore Schemas = new(new SchemaSet([EventSchemaDefinition.Parse("""
+    // The event's schema declares how it refers to each context (as written by EventSchema<T> classes). It comes from a
+    // catalog store, so contexts without a registered provider fail only the rules that use them.
+    private static readonly CatalogDocument Stored = new([EventSchemaDefinition.Parse("""
         { "x-ruleloom-event": "TransferMade", "type": "object",
+          "properties": {
+            "fromAccountId": { "type": "string" }, "toAccountId": { "type": "string" },
+            "address": { "type": "object", "properties": { "country": { "type": "string" }, "postcode": { "type": "string" } } } },
           "x-ruleloom-contexts": {
             "fromAccount": { "x-ruleloom-referenced-by": "fromAccountId" },
             "toAccount": { "x-ruleloom-referenced-by": "toAccountId" },
@@ -24,7 +26,7 @@ public class ContextReferenceTests
             "payer": { "x-ruleloom-provider": "account", "x-ruleloom-referenced-by": "fromAccountId" },
             "payee": { "x-ruleloom-provider": "account", "x-ruleloom-referenced-by": "toAccountId" },
             "auditor": { "x-ruleloom-provider": "audit" } } }
-        """)], []));
+        """)]);
 
     public static TheoryData<string> StateKinds() => ["object", "json"];
 
@@ -33,7 +35,7 @@ public class ContextReferenceTests
     public async Task ExecuteAsync_OneProviderUnderTwoNames_GetsEachContextsReference(string kind)
     {
         var accounts = new FakeContextProvider(request => new { Id = request.GetReference<string>(), Frozen = request.Name == "toAccount" });
-        var engine = Engine(Schemas, ("fromAccount", accounts), ("toAccount", accounts));
+        var engine = Engine(("fromAccount", accounts), ("toAccount", accounts));
 
         var result = await engine.ExecuteAsync("TransferMade", Transfer(kind),
             [Rule("TransferMade", Op("and", Op("eq", Path("@fromAccount.Id"), Value("A-1")), Op("eq", Path("@toAccount.Frozen"), Value(true))))],
@@ -49,7 +51,7 @@ public class ContextReferenceTests
     public async Task ExecuteAsync_CompositeReference_PassesThePartsByName(string kind)
     {
         var zones = new FakeContextProvider(request => request.GetReference<ZoneKey>());
-        var engine = Engine(Schemas, ("zone", zones));
+        var engine = Engine(("zone", zones));
 
         var result = await engine.ExecuteAsync("TransferMade", Transfer(kind),
             [Rule("TransferMade", Op("eq", Path("@zone.Postcode"), Value("EH1 1AA")))], TestContext.Current.CancellationToken);
@@ -63,7 +65,7 @@ public class ContextReferenceTests
     public async Task ExecuteAsync_ContextsLoadedByOneProvider_UseItWithEachReference()
     {
         var accounts = new FakeContextProvider(request => new { Id = request.GetReference<string>() });
-        var engine = Engine(Schemas, ("account", accounts));
+        var engine = Engine(("account", accounts));
 
         var result = await engine.ExecuteAsync("TransferMade", Transfer("object"),
             [Rule("TransferMade", Op("and", Op("eq", Path("@payer.Id"), Value("A-1")), Op("eq", Path("@payee.Id"), Value("A-2"))))],
@@ -77,7 +79,7 @@ public class ContextReferenceTests
     [Fact]
     public async Task ExecuteAsync_ContextWhoseProviderIsNotRegistered_FailsOnlyItsRules()
     {
-        var engine = Engine(Schemas, ("account", new FakeContextProvider(new { Id = "A-1" })));
+        var engine = Engine(("account", new FakeContextProvider(new { Id = "A-1" })));
 
         var result = await engine.ExecuteAsync("TransferMade", Transfer("object"),
             [Rule("TransferMade", Op("eq", Path("@auditor.Name"), Value("x")), "audited"), Rule("TransferMade", Op("eq", Path("@payer.Id"), Value("A-1")), "paid")],
@@ -85,30 +87,21 @@ public class ContextReferenceTests
 
         var audited = result.Rules.Single(r => r.RuleId == "audited");
         Assert.Equal(RuleExecutionStatus.Failed, audited.Status);
-        Assert.Contains("'audit' for '@auditor'", audited.Error!.Message);
+        Assert.Equal("No context provider is registered under 'audit' (context '@auditor').", audited.Error!.Message);
         Assert.Equal(RuleExecutionStatus.Matched, result.Rules.Single(r => r.RuleId == "paid").Status);
     }
 
     [Fact]
-    public async Task ExecuteAsync_WithoutReferences_PassesNoReference()
+    public async Task ExecuteAsync_ContextWithoutAReference_PassesNoReference()
     {
-        var accounts = new FakeContextProvider(request => new { Id = request.Resolve("fromAccountId") });
         var calendar = new FakeContextProvider(request => new { Id = request.Resolve("fromAccountId") });
-        var withoutSchemas = Engine(null, ("fromAccount", accounts));
-        var withoutDeclaredReference = Engine(Schemas, ("calendar", calendar));
-        var otherEvent = Engine(Schemas, ("fromAccount", accounts));
+        var engine = Engine(("calendar", calendar));
 
-        foreach (var (engine, path, eventType) in new[] { (withoutSchemas, "@fromAccount.Id", "TransferMade"), (withoutDeclaredReference, "@calendar.Id", "TransferMade"), (otherEvent, "@fromAccount.Id", "Unknown") })
-        {
-            var result = await engine.ExecuteAsync(eventType, Transfer("object"),
-                [Rule(eventType, Op("eq", Path(path), Value("A-1")))], TestContext.Current.CancellationToken);
+        var result = await engine.ExecuteAsync("TransferMade", Transfer("object"),
+            [Rule("TransferMade", Op("eq", Path("@calendar.Id"), Value("A-1")))], TestContext.Current.CancellationToken);
 
-            Assert.Equal(RuleExecutionStatus.Matched, result.Rules[0].Status);
-        }
-
-        Assert.All(calendar.Requests, request => Assert.Null(request.Reference));
-
-        Assert.All(accounts.Requests, request => Assert.Null(request.Reference));
+        Assert.Equal(RuleExecutionStatus.Matched, result.Rules[0].Status);
+        Assert.Null(calendar.Requests.Single().Reference);
     }
 
     [Fact]
@@ -116,8 +109,11 @@ public class ContextReferenceTests
     {
         var accounts = new FakeContextProvider(request => request.Reference);
         object? loaded = null;
-        var engine = new RuleEngine(Evaluator(), new DirectActionFactory().Add(new LoadingAction(async (context, ct) => loaded = await context.GetContextAsync("toAccount", ct)), "load"),
-            null, new DirectContextProviderFactory().Add(accounts, "toAccount"), Schemas);
+        var engine = new TestCatalog()
+            .Action("load", new LoadingAction(async (context, ct) => loaded = await context.GetContextAsync("toAccount", ct)))
+            .Provider("toAccount", accounts)
+            .Stored(Stored)
+            .Engine();
 
         await engine.ExecuteAsync("TransferMade", Transfer("object"),
             [new RuleDefinition { Id = "r", Name = "r", EventType = "TransferMade", Condition = Op("eq", Value(1), Value(1)), Actions = [new ActionDefinition { Action = "load" }] }],
@@ -152,13 +148,13 @@ public class ContextReferenceTests
         ? JsonNode.Parse("""{ "fromAccountId": "A-1", "toAccountId": "A-2", "address": { "country": "GB", "postcode": "EH1 1AA" } }""")!
         : new { FromAccountId = "A-1", ToAccountId = "A-2", Address = new { Country = "GB", Postcode = "EH1 1AA" } };
 
-    private static RuleEngine Engine(ISchemaStore? schemas, params (string Name, IContextProvider Provider)[] providers)
+    private static RuleEngine Engine(params (string Name, IContextProvider Provider)[] providers)
     {
-        var factory = new DirectContextProviderFactory();
+        var catalog = new TestCatalog().Action("record", new NoOpAction()).Stored(Stored);
         foreach (var (name, provider) in providers)
-            factory.Add(provider, name);
+            catalog.Provider(name, provider);
 
-        return new RuleEngine(Evaluator(), new DirectActionFactory().Add(new NoOpAction(), "record"), null, factory, schemas);
+        return catalog.Engine();
     }
 
     private static RuleDefinition Rule(string eventType, Abstractions.Condition.ConditionNode condition, string id = "r") =>

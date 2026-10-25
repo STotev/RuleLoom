@@ -113,7 +113,7 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 | Milestone | Contents | Notes |
 |---|---|---|
 | **0.6: Schemas and contexts** ([PRD #87](https://github.com/STotev/RuleLoom/issues/87)) | New `RuleLoom.Schemas` package: event schema classes (`EventSchema<T>`) with inference from DTOs, JSON Schema export/import, `ISchemaStore` + in-memory store; **contexts** (`@customer.Tier`) loaded by consumer-registered context providers, prefetched once per event; previous state rebuilt from changed fields; schema-aware `RuleValidator` (unknown paths and contexts are errors, type mismatches warnings); `#` reserved for functions | Detail under [Schema & validation](#schema--validation) below |
-| **0.7: Authoring surface & hosting** | Transport-free **catalogue** (event schemas, operators, actions, validate); **action descriptors** (FluentValidation-style; parameters that are values or paths); `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration endpoints); **schema publishing** (`UseSchemaPublishing(p => p.UseHttp(...))`) and **storage packages** (e.g. PostgreSQL); optional build-time schema generation; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape) | Optional packages; no rule CRUD. The PRD also decides **scopes** (applications / bounded contexts) and rule groups, see the vision |
+| **0.7: Authoring surface & hosting** | The transport-free catalog moved into 0.6 as the [catalog](specs/2026-10-25-catalog-design.md); **action parameter descriptors** on `ActionDescriptor<T>` (parameters that are values or paths); `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration endpoints); **schema publishing** (`UseSchemaPublishing(p => p.UseHttp(...))`) and **storage packages** (e.g. PostgreSQL); optional build-time schema generation; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape) | Optional packages; no rule CRUD. The PRD also decides **scopes** (applications / bounded contexts) and rule groups, see the vision |
 | **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
 | **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides, a **documentation site** built from `docs/` with more extensive examples (see below) | 1.0 marks a stable API; packages are already published from 0.5.0 |
 | **After 0.7** | **Fluent rule builder** producing `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the schema builder's expression → path translation | Mainly for in-process users; placed once 0.7 settles |
@@ -130,7 +130,8 @@ becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66, see *D
 | [#101](https://github.com/STotev/RuleLoom/issues/101) | Context schemas described with their providers | AFK | #93 | [#105](https://github.com/STotev/RuleLoom/pull/105) | [context-schemas](specs/2026-10-19-context-schemas-design.md) |
 | [#94](https://github.com/STotev/RuleLoom/issues/94) | Schema-aware rule validation with severities | AFK | #91, #92, #101 | [#106](https://github.com/STotev/RuleLoom/pull/106) | [schema-validation](specs/2026-10-21-schema-validation-design.md) |
 | [#107](https://github.com/STotev/RuleLoom/issues/107) | Parse rule paths once and restructure RuleValidator | AFK | #94 | [#108](https://github.com/STotev/RuleLoom/pull/108) | [path-model](specs/2026-10-22-path-model-design.md) |
-| [#95](https://github.com/STotev/RuleLoom/issues/95) | Sample and guide for schemas and contexts | HITL | #91, #93, #94, #101, #107 | — | — |
+| [#109](https://github.com/STotev/RuleLoom/issues/109) | The catalog: one immutable registry of event schemas, context providers, operators and actions that the engine, validator and UI run on; catalog store | HITL | #107 | — | [catalog](specs/2026-10-25-catalog-design.md) |
+| [#95](https://github.com/STotev/RuleLoom/issues/95) | Sample and guide for schemas and contexts, built on the catalog | HITL | #91, #93, #94, #101, #107, #109 | — | — |
 
 ---
 
@@ -212,12 +213,12 @@ parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variab
   (analysis §7); functions could be its first step or a separate feature.
 
 ### Schema & validation
-**0.6** ([PRD #87](https://github.com/STotev/RuleLoom/issues/87)) delivers schemas, contexts and path validation;
-the catalogue and action descriptors follow in 0.7. Design decisions are in [`vision.md`](vision.md#decided). Earlier
+**0.6** ([PRD #87](https://github.com/STotev/RuleLoom/issues/87)) delivers schemas, contexts, path validation and the
+catalog (#109); action parameter descriptors follow in 0.7. Design decisions are in [`vision.md`](vision.md#decided). Earlier
 sketch: old roadmap §1.2.
 
 The schema is intended as the single source for:
-- **UI form generation**: fields, types and labels for rule-authoring UIs (read through the 0.7 catalogue).
+- **UI form generation**: fields, types and labels for rule-authoring UIs (read from the catalog: `catalog.ToJson()`).
 - **Path validation / whitelisting**: reject unknown paths when a rule is saved (0.6). `RuleValidator` in #22 can't do this
   because it doesn't know an event's CLR type.
 - **Path cache**: pre-warm or bound the shared accessor cache (#15) to schema paths, possibly as a DI registration
@@ -268,7 +269,7 @@ trace. Detail: old roadmap Phase 3.
 
 ### Infrastructure & scale (old Phase 4)
 Persistence and distributed events (MassTransit/RabbitMQ) are the consumer's. The execution observer hook is in
-**0.8**, the catalogue REST API in **0.7**, and the operations dashboard is post-1.0. Still open: structured `ILogger`
+**0.8**, the catalog REST API in **0.7**, and the operations dashboard is post-1.0. Still open: structured `ILogger`
 logging (the engine reports failures only in its results today). Detail: old roadmap Phase 4.
 
 ---

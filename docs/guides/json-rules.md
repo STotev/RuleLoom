@@ -204,26 +204,11 @@ A rule is rejected when:
 - `operands` or `actions` isn't an array, an action has no `type`, or `parameters` isn't an object
 
 Whether an operator exists or has the right number of operands isn't checked by the parser. To catch those before a
-rule is saved or run, validate it against the operators and actions you've registered:
+rule is saved or run, validate it against the catalog the engine runs on:
 
 ```csharp
-var validator = new RuleValidator(operators, actionFactory);   // same ones as for the engine
+var validator = new RuleValidator(catalog);   // or resolve RuleValidator from DI
 var result = validator.Validate(rule);
-
-foreach (var error in result.Errors)
-    Console.WriteLine($"{error.Path}: {error.Message}");   // e.g. "$.condition.operands[1].operator: Unknown operator 'gt'."
-```
-
-`RuleValidator` reports every problem at once: unknown operators, too few or too many operands, unknown actions,
-and `Delay`/`Advance` schedules without `amount` or `unit`.
-
-With schemas, it also checks paths. Give the validator the context providers and the schema store (DI does this) and
-call `ValidateAsync`. When the store has a schema for the rule's event, every path in conditions and schedule
-`referencePath`s is checked:
-
-```csharp
-var validator = new RuleValidator(operators, actionFactory, contextProviders, schemaStore);
-var result = await validator.ValidateAsync(rule, cancellationToken);
 
 foreach (var error in result.Errors)
     Console.WriteLine($"{error.Path}: {error.Message}");   // "$.condition.operands[0].path: 'Totl' is not a field of OrderPlaced."
@@ -231,15 +216,20 @@ foreach (var warning in result.Warnings)
     Console.WriteLine($"{warning.Path}: {warning.Message}");
 ```
 
+`RuleValidator` reports every problem at once: an event type that isn't in the catalog, unknown operators, too few or
+too many operands, unknown actions, and `Delay`/`Advance` schedules without `amount` or `unit`. Every path in
+conditions and schedule `referencePath`s is checked against the event's schema:
+
 - **Errors:** unknown fields (ignored fields count as unknown), paths below a value without fields or into a list
-  (`Lines.Sku`, `@watchers.Email`), contexts the event doesn't declare, contexts whose provider isn't registered,
-  `$current.@x`/`$previous.@x`, and `changed` on a context. `$previous.` paths are checked against the subject.
+  (`Lines.Sku`, `@watchers.Email`), contexts the event doesn't declare, contexts whose provider isn't registered
+  (possible only for event schemas that came from a catalog store), `$current.@x`/`$previous.@x`, and `changed` on a
+  context. `$previous.` paths are checked against the subject.
 - **Warnings** (the rule stays valid; `IsValid` only looks at errors): `eq`, `gt`, `gte`, `lt` and `lte` comparing types
   that can never match (a number field with `"100"`, a boolean with `"yes"`, a date with text that isn't ISO 8601,
   `gt` on a list or object), and paths into a context whose provider has no schema (an untyped provider), which can't
   be checked. Enum fields aren't checked.
 - Paths below untyped fields (`object`, JSON), dictionaries and repeated types aren't checked.
-- Without a store, or without a schema for the event, `ValidateAsync` returns what `Validate` returns.
+- Rules on an event type that isn't in the catalog get an error at `$.eventType`, and their paths aren't checked.
 
 ## Type Inference Rules
 
@@ -292,8 +282,8 @@ public void ValidateOperands(OperandValidationContext context)
 ## Contexts
 
 A rule often needs data beyond the event's subject: the order's customer, the warehouse, the people watching an ad.
-Instead of sending it with every event, give each kind of related data a name and register a **context provider** that
-loads it. Rules use it with `@name`:
+Instead of sending it with every event, the event's schema declares the related data it has (its **contexts**) and a
+**context provider** in the catalog loads it. Rules use it with `@name`:
 
 ```json
 { "operator": "eq", "operands": [{ "path": "@customer.Tier" }, { "value": "Gold" }] }
@@ -306,24 +296,39 @@ public sealed class CustomerProvider(ICustomersClient customers) : ContextProvid
         request.Resolve("CustomerId") is string id ? await customers.FindAsync(id, cancellationToken) : null;
 }
 
-services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("customer"));   // Scoped
-// without DI: new RuleEngine(evaluator, actions, contextProviders: new DirectContextProviderFactory().Add(provider, "customer"))
+public sealed class OrderPlacedSchema : EventSchema<OrderDto>
+{
+    public OrderPlacedSchema()
+    {
+        Event("OrderPlaced");
+        Context("customer");   // loaded by the provider registered as "customer"
+    }
+}
+
+services.AddRuleLoom(rules => rules.AddCatalog(catalog => catalog
+    .AddEvent<OrderPlacedSchema>()
+    .AddContextProvider<CustomerProvider>("customer")));   // created in each scope
+// without DI: new RuleEngine(catalog, actions, new DirectContextProviderFactory().Add(new CustomerProvider(customers)))
 ```
+
+- **Only declared contexts.** A rule can use the contexts its event declares, and nothing else: `@warehouse` on an
+  event that doesn't declare it (or on an event type that isn't in the catalog) fails the rule, even when a provider is
+  registered under that name. Building the catalog fails when an event declares a context with no provider.
 
 - **The provider decides how to find the data.** It gets the context name and the event (type, current and previous
   state; `request.Resolve(path)` reads the subject), and returns a .NET object, JSON, a collection, or `null` when there
   is none. `ContextProvider<T>` (one entity) and `CollectionContextProvider<TItem>` (a collection) are typed base
   classes; implement `IContextProvider` directly to return untyped data such as JSON from another service.
 - **References from event schemas.** When the event's schema declares how it refers to a context
-  (`Context("toAccount").ReferencedBy(t => t.ToAccountId)`, see `RuleLoom.Schemas`) and schemas are registered with
-  `AddSchemas`, the engine resolves the reference from the event and passes it as `request.Reference`; read it with
+  (`Context("toAccount").ReferencedBy(t => t.ToAccountId)`, see `RuleLoom.Schemas`), the engine resolves the reference
+  from the event and passes it as `request.Reference`; read it with
   `request.GetReference<string>()` (a single value) or `GetReference<ZoneKey>()` (a composite reference mapped onto a
   record by part name). Without a declared reference, `Reference` is `null` and the provider reads the subject itself.
-- **Describing a context's fields.** A typed provider describes what it loads: its fields come from its type, and an
-  override of `Describe(ContextDescription<T> context)` adds `context.Label("Account")`,
-  `context.Field(a => a.Balance).Label("Balance")` or `.Ignore()`. With `AddSchemas`, the description is saved into the
-  schema store under the provider's registered name; it's used to validate `@` paths and to show rule authors what
-  they can pick. Untyped providers (`IContextProvider`, or a JSON or `object` type) have no description.
+- **Describing a context's fields.** A typed provider's fields come from the type it loads, and a
+  `ContextSchema<T>` of that type (in the provider's or the type's assembly) adds `Label("Account")`,
+  `Field(a => a.Balance).Label("Balance")` or `.Ignore()` in its constructor. The schema is kept in the catalog under
+  the provider's registered name; it's used to validate `@` paths and to show rule authors what they can pick. Untyped
+  providers (`IContextProvider`, or a JSON or `object` type) have no schema, unless a catalog store holds one.
 - **One provider, several contexts.** A schema can say which provider loads a context:
   `Context("fromAccount").LoadedBy("account").ReferencedBy(t => t.FromAccountId)` and
   `Context("toAccount").LoadedBy("account").ReferencedBy(t => t.ToAccountId)`, with one
@@ -332,11 +337,11 @@ services.AddRuleLoom(rules => rules.AddContextProvider<CustomerProvider>("custom
   loads it.
 - **Loaded only when used, once per event.** Before evaluating, the engine loads the contexts that the event's rules
   use (in conditions, action conditions and schedule `referencePath`s), in parallel. Contexts no rule uses aren't loaded.
-- **Actions** can load any registered context on demand, e.g. a collection to email:
+- **Actions** can load any context the event declares on demand, e.g. a collection to email:
   `var watchers = await context.GetContextAsync<WatcherDto[]>("watchers", ct);` (JSON is deserialized; the untyped
   `GetContextAsync(name)` returns the value as loaded). It shares the same per-event cache.
 - **Failures stay local.** If a provider throws, only the rules (or actions) that use that context fail, with a
-  `ContextLoadException`; other rules run. A context name without a provider fails the rules that use it.
+  `ContextLoadException`; other rules run.
 - **No previous state.** Contexts are read as they are now: `$previous.@customer` is rejected and `changed` on a context
   fails the rule.
 - Names ignore case. A collection comes back as is; paths into it (`@watchers.Email`) resolve to `null`.
@@ -472,14 +477,9 @@ Mode and unit names ignore case. A reference that's missing, `null` or not a dat
 var rule = RuleJsonParser.Parse(jsonString);
 
 // Use with RuleEngine
-IConditionOperator[] operators =
-[
-    new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator(),
-    new GreaterThanOperator(), new GreaterThanOrEqualOperator(), new LessThanOperator(), new LessThanOrEqualOperator()
-];
-IAction[] actions = [new ConsoleLogAction()];
+var catalog = new CatalogBuilder().AddAction<ConsoleLogAction>().Build();   // with the built-in operators
 
-var engine = new RuleEngine(new ConditionEvaluator(operators), new DirectActionFactory(actions));
+var engine = new RuleEngine(catalog);
 RuleEngineResult result = await engine.ExecuteAsync(eventType, current, previous, [rule]);
 ```
 

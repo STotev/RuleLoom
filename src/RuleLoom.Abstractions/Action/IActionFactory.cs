@@ -1,20 +1,16 @@
 namespace RuleLoom.Abstractions.Action;
 
 /// <summary>
-/// Resolves actions by the name they are registered under.
+/// Creates actions. The engine finds an action's registration in its <see cref="Catalog"/> by name and asks the
+/// factory for an instance, so the factory never resolves names: implement it to create actions your own way (e.g.
+/// from another container).
 /// </summary>
 public interface IActionFactory
 {
     /// <summary>
-    /// Tries to get the action registered under <paramref name="name"/> (matched ignoring case).
+    /// Creates (or returns) the action for <paramref name="action"/>.
     /// </summary>
-    /// <param name="name">The action name (e.g. "send-email").</param>
-    /// <param name="action">The resolved action when found.</param>
-    /// <returns><c>true</c> when an action is found; otherwise <c>false</c>.</returns>
-    bool TryGetAction(string name, out IAction? action);
-
-    /// <summary>
-    /// The action names this factory can resolve. Used to validate rules before they run.
-    /// </summary>
-    IReadOnlyCollection<string> ActionNames { get; }
+    /// <param name="action">The action's registration in the catalog.</param>
+    /// <exception cref="InvalidOperationException">The action can't be created.</exception>
+    IAction Create(ActionRegistration action);
 }

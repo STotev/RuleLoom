@@ -1,14 +1,12 @@
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Actions;
 using RuleLoom.Engine;
-using RuleLoom.Evaluators;
-using RuleLoom.Operators;
 using RuleLoom.Validation;
 
 namespace RuleLoom.Samples.Console;
 
 /// <summary>
-/// Rules authored as JSON: parsed, validated against the registered operators and actions, then run.
+/// Rules authored as JSON: parsed, validated against the catalog (events, operators, actions), then run.
 /// </summary>
 internal static class JsonExample
 {
@@ -42,9 +40,8 @@ internal static class JsonExample
 
     public static async Task RunAsync()
     {
-        var operators = BuiltInOperators.Create();
-        var actions = new DirectActionFactory([new ConsoleLogAction()]);
-        var validator = new RuleValidator(operators, actions);
+        var catalog = new CatalogBuilder().AddEvent<CarAdPublishedSchema>().AddAction<ConsoleLogAction>().Build();
+        var validator = new RuleValidator(catalog);
 
         var rules = RuleJsonParser.ParseMany(Rules);
 
@@ -64,7 +61,7 @@ internal static class JsonExample
                 System.Console.WriteLine($"  {error.Path}: {error.Message}");
         }
 
-        var engine = new RuleEngine(new ConditionEvaluator(operators), actions);
+        var engine = new RuleEngine(catalog);
         var ad = new CarAd { Title = "2020 Ford Focus", Price = 13_900m, MarketValue = 15_200m, Status = AdStatus.Active };
 
         var result = await engine.ExecuteAsync("CarAdPublished", ad, valid);

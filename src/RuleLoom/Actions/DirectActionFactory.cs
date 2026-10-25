@@ -3,23 +3,22 @@ using RuleLoom.Abstractions.Action;
 namespace RuleLoom.Actions;
 
 /// <summary>
-/// Default non-DI action factory backed by action instances, each registered under a name: the one given
-/// to <see cref="Add"/>, or else its default name (<see cref="ActionNames.GetDefaultName"/>). Names are matched
-/// ignoring case.
+/// Default non-DI action factory: returns the instance added for an action's type, or else creates the type with its
+/// parameterless constructor. Names stay in the catalog; the factory only knows types.
 /// </summary>
 public sealed class DirectActionFactory : IActionFactory
 {
-    private readonly Dictionary<string, IAction> _actions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<Type, IAction> _actions = [];
 
     /// <summary>
-    /// Creates an empty factory; register actions with <see cref="Add"/>.
+    /// Creates a factory without instances: every action is created with its parameterless constructor.
     /// </summary>
     public DirectActionFactory()
     {
     }
 
     /// <summary>
-    /// Creates a factory with each action registered under its default name.
+    /// Creates a factory that returns these instances for their types.
     /// </summary>
     public DirectActionFactory(IEnumerable<IAction> actions)
     {
@@ -29,31 +28,25 @@ public sealed class DirectActionFactory : IActionFactory
             Add(action);
     }
 
-    public IReadOnlyCollection<string> ActionNames => _actions.Keys;
-
     /// <summary>
-    /// Registers <paramref name="action"/> under <paramref name="name"/>, or under its default name when omitted.
+    /// Returns <paramref name="action"/> for every registration of its type.
     /// </summary>
-    /// <exception cref="ArgumentException">The name is already registered (names are case-insensitive).</exception>
-    public DirectActionFactory Add(IAction action, string? name = null)
+    /// <exception cref="ArgumentException">An instance of this type was already added.</exception>
+    public DirectActionFactory Add(IAction action)
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        name ??= Abstractions.Action.ActionNames.GetDefaultName(action.GetType());
+        if (!_actions.TryAdd(action.GetType(), action))
+            throw new ArgumentException($"An instance of {action.GetType().Name} was already added.", nameof(action));
 
-        if (_actions.Keys.FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase)) is { } existing)
-        {
-            throw new ArgumentException(
-                existing == name
-                    ? $"Action name '{name}' is registered more than once."
-                    : $"Action name '{name}' conflicts with '{existing}' (names are case-insensitive).",
-                nameof(name));
-        }
-
-        _actions.Add(name, action);
         return this;
     }
 
-    public bool TryGetAction(string name, out IAction? action) =>
-        _actions.TryGetValue(name, out action);
+    /// <inheritdoc />
+    public IAction Create(ActionRegistration action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        return _actions.TryGetValue(action.Type, out var instance) ? instance : Activation.Create<IAction>(action.Type, action.Name);
+    }
 }

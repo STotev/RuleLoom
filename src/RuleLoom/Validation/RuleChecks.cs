@@ -22,6 +22,16 @@ internal sealed class RequiredFieldsCheck : RuleCheck
     }
 }
 
+/// <summary>A rule's event type must be in the catalog.</summary>
+internal sealed class EventTypeCheck(Catalog catalog) : RuleCheck
+{
+    public override void Rule(RuleDefinition rule, ValidationProblems problems)
+    {
+        if (!string.IsNullOrWhiteSpace(rule.EventType) && !catalog.TryGetEvent(rule.EventType, out _))
+            problems.Error("$.eventType", $"Event type '{rule.EventType}' isn't in the catalog.");
+    }
+}
+
 /// <summary>A rule's and an action's condition must be an operator.</summary>
 internal sealed class RootConditionCheck : RuleCheck
 {
@@ -93,13 +103,13 @@ internal sealed class OperatorCheck(SchemaPaths? schemaPaths) : RuleCheck
 }
 
 /// <summary>Actions must be registered, and delayed or advanced schedules need an amount and a unit.</summary>
-internal sealed class ActionCheck(IReadOnlySet<string> actionNames) : RuleCheck
+internal sealed class ActionCheck(Catalog catalog) : RuleCheck
 {
     public override void Action(ActionDefinition action, string location, ValidationProblems problems)
     {
         if (string.IsNullOrWhiteSpace(action.Action))
             problems.Error($"{location}.action", "'action' must be a non-empty string.");
-        else if (!actionNames.Contains(action.Action))
+        else if (!catalog.TryGetAction(action.Action, out _))
             problems.Error($"{location}.action", $"No action is registered under the name '{action.Action}'.");
     }
 

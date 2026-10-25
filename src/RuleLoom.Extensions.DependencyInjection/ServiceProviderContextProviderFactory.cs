@@ -4,28 +4,20 @@ using RuleLoom.Abstractions.Context;
 namespace RuleLoom.Extensions.DependencyInjection;
 
 /// <summary>
-/// Resolves context providers registered with <see cref="RuleLoomBuilder.AddContextProvider{TProvider}"/> from the
-/// current scope, so providers can use scoped services.
+/// Creates context providers in the current scope: the registered service when the provider's type is registered,
+/// otherwise a new instance with its dependencies from the scope. Instances that aren't registered aren't disposed with
+/// the scope, so register disposable providers yourself.
 /// </summary>
 public sealed class ServiceProviderContextProviderFactory : IContextProviderFactory
 {
     private readonly IServiceProvider _services;
-    private readonly RuleLoomRegistry _registry;
 
-    internal ServiceProviderContextProviderFactory(IServiceProvider services, RuleLoomRegistry registry)
+    internal ServiceProviderContextProviderFactory(IServiceProvider services) => _services = services;
+
+    /// <inheritdoc />
+    public IContextProvider Create(ContextProviderRegistration provider)
     {
-        _services = services;
-        _registry = registry;
-    }
-
-    public IReadOnlyCollection<string> ProviderNames => _registry.ContextProviderNames;
-
-    public bool TryGetProvider(string name, out IContextProvider? provider)
-    {
-        provider = _registry.TryGetContextProviderType(name, out var providerType)
-            ? (IContextProvider)_services.GetRequiredService(providerType!)
-            : null;
-
-        return provider is not null;
+        ArgumentNullException.ThrowIfNull(provider);
+        return (IContextProvider)ActivatorUtilities.GetServiceOrCreateInstance(_services, provider.Type);
     }
 }

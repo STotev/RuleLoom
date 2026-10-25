@@ -3,8 +3,8 @@ using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
-using RuleLoom.Actions;
 using RuleLoom.Operators;
+using RuleLoom.Schemas;
 using RuleLoom.Validation;
 using static RuleLoom.Tests.Conditions;
 
@@ -12,9 +12,20 @@ namespace RuleLoom.Tests;
 
 public class RuleValidatorTests
 {
-    private static readonly RuleValidator Validator = new(
-        [new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator()],
-        new DirectActionFactory().Add(new NoOpAction(), "log").Add(new NoOpAction(), "send-email"));
+    // "Event" has the fields the rules use, and declares a context without a schema.
+    private static readonly EventSchemaDefinition Event = EventSchemaDefinition.Parse("""
+        { "x-ruleloom-event": "Event", "type": "object",
+          "properties": { "Price": { "type": "number" }, "Status": { "type": "string" }, "IsActive": { "type": "boolean" }, "A": {}, "B": {} },
+          "x-ruleloom-contexts": { "customer": {} } }
+        """);
+
+    private static readonly RuleValidator Validator = new(new TestCatalog()
+        .Operators(new EqualsOperator(), new ChangedOperator(), new AndOperator(), new OrOperator(), new NotOperator())
+        .Action("log", new NoOpAction())
+        .Action("send-email", new NoOpAction())
+        .Provider("customer", new FakeContextProvider((object?)null))
+        .Event(Event)
+        .Build());
 
     private static readonly OperatorCondition Valid = Op("eq", Path("Price"), Value(1));
 
@@ -167,7 +178,7 @@ public class RuleValidatorTests
     [Fact]
     public void Validate_CustomOperator_ReportsItsOwnOperandProblems()
     {
-        var validator = new RuleValidator([new BetweenOperator()], new DirectActionFactory([]));
+        var validator = new RuleValidator(new TestCatalog().Operators(new BetweenOperator()).Provider("customer", new FakeContextProvider((object?)null)).Event(Event).Build());
 
         var result = validator.Validate(Rule(Op("between", Path("Price"), Value(10), Value(1))));
 
@@ -180,7 +191,7 @@ public class RuleValidatorTests
     [InlineData(false)]
     public void Validate_OperatorValidationFails_IsAnErrorNotAnException(bool throws)
     {
-        var validator = new RuleValidator([new FaultyOperator(throws)], new DirectActionFactory([]));
+        var validator = new RuleValidator(new TestCatalog().Operators(new FaultyOperator(throws)).Provider("customer", new FakeContextProvider((object?)null)).Event(Event).Build());
 
         var result = validator.Validate(Rule(Op("faulty", Value(1))));
 
@@ -192,27 +203,12 @@ public class RuleValidatorTests
     [Fact]
     public void Validate_OperandCountOutOfRange_DoesNotAskTheOperator()
     {
-        var validator = new RuleValidator([new BetweenOperator()], new DirectActionFactory([]));
+        var validator = new RuleValidator(new TestCatalog().Operators(new BetweenOperator()).Provider("customer", new FakeContextProvider((object?)null)).Event(Event).Build());
 
         var result = validator.Validate(Rule(Op("between", Path("Price"))));
 
         Assert.Equal("$.condition.operands", Assert.Single(result.Errors).Path);
         Assert.Empty(result.Warnings);
-    }
-
-    [Fact]
-    public void Constructor_DuplicateOperatorNames_Throws()
-    {
-        Assert.Throws<ArgumentException>(() => new RuleValidator(
-            [new EqualsOperator(), new EqualsOperator()], new DirectActionFactory([])));
-    }
-
-    [Fact]
-    public void DirectActionFactory_ActionNames_ListsRegisteredNames()
-    {
-        var factory = new DirectActionFactory().Add(new NoOpAction(), "log").Add(new NoOpAction(), "send-email");
-
-        Assert.Equal(["log", "send-email"], factory.ActionNames.Order());
     }
 
     private static void AssertSingleError(RuleValidationResult result, string path, string message)

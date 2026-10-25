@@ -7,10 +7,9 @@ namespace RuleLoom.Validation;
 /// Resolves a rule's paths on its event's schema and the schemas of the contexts it uses, once per path: problems are
 /// reported the first time a path is resolved.
 /// </summary>
+/// <param name="catalog">The catalog, which finds the event's contexts and their providers' schemas.</param>
 /// <param name="event">The schema of the rule's event.</param>
-/// <param name="contexts">The event's contexts the rule uses, by context name (ignoring case): their schema, or
-/// <c>null</c> when the provider describes none. Declared contexts without a registered provider are missing.</param>
-internal sealed class SchemaPaths(EventSchemaDefinition @event, IReadOnlyDictionary<string, ContextSchemaDefinition?> contexts)
+internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
 {
     private readonly Dictionary<PathNode, FieldDefinition?> _resolved = new(ReferenceEqualityComparer.Instance);
 
@@ -32,15 +31,10 @@ internal sealed class SchemaPaths(EventSchemaDefinition @event, IReadOnlyDiction
         {
             var name = $"@{parsed.Context}";
 
-            if (!contexts.TryGetValue(parsed.Context!, out var context))
-            {
-                var declared = @event.Contexts.FirstOrDefault(c => string.Equals(c.Name, parsed.Context, StringComparison.OrdinalIgnoreCase));
-                return Report(problems, path, declared is null
-                    ? $"'{name}' is not a context of {@event.EventType}."
-                    : $"No context provider is registered under '{declared.Provider}' (context '{name}').");
-            }
+            if (!catalog.TryGetContext(@event.EventType, parsed.Context!, out var found, out var error))
+                return Report(problems, path, error);
 
-            if (context is null)
+            if (found.Provider.Schema is not { } context)
             {
                 problems.Warning(path.Location, $"Context '{name}' has no schema; paths into it aren't checked.");
                 return null;
@@ -65,7 +59,7 @@ internal sealed class SchemaPaths(EventSchemaDefinition @event, IReadOnlyDiction
         var segments = parsed.Segments;
         for (var index = 0; ; index++)
         {
-            if (Find(fields, segments[index]) is not { } field)
+            if (FieldDefinition.Find(fields, segments[index]) is not { } field)
                 return Report(problems, path, $"'{segments[index]}' is not a field of {owner}.");
 
             if (index == segments.Count - 1)
@@ -91,16 +85,6 @@ internal sealed class SchemaPaths(EventSchemaDefinition @event, IReadOnlyDiction
     {
         problems.Error(path.Location, message);
         return null;
-    }
-
-    /// <summary>Like property paths: an exact-case match wins; an ambiguous case-insensitive match is unknown.</summary>
-    private static FieldDefinition? Find(IReadOnlyList<FieldDefinition> fields, string name)
-    {
-        if (fields.FirstOrDefault(f => f.Name == name) is { } exact)
-            return exact;
-
-        var matches = fields.Where(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)).Take(2).ToList();
-        return matches.Count == 1 ? matches[0] : null;
     }
 }
 

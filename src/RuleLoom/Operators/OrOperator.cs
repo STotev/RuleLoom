@@ -5,6 +5,8 @@ namespace RuleLoom.Operators;
 public class OrOperator : IConditionOperator
 {
     public string Name => "or";
+    public string Label => "any of";
+    public string Description => "True when at least one operand is true.";
     public int MinOperands => 1;
     public int MaxOperands => int.MaxValue;
 

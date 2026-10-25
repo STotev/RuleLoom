@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-      <Description>Microsoft.Extensions.DependencyInjection integration for RuleLoom: services.AddRuleLoom(...) registers the engine, operators, actions and validator.</Description>
+      <Description>Microsoft.Extensions.DependencyInjection integration for RuleLoom: services.AddRuleLoom(...) registers the engine, validator and catalog (events, context providers, operators, actions).</Description>
       <PackageTags>rules;rule-engine;business-rules;dependency-injection</PackageTags>
     </PropertyGroup>
 

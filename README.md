@@ -15,10 +15,10 @@
 
 ---
 
-You provide the threads: the **events** your application raises, the **operators** rules can use and the **actions**
-they can take. Your users weave them into **rules**, without a deployment. When something happens (an order is
-placed, a price changes), RuleLoom runs that event's rules against the current and previous state and runs or
-schedules their actions.
+You provide the threads, together the **catalog**: the **events** your application raises, the **operators** rules
+can use and the **actions** they can take. Your users weave them into **rules**, without a deployment. When something
+happens (an order is placed, a price changes), RuleLoom runs that event's rules against the current and previous state
+and runs or schedules their actions.
 
 - **Rules as data**: JSON rules you can store per customer, edit in a UI and validate before saving, or rules built in code.
 - **Any state**: paths resolve on .NET objects and on JSON (`JsonElement`, `JsonNode`), so a service can run rules on
@@ -88,7 +88,7 @@ public sealed class SendEmailAction(IEmailService email) : IAction        // "ac
     }
 }
 
-services.AddRuleLoom(rules => rules.AddAction<SendEmailAction>());
+services.AddRuleLoom(rules => rules.AddCatalog(catalog => catalog.AddAction<SendEmailAction>()));
 
 // When an order is placed (rules come from your storage):
 var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();

@@ -40,23 +40,6 @@ public class ConditionEvaluatorTests
         Assert.Throws<ArgumentNullException>(() => new ConditionEvaluator(null!));
     }
 
-    [Fact]
-    public void Constructor_DuplicateOperatorNames_ThrowsNamingTheOperator()
-    {
-        var ex = Assert.Throws<ArgumentException>(() => new ConditionEvaluator([new EqualsOperator(), new EqualsOperator()]));
-
-        Assert.StartsWith("Operator 'eq' is registered more than once.", ex.Message);
-    }
-
-    [Fact]
-    public void Constructor_NamesDifferingOnlyInCase_ThrowsNamingBoth()
-    {
-        var ex = Assert.Throws<ArgumentException>(
-            () => new ConditionEvaluator([new EqualsOperator(), new CountingOperator("EQ", true)]));
-
-        Assert.StartsWith("Operator 'EQ' conflicts with 'eq' (names are case-insensitive).", ex.Message);
-    }
-
     [Theory]
     [InlineData("eq")]
     [InlineData("EQ")]

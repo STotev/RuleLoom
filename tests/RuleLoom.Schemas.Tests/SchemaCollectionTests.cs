@@ -21,32 +21,13 @@ public class SchemaCollectionTests
     }
 
     [Fact]
-    public void SchemaSet_SameContextTwice_Throws()
+    public void Build_HoldsOnlyEvents()
     {
-        var error = Assert.Throws<InvalidOperationException>(() => new SchemaSet([], [Contexts.Account(), Contexts.Account()]));
+        var document = new SchemaCollection().Add<OrderPlacedSchema>().Build();
 
-        Assert.Contains("account", error.Message);
-    }
-
-    [Fact]
-    public void SchemaSet_RoundTripsEventsAndContexts()
-    {
-        var events = new SchemaCollection().Add<OrderPlacedSchema>().Build().Events;
-        var json = new SchemaSet(events, [Contexts.Account(), Contexts.Watchers()]).ToJson();
-
-        var parsed = SchemaSet.Parse(json);
-
-        Assert.Equal(["OrderPlaced"], parsed.Events.Select(e => e.EventType));
-        Assert.Equal(["account", "watchers"], parsed.Contexts.Select(c => c.Name));
-        Assert.Equal(json, parsed.ToJson());
-    }
-
-    [Theory]
-    [InlineData("""[{ "type": "object" }]""")]
-    [InlineData("""[{ "x-ruleloom-context": "a" }, { "x-ruleloom-context": "A" }]""")]
-    [InlineData("""{ "x-ruleloom-context": "a" }""")]
-    public void SchemaSet_Parse_InvalidDocuments_Throw(string json)
-    {
-        Assert.Throws<System.Text.Json.JsonException>(() => SchemaSet.Parse(json));
+        Assert.Equal(["OrderPlaced"], document.Events.Select(e => e.EventType));
+        Assert.Empty(document.Contexts);
+        Assert.Empty(document.Operators);
+        Assert.Empty(document.Actions);
     }
 }

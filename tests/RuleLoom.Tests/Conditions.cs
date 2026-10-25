@@ -18,18 +18,7 @@ internal static class Conditions
     public static ValueOperand Value(object? value) => new() { Value = value };
 
     public static ConditionEvaluator Evaluator(params IConditionOperator[] extraOperators) =>
-        new([
-            new EqualsOperator(),
-            new ChangedOperator(),
-            new AndOperator(),
-            new OrOperator(),
-            new NotOperator(),
-            new GreaterThanOperator(),
-            new GreaterThanOrEqualOperator(),
-            new LessThanOperator(),
-            new LessThanOrEqualOperator(),
-            .. extraOperators
-        ]);
+        new(new TestCatalog().Operators([.. BuiltInOperators.Create(), .. extraOperators]).Build());
 
     /// <summary>
     /// Creates one <see cref="CountingOperator"/> per result, operator nodes referencing them,

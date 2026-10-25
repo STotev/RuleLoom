@@ -8,8 +8,8 @@ using RuleLoom.Abstractions.Rule;
 using RuleLoom.Actions;
 using RuleLoom.Contexts;
 using RuleLoom.Engine;
-using RuleLoom.Evaluators;
 using RuleLoom.Operators;
+using RuleLoom.Schemas;
 
 namespace RuleLoom.Tests.Integration;
 
@@ -23,7 +23,7 @@ public class RuleEngineIntegrationTests
         _logMessages = [];
 
         _engine = new RuleEngine(
-            new ConditionEvaluator(BuiltInOperators.Create()),
+            new CatalogBuilder().AddAction<TestLogAction>().Build(),
             new DirectActionFactory([new TestLogAction(_logMessages)]));
     }
 
@@ -593,7 +593,8 @@ public class RuleEngineIntegrationTests
         """;
 
         var reminder = new ReminderAction();
-        var engine = new RuleEngine(new ConditionEvaluator([new EqualsOperator()]), new DirectActionFactory([reminder]));
+        var catalog = new CatalogBuilder().RemoveBuiltInOperators().AddOperator<EqualsOperator>().AddAction<ReminderAction>().Build();
+        var engine = new RuleEngine(catalog, new DirectActionFactory([reminder]));
 
         // Act
         var result = await engine.ExecuteAsync(
@@ -704,7 +705,7 @@ public class RuleEngineIntegrationTests
         """;
 
         var engine = new RuleEngine(
-            new ConditionEvaluator(BuiltInOperators.Create()),
+            new CatalogBuilder().AddAction<FailingAction>().AddAction<TestLogAction>().Build(),
             new DirectActionFactory([new FailingAction(), new TestLogAction(_logMessages)]));
 
         // Act
@@ -1004,14 +1005,17 @@ public class RuleEngineIntegrationTests
         """;
 
         var customers = new Dictionary<string, object> { ["c-1"] = ParseState(kind, """{ "Tier": "Gold" }""") };
-        var contexts = new DirectContextProviderFactory()
-            .Add(new LookupProvider(request => customers.GetValueOrDefault((string)request.Resolve("CustomerId")!)), "customer")
-            .Add(new LookupProvider(_ => new[] { "a@example.com", "b@example.com" }), "watchers");
         var notified = new List<string>();
+        var catalog = new CatalogBuilder()
+            .AddEvent<OrderPlacedSchema>()
+            .AddContextProvider<CustomerProvider>("customer")
+            .AddContextProvider<WatchersProvider>("watchers")
+            .AddAction<NotifyWatchersAction>()
+            .Build();
         var engine = new RuleEngine(
-            new ConditionEvaluator(BuiltInOperators.Create()),
-            new DirectActionFactory().Add(new NotifyWatchersAction(notified), "notify-watchers"),
-            contextProviders: contexts);
+            catalog,
+            new DirectActionFactory([new NotifyWatchersAction(notified)]),
+            new DirectContextProviderFactory().Add(new CustomerProvider(customers)));
 
         var order = ParseState(kind, """{ "CustomerId": "c-1", "Total": 640.5 }""");
 
@@ -1023,10 +1027,29 @@ public class RuleEngineIntegrationTests
         Assert.Equal(["a@example.com", "b@example.com"], notified);
     }
 
-    private sealed class LookupProvider(Func<ContextRequest, object?> load) : IContextProvider
+    private sealed record Order(string CustomerId, decimal Total);
+
+    private sealed class OrderPlacedSchema : EventSchema<Order>
+    {
+        public OrderPlacedSchema()
+        {
+            Event("OrderPlaced");
+            Context("customer").ReferencedBy(o => o.CustomerId);
+            Context("watchers");
+        }
+    }
+
+    // Finds the customer the event refers to (its declared reference).
+    private sealed class CustomerProvider(Dictionary<string, object> customers) : IContextProvider
     {
         public ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(load(request));
+            ValueTask.FromResult(customers.GetValueOrDefault(request.GetReference<string>()!));
+    }
+
+    private sealed class WatchersProvider : IContextProvider
+    {
+        public ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken) =>
+            ValueTask.FromResult<object?>(new[] { "a@example.com", "b@example.com" });
     }
 
     private sealed class NotifyWatchersAction(List<string> notified) : IAction

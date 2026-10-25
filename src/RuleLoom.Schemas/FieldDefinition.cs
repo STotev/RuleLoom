@@ -31,4 +31,20 @@ public sealed record FieldDefinition(
 
     /// <inheritdoc />
     public override int GetHashCode() => HashCode.Combine(Name, Type, IsNullable, Label, Description, EnumValues.Count, Fields.Count);
+
+    /// <summary>
+    /// Finds the field a path segment names, like property paths do: an exact-case match wins; otherwise a single
+    /// match ignoring case; an ambiguous match is <c>null</c>.
+    /// </summary>
+    public static FieldDefinition? Find(IReadOnlyList<FieldDefinition> fields, string name)
+    {
+        ArgumentNullException.ThrowIfNull(fields);
+        ArgumentNullException.ThrowIfNull(name);
+
+        if (fields.FirstOrDefault(f => f.Name == name) is { } exact)
+            return exact;
+
+        var matches = fields.Where(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)).Take(2).ToList();
+        return matches.Count == 1 ? matches[0] : null;
+    }
 }

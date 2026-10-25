@@ -6,9 +6,9 @@ using RuleLoom.Samples.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
-    .AddRuleLoom(rules => rules
-        .AddAction<SendEmailAction>()
-        .AddAction<ConsoleLogAction>()) // built in, for development; not registered by default
+    .AddRuleLoom(rules => rules.AddCatalog(catalog => catalog
+        .AddFromAssemblyOf<OrderPlacedSchema>() // the event schemas and SendEmailAction
+        .AddAction<ConsoleLogAction>()))        // built in, for development; not registered by default
     .AddScoped<TenantRuleStore>()
     .AddSingleton<ActionScheduler>()
     .AddQuartz()

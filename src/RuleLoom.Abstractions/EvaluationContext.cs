@@ -3,6 +3,7 @@ using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using RuleLoom.Abstractions.Context;
+using RuleLoom.Schemas;
 
 namespace RuleLoom.Abstractions;
 
@@ -16,6 +17,7 @@ public class EvaluationContext
     private static readonly JsonSerializerOptions ContextJsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly string? _eventType;
+    private readonly Catalog? _catalog;
     private readonly IContextProviderFactory? _contextProviders;
     private readonly ConcurrentDictionary<string, Lazy<Task<object?>>> _contexts = new(StringComparer.OrdinalIgnoreCase);
 
@@ -41,20 +43,23 @@ public class EvaluationContext
     }
 
     /// <summary>
-    /// Creates a new evaluation context whose <c>@name</c> contexts are loaded through
-    /// <paramref name="contextProviders"/>, each at most once.
+    /// Creates a new evaluation context whose <c>@name</c> contexts are the ones <paramref name="eventType"/> declares in
+    /// <paramref name="catalog"/>, each loaded at most once by a provider from <paramref name="contextProviders"/>.
     /// </summary>
     /// <param name="current">The current state.</param>
     /// <param name="previous">The previous state, if any.</param>
-    /// <param name="eventType">The event being processed, passed to the providers.</param>
-    /// <param name="contextProviders">The registered context providers.</param>
-    public EvaluationContext(object? current, object? previous, string eventType, IContextProviderFactory contextProviders)
+    /// <param name="eventType">The event being processed, whose declared contexts can be loaded.</param>
+    /// <param name="catalog">The catalog with the event's schema and the context providers.</param>
+    /// <param name="contextProviders">Creates the providers.</param>
+    public EvaluationContext(object? current, object? previous, string eventType, Catalog catalog, IContextProviderFactory contextProviders)
         : this(current, previous)
     {
         ArgumentNullException.ThrowIfNull(eventType);
+        ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(contextProviders);
 
         _eventType = eventType;
+        _catalog = catalog;
         _contextProviders = contextProviders;
     }
 
@@ -69,7 +74,7 @@ public class EvaluationContext
     /// <param name="path">The property path to resolve.</param>
     /// <returns>The resolved value, or null if the path doesn't exist.</returns>
     /// <exception cref="InvalidOperationException">The path isn't valid (<see cref="RulePath"/>), or names a context
-    /// that has no provider or hasn't been loaded.</exception>
+    /// that the event doesn't declare (or can't be loaded) or that hasn't been loaded.</exception>
     /// <exception cref="ContextLoadException">The context's provider failed.</exception>
     public object? Resolve(string path) =>
         RulePath.TryParse(path, out var parsed, out var error) ? Resolve(parsed) : throw new InvalidOperationException(error);
@@ -78,8 +83,8 @@ public class EvaluationContext
     /// Resolves a parsed path: its property on the current state, the previous state or a loaded context.
     /// </summary>
     /// <returns>The resolved value, or null if the path doesn't exist.</returns>
-    /// <exception cref="InvalidOperationException">The path names a context that has no provider or hasn't been
-    /// loaded.</exception>
+    /// <exception cref="InvalidOperationException">The path names a context that the event doesn't declare (or can't
+    /// be loaded) or that hasn't been loaded.</exception>
     /// <exception cref="ContextLoadException">The context's provider failed.</exception>
     public object? Resolve(RulePath path)
     {
@@ -102,12 +107,13 @@ public class EvaluationContext
     /// <param name="name">The context name, without <c>@</c> (matched ignoring case).</param>
     /// <param name="cancellationToken">Cancels the load.</param>
     /// <returns>The context, or <c>null</c> if the provider found none.</returns>
-    /// <exception cref="InvalidOperationException">No provider is registered under <paramref name="name"/>.</exception>
-    /// <exception cref="ContextLoadException">The provider failed.</exception>
+    /// <exception cref="InvalidOperationException">The event doesn't declare the context <paramref name="name"/>, or
+    /// its declaration can't be used (see <see cref="Catalog.TryGetContext"/>).</exception>
+    /// <exception cref="ContextLoadException">The provider couldn't be created or failed.</exception>
     public async ValueTask<object?> GetContextAsync(string name, CancellationToken cancellationToken = default)
     {
-        var provider = GetProvider(name);
-        var load = _contexts.GetOrAdd(name, _ => new Lazy<Task<object?>>(() => LoadAsync(provider, name, cancellationToken)));
+        var context = FindContext(name);
+        var load = _contexts.GetOrAdd(name, _ => new Lazy<Task<object?>>(() => LoadAsync(context, cancellationToken)));
 
         return await load.Value.ConfigureAwait(false);
     }
@@ -119,8 +125,9 @@ public class EvaluationContext
     /// names ignoring case.
     /// </summary>
     /// <returns>The context, or the default of <typeparamref name="T"/> if the provider found none.</returns>
-    /// <exception cref="InvalidOperationException">No provider is registered under <paramref name="name"/>.</exception>
-    /// <exception cref="ContextLoadException">The provider failed.</exception>
+    /// <exception cref="InvalidOperationException">The event doesn't declare the context <paramref name="name"/>, or
+    /// its declaration can't be used.</exception>
+    /// <exception cref="ContextLoadException">The provider couldn't be created or failed.</exception>
     /// <exception cref="InvalidCastException">The context is neither a <typeparamref name="T"/> nor JSON.</exception>
     /// <exception cref="JsonException">The context's JSON can't be read as <typeparamref name="T"/>.</exception>
     public async ValueTask<T?> GetContextAsync<T>(string name, CancellationToken cancellationToken = default)
@@ -137,12 +144,16 @@ public class EvaluationContext
         };
     }
 
-    private async Task<object?> LoadAsync(IContextProvider provider, string name, CancellationToken cancellationToken)
+    private async Task<object?> LoadAsync(CatalogContext context, CancellationToken cancellationToken)
     {
+        var name = context.Declaration.Name;
+
         try
         {
-            return await provider.GetAsync(new ContextRequest(name, _eventType!, Current, Previous), cancellationToken)
-                .ConfigureAwait(false);
+            var provider = _contextProviders!.Create(context.Provider);
+            var request = new ContextRequest(name, _eventType!, Current, Previous) { Reference = ResolveReference(context.Declaration) };
+
+            return await provider.GetAsync(request, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -150,9 +161,18 @@ public class EvaluationContext
         }
     }
 
+    // The event's declared reference to the context, resolved on the subject: one value, or the parts by name.
+    private object? ResolveReference(ContextDefinition declaration) => declaration.ReferencedBy switch
+    {
+        null => null,
+        { IsComposite: true } reference => reference.Parts.ToDictionary(part => part.Key, part => Resolve(part.Value), StringComparer.OrdinalIgnoreCase)
+            as IReadOnlyDictionary<string, object?>,
+        var reference => Resolve(reference.Path!)
+    };
+
     private object? GetLoadedContext(string name)
     {
-        GetProvider(name);
+        FindContext(name);
 
         if (!_contexts.TryGetValue(name, out var load) || !load.Value.IsCompleted)
         {
@@ -170,13 +190,13 @@ public class EvaluationContext
         return load.Value.Result;
     }
 
-    private IContextProvider GetProvider(string name)
+    private CatalogContext FindContext(string name)
     {
-        IContextProvider? provider = null;
+        if (_catalog is null)
+            throw new InvalidOperationException($"Context '@{name}' can't be loaded: this evaluation context has no catalog.");
 
-        if (_contextProviders is null || !_contextProviders.TryGetProvider(name, out provider) || provider is null)
-            throw new InvalidOperationException($"No context provider is registered for '@{name}'.");
-
-        return provider;
+        return _catalog.TryGetContext(_eventType!, name, out var context, out var error)
+            ? context
+            : throw new InvalidOperationException(error);
     }
 }

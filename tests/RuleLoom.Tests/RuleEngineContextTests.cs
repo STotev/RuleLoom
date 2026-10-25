@@ -4,8 +4,6 @@ using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
-using RuleLoom.Actions;
-using RuleLoom.Contexts;
 using RuleLoom.Engine;
 using static RuleLoom.Tests.Conditions;
 
@@ -91,26 +89,51 @@ public class RuleEngineContextTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_UnregisteredContext_FailsTheRule()
+    public async Task ExecuteAsync_UndeclaredContext_FailsTheRuleWithoutLoadingIt()
     {
-        var engine = Engine(new RecordingAction(), ("customer", new FakeContextProvider(new { })));
+        var warehouse = new FakeContextProvider(new { City = "Paris" });
+        var engine = new TestCatalog()
+            .Action("record", new RecordingAction())
+            .Provider("warehouse", warehouse)
+            .Event("OrderPlaced")
+            .Engine();
 
         var result = await engine.ExecuteAsync("OrderPlaced", Order,
             [Rule("city", Op("eq", Path("@warehouse.City"), Value("Paris")))], TestContext.Current.CancellationToken);
 
         Assert.Equal(RuleExecutionStatus.Failed, result.Rules[0].Status);
-        Assert.Contains("@warehouse", result.Rules[0].Error!.Message);
+        Assert.Equal("'@warehouse' is not a context of OrderPlaced.", result.Rules[0].Error!.Message);
+        Assert.Equal(0, warehouse.Calls);
     }
 
     [Fact]
-    public async Task ExecuteAsync_EngineWithoutProviders_FailsRulesUsingContexts()
+    public async Task ExecuteAsync_EventNotInTheCatalog_FailsRulesUsingContexts()
     {
-        var engine = new RuleEngine(Evaluator(), new DirectActionFactory().Add(new RecordingAction(), "record"));
+        var engine = new TestCatalog()
+            .Action("record", new RecordingAction())
+            .Provider("customer", new FakeContextProvider(new { Tier = "Gold" }))
+            .Engine();
+
+        var result = await engine.ExecuteAsync("OrderPlaced", Order,
+            [Rule("gold", Op("eq", Path("@customer.Tier"), Value("Gold"))), Rule("big", Op("gt", Path("Total"), Value(500)))],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(RuleExecutionStatus.Failed, result.Rules[0].Status);
+        Assert.Contains("isn't in the catalog", result.Rules[0].Error!.Message);
+        Assert.Equal(RuleExecutionStatus.Matched, result.Rules[1].Status);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ProviderCantBeCreated_FailsRulesUsingTheContext()
+    {
+        var engine = new RuleEngine(
+            new TestCatalog().Provider("customer", new FakeContextProvider(new { })).Event("OrderPlaced", "customer").Build());
 
         var result = await engine.ExecuteAsync("OrderPlaced", Order,
             [Rule("gold", Op("eq", Path("@customer.Tier"), Value("Gold")))], TestContext.Current.CancellationToken);
 
         Assert.Equal(RuleExecutionStatus.Failed, result.Rules[0].Status);
+        Assert.Contains("parameterless constructor", Assert.IsType<ContextLoadException>(result.Rules[0].Error).InnerException!.Message);
     }
 
     [Fact]
@@ -161,17 +184,16 @@ public class RuleEngineContextTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => execution);
     }
 
+    // OrderPlaced and OrderUpdated declare every provider's context.
     private static RuleEngine Engine(RecordingAction action, params (string Name, IContextProvider Provider)[] providers)
     {
-        var factory = new DirectContextProviderFactory();
+        var catalog = new TestCatalog().Action("record", action);
         foreach (var (name, provider) in providers)
-            factory.Add(provider, name);
+            catalog.Provider(name, provider);
 
-        return new RuleEngine(
-            Evaluator(),
-            new DirectActionFactory().Add(action, "record"),
-            new FixedTimeProvider(new DateTimeOffset(2026, 10, 18, 9, 0, 0, TimeSpan.Zero)),
-            factory);
+        var names = providers.Select(p => p.Name).ToArray();
+        return catalog.Event("OrderPlaced", names).Event("OrderUpdated", names)
+            .Engine(new FixedTimeProvider(new DateTimeOffset(2026, 10, 18, 9, 0, 0, TimeSpan.Zero)));
     }
 
     private static RuleDefinition Rule(string id, ConditionNode condition, params ActionDefinition[] actions) =>
