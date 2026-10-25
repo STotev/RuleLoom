@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 
 namespace RuleLoom.Schemas.Tests;
 
-public class ContextDescriptionTests
+public class ContextSchemaTests
 {
     private static readonly ContextSchemaDefinition Account = Contexts.Account();
     private static readonly ContextSchemaDefinition Watchers = Contexts.Watchers();
@@ -65,7 +65,7 @@ public class ContextDescriptionTests
     [Fact]
     public void Build_WithoutConfiguration_DescribesTheTypeWithoutLabels()
     {
-        var schema = new ContextDescription<AccountDto>().Build("account");
+        var schema = new PlainAccountSchema().Build("account");
 
         Assert.Equal((null, null), (schema.Label, schema.Description));
         Assert.Equal(["id", "balance", "internalRiskScore"], schema.Fields.Select(f => f.Name));
@@ -75,7 +75,7 @@ public class ContextDescriptionTests
     [Fact]
     public void Build_CollectionType_Throws()
     {
-        var error = Assert.Throws<InvalidOperationException>(() => new ContextDescription<List<UserDto>>().Build("watchers"));
+        var error = Assert.Throws<InvalidOperationException>(() => new UserListSchema().Build("watchers"));
 
         Assert.Contains("collection", error.Message);
     }
@@ -83,19 +83,22 @@ public class ContextDescriptionTests
     [Fact]
     public void Build_FieldNotSerialized_Throws()
     {
-        var context = new ContextDescription<OrderDto>();
-        context.Field(o => o.Secret).Label("Secret");
-
-        Assert.Throws<InvalidOperationException>(() => context.Build("order"));
+        Assert.Throws<InvalidOperationException>(() => new SecretOrderSchema().Build("order"));
     }
 
     [Fact]
     public void Build_DictionaryType_IsNotACollection()
     {
-        var schema = new ContextDescription<Dictionary<string, string>>().Build("settings");
+        var schema = new SettingsSchema().Build("settings");
 
         Assert.False(schema.IsMany);
         Assert.Empty(schema.Fields);
+    }
+
+    [Fact]
+    public void DataType_IsTheDescribedType()
+    {
+        Assert.Equal(typeof(AccountDto), ((IContextSchema)new AccountSchema()).DataType);
     }
 
     private static IEnumerable<string> References(JsonNode? node) => node switch

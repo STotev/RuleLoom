@@ -110,15 +110,33 @@ public sealed class AccountDto
     public string InternalRiskScore { get; set; } = "";
 }
 
+public sealed class AccountSchema : ContextSchema<AccountDto>
+{
+    public AccountSchema()
+    {
+        Label("Account");
+        Description("A customer's account.");
+        Field(a => a.Balance).Label("Balance");
+        Field(a => a.InternalRiskScore).Ignore();
+    }
+}
+
+public sealed class PlainAccountSchema : ContextSchema<AccountDto>;
+
+public sealed class UserSchema : ContextSchema<UserDto>;
+
+public sealed class UserListSchema : ContextSchema<List<UserDto>>;
+
+public sealed class SettingsSchema : ContextSchema<Dictionary<string, string>>;
+
+public sealed class SecretOrderSchema : ContextSchema<OrderDto>
+{
+    public SecretOrderSchema() => Field(o => o.Secret).Label("Secret");
+}
+
 public static class Contexts
 {
-    public static ContextSchemaDefinition Account()
-    {
-        var context = new ContextDescription<AccountDto>().Label("Account").Description("A customer's account.");
-        context.Field(a => a.Balance).Label("Balance");
-        context.Field(a => a.InternalRiskScore).Ignore();
-        return context.Build("account");
-    }
+    public static ContextSchemaDefinition Account() => new AccountSchema().Build("account");
 
-    public static ContextSchemaDefinition Watchers() => new ContextDescription<UserDto>().Build("watchers", isMany: true);
+    public static ContextSchemaDefinition Watchers() => new UserSchema().Build("watchers", isMany: true);
 }

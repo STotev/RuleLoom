@@ -44,7 +44,7 @@ public class SchemaJsonTests
     {
         var json = new SchemaCollection().Add<OrderPlacedSchema>().Add<LineAddedSchema>().ToJson();
 
-        var schemas = SchemaSet.Parse(json).Events;
+        var schemas = CatalogDocument.Parse(json).Events;
 
         Assert.Equal(["OrderPlaced", "LineAdded"], schemas.Select(s => s.EventType));
     }
