@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace RuleLoom.Schemas.Tests;
@@ -127,12 +128,23 @@ public class EventSchemaTests
     }
 
     [Fact]
-    public void Build_ContextProvider_IsTheConfiguredOneOrTheContextName()
+    public void Build_ContextProvider_IsTheConfiguredOneOrTheContextName_AndAlwaysWritten()
     {
+        var contexts = JsonNode.Parse(Order.ToJson())!["x-ruleloom-contexts"]!.AsObject();
+
         Assert.Equal("account", Order.Contexts.Single(c => c.Name == "billingAccount").Provider);
         Assert.Equal("customer", Order.Contexts.Single(c => c.Name == "customer").Provider);
-        Assert.Contains("\"x-ruleloom-provider\": \"account\"", Order.ToJson());
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(Order.ToJson(), "x-ruleloom-provider"));
+        Assert.Equal("account", (string?)contexts["billingAccount"]!["x-ruleloom-provider"]);
+        Assert.All(contexts, pair => Assert.Equal(Order.Contexts.Single(c => c.Name == pair.Key).Provider, (string?)pair.Value!["x-ruleloom-provider"]));
+    }
+
+    [Fact]
+    public void Parse_ContextWithoutProvider_DefaultsToItsName_AndWritesIt()
+    {
+        var schema = EventSchemaDefinition.Parse("""{ "x-ruleloom-event": "E", "x-ruleloom-contexts": { "customer": {} } }""");
+
+        Assert.Equal("customer", Assert.Single(schema.Contexts).Provider);
+        Assert.Equal("customer", (string?)JsonNode.Parse(schema.ToJson())!["x-ruleloom-contexts"]!["customer"]!["x-ruleloom-provider"]);
     }
 
     [Fact]
