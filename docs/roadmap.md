@@ -26,6 +26,7 @@ connect to historical docs — they were reused inconsistently between documents
 | 0.4.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.4.0) 2026-10-06 | Action names by registration, `IAction`, dependency injection, upgrading guide |
 | 0.5.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.5.0) 2026-10-15; the first release on [NuGet](https://www.nuget.org/packages/RuleLoom) | JSON state, ISO date comparison, required rule ids, `ConsoleLogAction`, ASP.NET Core sample |
 | 0.6.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.6.0) 2026-10-25 | Event schemas (`RuleLoom.Schemas`), contexts, validation against schemas, the catalog, previous state from changed fields |
+| 0.7.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.7.0) 2026-10-26 | Typed actions (`IAction<TParameters>`), `$path` parameters, parameter validation, rule-by-rule parsing (`ParseEach`), `RuleLoom.AspNetCore` (`MapRuleLoom`) |
 
 ---
 
