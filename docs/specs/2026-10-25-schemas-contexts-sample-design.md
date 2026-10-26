@@ -38,7 +38,7 @@ Recorded while building. None blocks 0.6; the first is for the 0.7 authoring sur
 1. **The link from a context to its schema is implicit in the catalog document.** An event's context declaration carries
    `x-ruleloom-provider` only when the schema sets `LoadedBy`; otherwise a UI has to know that the provider (and so the
    context schema) is the one named after the context. Consider writing the provider on every declaration when the
-   authoring surface is designed (0.7).
+   authoring surface is designed (0.7). *Done in 0.7 (#114).*
 2. **Providers null-forgive the reference** (`request.GetReference<string>()!`) even though the event declares
    `ReferencedBy`: the reference is `null` only when the event's field is. Acceptable; the guide shows the pattern.
 3. **Collection contexts come back nullable** from `GetContextAsync<T>`, so the action writes `?? []` although a
