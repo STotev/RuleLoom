@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file. It is generated
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/) — do not edit it by hand.
 
+## [0.7.0](https://github.com/STotev/RuleLoom/compare/v0.6.0...v0.7.0) (2026-10-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* validate typed actions' parameters against their schema ([#124](https://github.com/STotev/RuleLoom/issues/124))
+* paths in action parameters ({ "$path": ... }), resolved when parameters are read ([#123](https://github.com/STotev/RuleLoom/issues/123))
+
+### Features
+
+* context declarations always name their provider ([#126](https://github.com/STotev/RuleLoom/issues/126)) ([0b78ce5](https://github.com/STotev/RuleLoom/commit/0b78ce5bb1e7801475a724667655beb51d93238d))
+* parse rule arrays rule by rule (RuleJsonParser.ParseEach) ([#125](https://github.com/STotev/RuleLoom/issues/125)) ([f920700](https://github.com/STotev/RuleLoom/commit/f9207001c96b0e5e73623c6fcf96c2a200836652))
+* paths in action parameters ({ "$path": ... }), resolved when parameters are read ([#123](https://github.com/STotev/RuleLoom/issues/123)) ([9111e54](https://github.com/STotev/RuleLoom/commit/9111e5447bd976d8f60238482744eea2cf443842))
+* RuleLoom.AspNetCore with app.MapRuleLoom (catalog and validate endpoints) ([#127](https://github.com/STotev/RuleLoom/issues/127)) ([fccab0d](https://github.com/STotev/RuleLoom/commit/fccab0d0f4c3636f2d1c9e5a4d8d429fe7425fe4))
+* **sample:** typed actions, $path parameters and MapRuleLoom in the ASP.NET Core sample ([#128](https://github.com/STotev/RuleLoom/issues/128)) ([6682e77](https://github.com/STotev/RuleLoom/commit/6682e772f083141951057ede9d7888785297b093))
+* typed actions with IAction&lt;TParameters&gt; and parameters in the catalog ([#121](https://github.com/STotev/RuleLoom/issues/121)) ([20835c7](https://github.com/STotev/RuleLoom/commit/20835c7a676da32fe8035ff2303d955a20335d3a))
+* validate typed actions' parameters against their schema ([#124](https://github.com/STotev/RuleLoom/issues/124)) ([a440c31](https://github.com/STotev/RuleLoom/commit/a440c31991d31f2810be369bf3dcf5f2a237cbc3))
+
 ## [0.6.0](https://github.com/STotev/RuleLoom/compare/v0.5.0...v0.6.0) (2026-10-25)
 
 
