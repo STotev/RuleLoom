@@ -95,7 +95,7 @@ operators and actions. It's built once and fixed afterwards; the engine and the 
 ```
 
 ```csharp
-RuleDefinition rule = RuleJsonParser.Parse(json);              // or ParseMany / ParseAsync
+RuleDefinition rule = RuleJsonParser.Parse(json);              // or ParseMany / ParseEach / ParseAsync
 ```
 
 - Paths read the current state (`"Price"`, `"Address.City"`); `$current.`/`$previous.` choose a state explicitly.
