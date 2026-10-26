@@ -30,7 +30,21 @@ Reviewed with the maintainer before building (HITL).
 
 ## Findings
 
-Recorded while building.
+Recorded while building. None blocks 0.7.
+
+1. **Running a scheduled action later is still the app's code.** `RunScheduledActionJob` repeats what the engine does
+   for an immediate action: build the `EvaluationContext` (event type, catalog, context provider factory), find the
+   action in the catalog, create it, run it, turn exceptions into a failed result. With `$path` parameters, getting the
+   context wrong now fails quietly at run time: `new EvaluationContext(current, previous)` works for `Customer.Email`
+   and fails `@customer.Email` as an undeclared context. A RuleLoom entry point (e.g. running a `ScheduledAction` with
+   its event's state) would remove the duplication; a candidate for the backlog.
+2. **`ScheduledAction` doesn't carry the event type**, which that context needs; the app stores it in the job data
+   next to the state. An entry point as in 1 would take it with the state.
+3. **A malformed rule has no name in the sample's report** (`InvalidRule.Rule` is `null`): `ParseEach` gives the index
+   and the path, not the id, by design (#81). The location is enough to find it; no change.
+4. **A typed action reads a path written as text as text.** Switching `send-email` to typed parameters and its rules to
+   `$path` must happen together: a rule still saying `"to": "Customer.Email"` validates (it's text) and emails the
+   literal string. The upgrading guide says so; the validator can't tell.
 
 ## Deviations
 
