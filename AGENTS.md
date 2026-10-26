@@ -75,9 +75,9 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 
 | Project | Path | Role |
 |---|---|---|
-| `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models: what the engine runs (operators, actions, context providers), the `Catalog` and its registrations, `ActionDescriptor<T>`, the factory contracts. **No dependencies outside `RuleLoom.Schemas` and .NET** |
+| `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models: what the engine runs (operators, actions, context providers), the `Catalog` and its registrations, action descriptors, the factory contracts. **No dependencies outside `RuleLoom.Schemas` and .NET** |
 | `RuleLoom` | `src/RuleLoom` | Default implementation: `CatalogBuilder`, engine, evaluator, operators, actions, direct factories, scheduling, validation |
-| `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Descriptions: event schemas (`EventSchema<T>` classes) and context schemas (`ContextSchema<T>`), generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`); the catalog document and store (`CatalogDocument`, `ICatalogStore` + `InMemoryCatalogStore`). **No dependencies at all** (not even Abstractions); producers and store packages use it without the engine; `RuleLoom.Abstractions` and `RuleLoom` reference it |
+| `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Descriptions: event schemas (`EventSchema<T>` classes), context schemas (`ContextSchema<T>`) and action parameters (`ParametersSchema<T>`), generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`); the catalog document and store (`CatalogDocument`, `ICatalogStore` + `InMemoryCatalogStore`). **No dependencies at all** (not even Abstractions); producers and store packages use it without the engine; `RuleLoom.Abstractions` and `RuleLoom` reference it |
 | `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(r => r.AddCatalog(...).UseStore<T>())`: the catalog (built at startup), engine, validator and factories |
 | `RuleLoom.Tests` | `tests/RuleLoom.Tests` | xUnit unit tests |
 | `RuleLoom.Tests.Integration` | `tests/RuleLoom.Tests.Integration` | xUnit end-to-end tests |
@@ -188,7 +188,10 @@ environment `nuget`) and attaches the packages to the GitHub release.
   field names are JSON names. Context data is described by its type: `class XSchema : ContextSchema<T>` (constructor:
   `Label`/`Description`/`Field(...)`) builds a `ContextSchemaDefinition` under the provider's name
   (`x-ruleloom-context`; `IsMany` for collections); both inherit `SchemaDefinition` (`Label`, `Description`, `Fields`,
-  `ToJson`). Schemas describe data; descriptors (`ActionDescriptor<TAction>`) describe code. `CatalogBuilder` finds
+  `ToJson`). An action's parameters type is described by `ParametersSchema<T>` (`Parameter(...)`, used by typed
+  descriptors) as a `ParametersSchemaDefinition` (JSON Schema with `required`; `ActionRegistration.Parameters`,
+  `CatalogAction.Parameters`, `"parameters"` in the document). Schemas describe data; descriptors
+  (`ActionDescriptor<TAction>`, `ActionDescriptor<TAction, TParameters>`) describe code. `CatalogBuilder` finds
   descriptions next to what they describe (the action's / provider's / data type's assembly, or `AddFromAssemblyOf`;
   public types only; two for one type fail the build), or takes them explicitly (`AddAction<T, TDescriptor>`,
   `AddContextProvider<T, TSchema>`). `SchemaCollection` gathers event schema classes (assembly scan) into a
@@ -211,13 +214,19 @@ environment `nuget`) and attaches the packages to the GitHub release.
   `ValidateOperands(OperandValidationContext)` to check operands when rules are validated (`GetPath`, `GetField` with
   schemas, `Error`/`Warning`); share the rules with `Evaluate`. The validator never names specific operators: put
   operator-specific checks on the operator (built-ins do: `changed`, the comparisons via `ComparedOperands`).
-- **Action**: implement `IAction` —
-  `Task<ActionResult> ExecuteAsync(ActionDefinition, EvaluationContext, CancellationToken)`; name it by its class
-  (`SendEmailAction` → `send-email`) or `[ActionName("...")]`; read parameters with
-  `action.GetParameter<T>(name)` / `TryGetParameter<T>` (plain CLR values, converted via `ValueConverter`);
-  return `ActionResult.Success()` or `ActionResult.Failed(...)`.
-- **Action descriptor**: `class XDescriptor : ActionDescriptor<XAction>` (constructor: `Label`, `Description`; parameters
-  in 0.7), shipped next to the action.
+- **Action**: implement `IAction<TParameters>` —
+  `ExecuteAsync(TParameters, ActionDefinition, EvaluationContext, CancellationToken)`; a default interface member
+  implements `IAction.ExecuteAsync` with `action.GetParameters<TParameters>(context)` (JSON binding with
+  `ParametersSchemaDefinition.JsonOptions`: names ignore case, enums by name, constructor parameters without a default
+  and `required` members required; a failure throws `InvalidOperationException` naming the parameter, failing only that
+  action). The catalog describes the parameters from the type; an action implementing two parameter types fails the
+  build. Or implement `IAction` — `ExecuteAsync(ActionDefinition, EvaluationContext, CancellationToken)` — and read
+  parameters with `action.GetParameter<T>(name)` / `TryGetParameter<T>` (plain CLR values, converted via
+  `ValueConverter`); its parameters aren't described. Name it by its class (`SendEmailAction` → `send-email`) or
+  `[ActionName("...")]`; return `ActionResult.Success()` or `ActionResult.Failed(...)`.
+- **Action descriptor**: `class XDescriptor : ActionDescriptor<XAction, XParameters>` (constructor: `Label`,
+  `Description`, `Parameter(p => p.X)` with `Label`/`Description`/`Ignore`) or `ActionDescriptor<XAction>` (no
+  parameters), shipped next to the action.
 - **Context provider**: derive from `ContextProvider<TContext>` / `CollectionContextProvider<TItem>` (typed `LoadAsync`;
   the type gives the schema, a `ContextSchema<T>` adds labels and ignores) or implement `IContextProvider`
   (`ValueTask<object?> GetAsync(ContextRequest, CancellationToken)`; no schema unless the store holds one); read the
