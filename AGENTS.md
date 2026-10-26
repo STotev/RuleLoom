@@ -187,7 +187,8 @@ environment `nuget`) and attaches the packages to the GitHub release.
   `o => new { o.A, o.B }`; `LoadedBy(provider)`); `Build(options)`
   generates an `EventSchemaDefinition` from how `TDto` is serialized (Web defaults unless options are given; numbers
   not typed as strings; null-oblivious types non-nullable), adds configured titles and descriptions (no automatic labels) and
-  `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`). `ToJson()`/`Parse` round-trip;
+  `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`, and `x-ruleloom-provider` always: the
+  `LoadedBy` provider or the context's name, also filled in when reading a document without it). `ToJson()`/`Parse` round-trip;
   field names are JSON names. Context data is described by its type: `class XSchema : ContextSchema<T>` (constructor:
   `Label`/`Description`/`Field(...)`) builds a `ContextSchemaDefinition` under the provider's name
   (`x-ruleloom-context`; `IsMany` for collections); both inherit `SchemaDefinition` (`Label`, `Description`, `Fields`,
