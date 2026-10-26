@@ -1,5 +1,4 @@
 using Quartz;
-using RuleLoom.Abstractions;
 using RuleLoom.Actions;
 using RuleLoom.Engine;
 using RuleLoom.Samples.AspNetCore;
@@ -20,8 +19,9 @@ builder.Services
 
 var app = builder.Build();
 
-// What a rule-authoring UI reads: the events and their contexts, their fields, the operators and the actions.
-app.MapGet("/catalog", (Catalog catalog) => Results.Text(catalog.ToJson(), "application/json"));
+// What a rule-authoring UI uses: GET /rules/catalog (the events and their contexts, their fields, the operators and the
+// actions with their parameters) and POST /rules/validate. A real app secures them: .RequireAuthorization().
+app.MapRuleLoom("/rules");
 
 app.MapPost("/events", async (
     EventRequest request,

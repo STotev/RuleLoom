@@ -11,7 +11,7 @@
       ]
     },
     "actions": [
-      { "action": "send-email", "parameters": { "to": "Customer.Email", "subject": "Thank you for your order: a gift is on its way" } }
+      { "action": "send-email", "parameters": { "to": { "$path": "@customer.Email" }, "subject": "Thank you for your order: a gift is on its way" } }
     ]
   },
   {
@@ -22,7 +22,7 @@
     "actions": [
       {
         "action": "send-email",
-        "parameters": { "to": "Customer.Email", "subject": "Your payment is due in a minute" },
+        "parameters": { "to": { "$path": "Customer.Email" }, "subject": "Your payment is due in a minute" },
         "schedule": { "mode": "Advance", "amount": 1, "unit": "Minutes", "referencePath": "PaymentDueAt" }
       }
     ]
@@ -33,7 +33,7 @@
     "eventType": "OrderUpdated",
     "condition": { "operator": "changed", "operands": [{ "path": "Status" }] },
     "actions": [
-      { "action": "send-email", "parameters": { "to": "Customer.Email", "subject": "Your order status has changed" } }
+      { "action": "send-email", "parameters": { "to": { "$path": "Customer.Email" }, "subject": "Your order status has changed" } }
     ]
   }
 ]

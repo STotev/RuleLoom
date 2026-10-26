@@ -3,7 +3,7 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.6 → 0.7](#06--07): a parameter `{ "$path": ... }` is a path; `FieldDefinition` has `IsRequired`
+- [0.6 → 0.7](#06--07): a parameter `{ "$path": ... }` is a path; `FieldDefinition` has `IsRequired`; optionally, typed actions, path parameters and `MapRuleLoom`
 - [0.5 → 0.6](#05--06): the engine, validator and DI run on a catalog; paths starting with `@` or `#` are no longer property names
 - [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
 - [0.3 → 0.4](#03--04): actions are named by registration, `IAction`, dependency injection
@@ -27,6 +27,55 @@ keep working.
 `FieldDefinition` gained `IsRequired` (the field is listed in its object's `required`), a positional parameter after
 `IsNullable`. Code that creates or deconstructs a `FieldDefinition` passes or receives it there; code that reads its
 properties is unaffected.
+
+### Optional: typed actions, path parameters and `MapRuleLoom`
+
+Nothing else has to change, but an action that took a path as text and resolved it can now let RuleLoom do it. Before:
+
+```csharp
+public sealed class SendEmailAction : IAction
+{
+    public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken ct = default)
+    {
+        var to = context.Resolve(action.GetParameter<string>("to")) as string;   // "to": "Customer.Email"
+        var subject = action.GetParameter<string>("subject");
+        // ...
+    }
+}
+```
+
+After: a typed action, and rules that mark the path:
+
+```csharp
+public sealed record SendEmailParameters(string To, string Subject);
+
+public sealed class SendEmailAction : IAction<SendEmailParameters>
+{
+    public Task<ActionResult> ExecuteAsync(SendEmailParameters parameters, ActionDefinition action, EvaluationContext context,
+        CancellationToken ct = default)
+    {
+        // parameters.To is the address: RuleLoom resolved { "$path": "Customer.Email" }
+    }
+}
+```
+
+```json
+{ "action": "send-email", "parameters": { "to": { "$path": "Customer.Email" }, "subject": "Your order has shipped" } }
+```
+
+Change the action and its rules together: a typed action reads `"to": "Customer.Email"` as the text itself. What you
+get:
+
+- the catalog document describes the parameters (label them with `ActionDescriptor<TAction, TParameters>`), and
+  `RuleValidator` reports unknown, missing and wrongly typed parameters and checks the paths;
+- paths can read contexts (`{ "$path": "@customer.Email" }`), loaded with the rule's other contexts.
+
+If you run scheduled actions yourself, create their `EvaluationContext` with the event type, the catalog and an
+`IContextProviderFactory` (as the engine does), so paths into contexts resolve when the action runs; with
+`new EvaluationContext(current, previous)` they fail as undeclared.
+
+An endpoint you wrote to serve `catalog.ToJson()` can be replaced by the `RuleLoom.AspNetCore` package:
+`app.MapRuleLoom("/rules")` maps `GET /rules/catalog` and `POST /rules/validate`.
 
 ## 0.5 → 0.6
 
