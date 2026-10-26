@@ -129,19 +129,19 @@ From 0.5.0: NuGet packages published by the release workflow with trusted publis
 ## 🎯 Milestones
 
 Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
-becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66) and **0.6** is done (PRD #87), see *Done*;
+becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66), **0.6** is done (PRD #87), see *Done*, and **0.7** is done (PRD #113, below);
 the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings) shaped 0.7–0.8 below.
 
 | Milestone | Contents | Notes |
 |---|---|---|
 | **0.7: Typed actions & authoring endpoints** ([PRD #113](https://github.com/STotev/RuleLoom/issues/113)) | **Typed actions** (`IAction<TParameters>`, parameters described by their type and `ActionDescriptor<TAction, TParameters>`, in the catalog document as JSON Schema); **paths in parameters** (`{ "$path": "@customer.Email" }`, [ADR 0003](adr/0003-paths-in-parameters-are-marked.md)); parameters validated against their schema; `RuleLoom.AspNetCore` with `MapRuleLoom` (catalog, validate); rule arrays parsed rule by rule (#81); every context declaration naming its provider | One application first; no rule CRUD. Detail below |
-| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; **event envelope** `RuleEvent` as decided in 0.5, moved from 0.7 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape); `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
+| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; **event envelope** `RuleEvent` as decided in 0.5, moved from 0.7 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape); `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later"; the 0.7 sample's [findings](specs/2026-10-26-sample-typed-actions-design.md#findings) show the cost of running them in app code (with `$path`, a wrong `EvaluationContext` shows only when the action runs) |
 | **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides, a **documentation site** built from `docs/` with more extensive examples (see below) | 1.0 marks a stable API; packages are already published from 0.5.0 |
 | **Parked: service-to-service** | Schema publishing (`UseSchemaPublishing(p => p.UseHttp(...))`) and registration endpoints; storage packages (e.g. PostgreSQL); optional build-time schema generation; explicit state snapshotter; **scopes** (applications / bounded contexts, see the vision) | Monolith first (2026-10-24): one application, one catalog, event types unique per catalog. Picked up when several applications share an engine |
 | **After 0.7** | **Fluent rule builder** producing `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the schema builder's expression → path translation | Mainly for in-process users; placed once 0.7 settles |
 | **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
 
-### 0.7 — PRD [#113](https://github.com/STotev/RuleLoom/issues/113)
+### 0.7 — PRD [#113](https://github.com/STotev/RuleLoom/issues/113) ✅
 
 | Issue | Slice | Type | Blocked by | PR | Spec |
 |---|---|---|---|---|---|
