@@ -232,8 +232,8 @@ app.MapGet("/catalog", (Catalog catalog) => Results.Text(catalog.ToJson(), "appl
       "type": "object",
       "properties": { "total": { "type": "number" }, "...": {} },
       "x-ruleloom-contexts": {
-        "customer": { "title": "Customer", "x-ruleloom-referenced-by": "customer.email" },
-        "orderHistory": { "title": "Earlier orders", "x-ruleloom-referenced-by": "customer.email" }
+        "customer": { "title": "Customer", "x-ruleloom-provider": "customer", "x-ruleloom-referenced-by": "customer.email" },
+        "orderHistory": { "title": "Earlier orders", "x-ruleloom-provider": "orderHistory", "x-ruleloom-referenced-by": "customer.email" }
       }
     }
   ],
@@ -252,8 +252,9 @@ app.MapGet("/catalog", (Catalog catalog) => Results.Text(catalog.ToJson(), "appl
 ```
 
 Events and contexts are JSON Schema 2020-12 documents. A context's schema is listed under the name of the provider that
-loads it: the declaration's `x-ruleloom-provider` (written when the schema sets `LoadedBy`), or else the context's own
-name.
+loads it, and every context declaration names that provider in `x-ruleloom-provider` (the one set with `LoadedBy`, or
+else the context's own name), so a UI finds a context's schema without a default rule. Documents written without it
+are read as naming the context's own name.
 
 ## 10. Keeping the catalog in a store
 

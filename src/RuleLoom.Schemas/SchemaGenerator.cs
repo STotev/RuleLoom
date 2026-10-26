@@ -132,8 +132,7 @@ internal static class SchemaGenerator
             node["title"] = label;
         if (context.Description is { } description)
             node["description"] = description;
-        if (context.Provider is { } provider)
-            node[ProviderKeyword] = provider;
+        node[ProviderKeyword] = context.Provider ?? context.Name;
 
         if (context.Reference is { } reference)
         {

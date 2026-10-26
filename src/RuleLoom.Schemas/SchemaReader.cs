@@ -49,11 +49,13 @@ internal static class SchemaReader
             _ => throw new JsonException($"The reference of context '{name}' must be a path or an object of paths.")
         };
 
-        var provider = node[SchemaGenerator.ProviderKeyword] is null
-            ? name
-            : String(node, SchemaGenerator.ProviderKeyword) is { } configured && !string.IsNullOrWhiteSpace(configured)
-                ? configured
-                : throw new JsonException($"The provider of context '{name}' must be a non-empty string.");
+        // Without a provider (documents written before it was always written), the context's name, written into the
+        // document so it names every provider.
+        node[SchemaGenerator.ProviderKeyword] ??= name;
+
+        var provider = String(node, SchemaGenerator.ProviderKeyword) is { } configured && !string.IsNullOrWhiteSpace(configured)
+            ? configured
+            : throw new JsonException($"The provider of context '{name}' must be a non-empty string.");
 
         return new ContextDefinition(name, String(node, "title"), String(node, "description"), reference, provider);
     }
