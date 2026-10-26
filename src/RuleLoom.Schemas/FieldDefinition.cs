@@ -6,6 +6,7 @@ namespace RuleLoom.Schemas;
 /// <param name="Name">The field's JSON name (rule paths match it ignoring case); empty for array items.</param>
 /// <param name="Type">The kind of value.</param>
 /// <param name="IsNullable">Whether the field can be <c>null</c>.</param>
+/// <param name="IsRequired">Whether the field must be present (listed in its object's <c>required</c>).</param>
 /// <param name="Label">A readable name for authoring UIs, if configured (<c>title</c>).</param>
 /// <param name="Description">An optional longer explanation.</param>
 /// <param name="EnumValues">The allowed values when <paramref name="Type"/> is <see cref="FieldType.Enum"/>.</param>
@@ -15,6 +16,7 @@ public sealed record FieldDefinition(
     string Name,
     FieldType Type,
     bool IsNullable,
+    bool IsRequired,
     string? Label,
     string? Description,
     IReadOnlyList<string> EnumValues,
@@ -24,13 +26,14 @@ public sealed record FieldDefinition(
     /// <summary>Compares every member, including the contents of <see cref="EnumValues"/> and <see cref="Fields"/>.</summary>
     public bool Equals(FieldDefinition? other) =>
         other is not null &&
-        (Name, Type, IsNullable, Label, Description) == (other.Name, other.Type, other.IsNullable, other.Label, other.Description) &&
+        (Name, Type, IsNullable, IsRequired, Label, Description) ==
+        (other.Name, other.Type, other.IsNullable, other.IsRequired, other.Label, other.Description) &&
         EnumValues.SequenceEqual(other.EnumValues) &&
         Fields.SequenceEqual(other.Fields) &&
         Equals(Items, other.Items);
 
     /// <inheritdoc />
-    public override int GetHashCode() => HashCode.Combine(Name, Type, IsNullable, Label, Description, EnumValues.Count, Fields.Count);
+    public override int GetHashCode() => HashCode.Combine(Name, Type, IsNullable, IsRequired, Label, Description, EnumValues.Count, Fields.Count);
 
     /// <summary>
     /// Finds the field a path segment names, like property paths do: an exact-case match wins; otherwise a single

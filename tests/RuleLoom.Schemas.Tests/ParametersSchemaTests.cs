@@ -13,6 +13,7 @@ public class ParametersSchemaTests
 
         Assert.Equal(["to", "subject", "cc", "priority"], schema.Fields.Select(f => f.Name));
         Assert.Equal(["to", "subject"], document["required"]!.AsArray().Select(n => (string?)n));
+        Assert.Equal([true, true, false, false], schema.Fields.Select(f => f.IsRequired));
         Assert.Equal(FieldType.Enum, schema.Fields[3].Type);
         Assert.Equal(["Low", "High"], schema.Fields[3].EnumValues);
         Assert.True(schema.Fields[2].IsNullable);

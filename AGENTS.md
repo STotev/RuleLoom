@@ -166,10 +166,13 @@ environment `nuget`) and attaches the packages to the GitHub release.
 - **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
   `RuleValidator(catalog).Validate` (`RuleLoom.Validation`; one `RuleWalker` pass handing each node to small
   `RuleCheck`s) checks a rule against the catalog: event type not in the catalog, unknown operators/actions, operand
-  counts, incomplete schedules, and paths against the event's and contexts' schemas (`SchemaPathCheck`; operators get
-  their operands' fields): unknown fields/contexts, undeclared or broken contexts, paths into lists → `Errors`;
-  comparisons of built-in operators that can't match and contexts without a schema → `Warnings` (`IsValid` ignores
-  warnings). Every problem comes with a JSONPath location.
+  counts, incomplete schedules, and paths (operands, `$path` parameters, schedule reference paths) against the event's
+  and contexts' schemas (`SchemaPathCheck`; operators get their operands' fields): unknown fields/contexts, undeclared or
+  broken contexts, paths into lists → `Errors`; comparisons of built-in operators that can't match and contexts without
+  a schema → `Warnings` (`IsValid` ignores warnings). Typed actions' parameters are checked against their parameters
+  schema (`ParameterCheck`, values as the JSON they're bound from): unknown or missing required parameters, values of
+  the wrong type → `Errors`; a `$path` whose field can't be read as the parameter → `Warnings`; untyped actions aren't
+  checked. Every problem comes with a JSONPath location.
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
   in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now. UTC only.
   `ReferencePath` values convert via `ValueConverter` (`DateTime`/`DateTimeOffset`, or strict ISO 8601 strings).

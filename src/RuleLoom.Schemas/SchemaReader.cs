@@ -58,18 +58,30 @@ internal static class SchemaReader
         return new ContextDefinition(name, String(node, "title"), String(node, "description"), reference, provider);
     }
 
-    public static List<FieldDefinition> ReadFields(JsonObject schema, JsonObject root) => schema["properties"] switch
+    public static List<FieldDefinition> ReadFields(JsonObject schema, JsonObject root)
     {
-        null => [],
-        JsonObject properties => properties.Select(pair => ReadField(pair.Key, pair.Value, root)).ToList(),
-        _ => throw new JsonException("'properties' must be an object.")
-    };
+        var required = schema["required"] switch
+        {
+            null => [],
+            JsonArray names => names.Select(n => n is JsonValue value && value.TryGetValue<string>(out var name)
+                ? name
+                : throw new JsonException("'required' must be an array of names.")).ToHashSet(),
+            _ => throw new JsonException("'required' must be an array of names.")
+        };
 
-    private static FieldDefinition ReadField(string name, JsonNode? node, JsonObject root)
+        return schema["properties"] switch
+        {
+            null => [],
+            JsonObject properties => properties.Select(pair => ReadField(pair.Key, pair.Value, required.Contains(pair.Key), root)).ToList(),
+            _ => throw new JsonException("'properties' must be an object.")
+        };
+    }
+
+    private static FieldDefinition ReadField(string name, JsonNode? node, bool isRequired, JsonObject root)
     {
         // The schema `true` (any value): what the exporter writes for object, JsonElement and JsonNode.
         if (node is JsonValue any && any.TryGetValue<bool>(out var accepted) && accepted)
-            return new FieldDefinition(name, FieldType.Any, true, null, null, [], [], null);
+            return new FieldDefinition(name, FieldType.Any, true, isRequired, null, null, [], [], null);
 
         if (node is not JsonObject field)
             throw new JsonException($"'{name}' must be a JSON object or true.");
@@ -87,11 +99,12 @@ internal static class SchemaReader
             name,
             type,
             isNullable,
+            isRequired,
             String(field, "title"),
             String(field, "description"),
             enumValues,
             type == FieldType.Object && !isCycle ? ReadFields(described, root) : [],
-            type == FieldType.Array && !isCycle ? ReadField(string.Empty, described["items"] ?? JsonValue.Create(true), root) : null);
+            type == FieldType.Array && !isCycle ? ReadField(string.Empty, described["items"] ?? JsonValue.Create(true), false, root) : null);
     }
 
     private static JsonObject Target(JsonObject field, JsonObject root, string name) =>

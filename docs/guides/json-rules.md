@@ -219,7 +219,7 @@ foreach (var warning in result.Warnings)
 
 `RuleValidator` reports every problem at once: an event type that isn't in the catalog, unknown operators, too few or
 too many operands, unknown actions, and `Delay`/`Advance` schedules without `amount` or `unit`. Every path in
-conditions and schedule `referencePath`s is checked against the event's schema:
+conditions, `$path` parameters and schedule `referencePath`s is checked against the event's schema:
 
 - **Errors:** unknown fields (ignored fields count as unknown), paths below a value without fields or into a list
   (`Lines.Sku`, `@watchers.Email`), contexts the event doesn't declare, contexts whose provider isn't registered
@@ -230,6 +230,16 @@ conditions and schedule `referencePath`s is checked against the event's schema:
   `gt` on a list or object), and paths into a context whose provider has no schema (an untyped provider), which can't
   be checked. Enum fields aren't checked.
 - Paths below untyped fields (`object`, JSON), dictionaries and repeated types aren't checked.
+
+A typed action's parameters (`IAction<TParameters>`) are checked against its parameters schema; untyped actions'
+parameters aren't:
+
+- **Errors:** a parameter the type doesn't have (`$.actions[0].parameters.subjet`), a required one that's missing
+  (reported at `$.actions[0].parameters`), and a value of the wrong type: text, whole numbers, numbers, booleans, ISO
+  8601 dates, enum names (ignoring case), objects and lists, checked inside too (`$.actions[0].parameters.cc.email`,
+  `…tags[1]`); `null` only where the parameter is nullable. Names ignore case, as when the action reads them.
+- **Warnings:** a `$path` whose field the action can't read as the parameter's type (`"attempts": { "$path": "Email" }`
+  for a number), reported at `…parameters.attempts.$path`. JSON state may still convert, so it doesn't block the rule.
 - Rules on an event type that isn't in the catalog get an error at `$.eventType`, and their paths aren't checked.
 
 ## Type Inference Rules

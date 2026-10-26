@@ -3,7 +3,7 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.6 → 0.7](#06--07): a parameter `{ "$path": ... }` is a path
+- [0.6 → 0.7](#06--07): a parameter `{ "$path": ... }` is a path; `FieldDefinition` has `IsRequired`
 - [0.5 → 0.6](#05--06): the engine, validator and DI run on a catalog; paths starting with `@` or `#` are no longer property names
 - [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
 - [0.3 → 0.4](#03--04): actions are named by registration, `IAction`, dependency injection
@@ -21,6 +21,12 @@ An action parameter whose value is an object with a `$path` key is now a path, r
 the rule is parsed. Rules are affected only if they pass such an object as a literal value; there's no escape for it
 yet, so pass it under another key. Other parameters are unchanged, and actions that resolve path strings themselves
 keep working.
+
+### `FieldDefinition` has `IsRequired`
+
+`FieldDefinition` gained `IsRequired` (the field is listed in its object's `required`), a positional parameter after
+`IsNullable`. Code that creates or deconstructs a `FieldDefinition` passes or receives it there; code that reads its
+properties is unaffected.
 
 ## 0.5 → 0.6
 
