@@ -6,8 +6,9 @@ against them. It shows:
 - **JSON state**: the event's `current` and `previous` stay `JsonElement`s; the service has no producer classes.
 - **Tenancy and storage are yours**: each tenant's rules are JSON files in `Rules/{tenantId}/`, read for every event, so
   edits apply to the next one.
-- **Validate, then run**: rules are checked with `RuleValidator` against the catalog; invalid ones are reported in the
-  response and skipped.
+- **Validate, then run**: each file is parsed rule by rule (`RuleJsonParser.ParseEach`) and the rules are checked with
+  `RuleValidator` against the catalog; malformed and invalid rules are reported in the response and skipped, and the
+  rest of the file still runs.
 - **Contexts**: orders declare the customer's loyalty profile (`@customer.Tier`, used in a rule) and their earlier
   orders (`orderHistory`, a collection read by an action), loaded by context providers.
 - **The catalog document**: `GET /catalog` returns what a rule-authoring UI would read.
@@ -59,6 +60,7 @@ schemas, the operators and the actions, with their labels.
 | | `OrderPlaced` | Big basket (`ItemCount gte 5`) | `console-log` |
 | | `OrderPlaced` | Loyalty check (`Total gte 100`) | `loyalty-check`: reads `orderHistory` |
 | | `OrderPlaced` | Silver upgrade | **Invalid**: `@customer.Teir` isn't a field of the customer context |
+| | `OrderPlaced` | Gift wrap | **Malformed**: no `condition` (reported at `$[4].condition`; the file's other rules still run) |
 | | `OrderUpdated` | Order status changed (`changed Status`) | Email the customer |
 | | `OrderUpdated` | Shipped SMS | **Invalid**: no `send-sms` action is registered |
 | `wheels-market` | `AdPublished` | Ad published (`Status eq Published`) | `console-log`; email the seller after 30 seconds |

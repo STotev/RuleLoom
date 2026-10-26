@@ -157,6 +157,21 @@ foreach (var rule in rules)
 }
 ```
 
+`ParseMany` is all or nothing: one malformed rule rejects the array. To load what you can from a file and report the
+rest, parse it rule by rule with `ParseEach`, which returns one `RuleParseResult` per rule, in order:
+
+```csharp
+foreach (var result in RuleJsonParser.ParseEach(json))
+{
+    if (result.IsParsed)
+        rules.Add(result.Rule);
+    else
+        Console.WriteLine(result.Error.Message);   // "'condition' is required. (at $[1].condition)"
+}
+```
+
+Malformed JSON, or JSON that isn't an array, still throws: there are no rules to tell apart.
+
 ## Performance Considerations
 
 ### Optimizations
@@ -178,7 +193,7 @@ For actual benchmarks, run BenchmarkDotNet tests against your use cases.
 
 Malformed JSON throws `JsonException`. Well-formed JSON that doesn't describe a valid rule throws
 `RuleParseException` (a `JsonException`), whose `Path` is the JSONPath of the problem, e.g. `$.condition.operands[1]`,
-or `$[2].condition` for the third rule passed to `ParseMany`:
+or `$[2].condition` for the third rule passed to `ParseMany` (`ParseEach` returns it in that rule's result instead):
 
 ```csharp
 try
@@ -203,6 +218,7 @@ A rule is rejected when:
   `{ "value": null }`), or its `operator`/`path` is empty
 - `operands` or `actions` isn't an array, an action has no `type`, or `parameters` isn't an object
 - a `$path` parameter has other keys, isn't a valid path, or sits inside a parameter's value
+- a value has the wrong type for its property, e.g. `"priority": "high"` or a schedule `"mode": "Weekly"`
 
 Whether an operator exists or has the right number of operands isn't checked by the parser. To catch those before a
 rule is saved or run, validate it against the catalog the engine runs on:

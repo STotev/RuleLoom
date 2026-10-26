@@ -145,7 +145,7 @@ the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings
 
 | Issue | Slice | Type | Blocked by | PR | Spec |
 |---|---|---|---|---|---|
-| [#81](https://github.com/STotev/RuleLoom/issues/81) | Parse rule arrays rule by rule | AFK | — | — | — |
+| [#81](https://github.com/STotev/RuleLoom/issues/81) | Parse rule arrays rule by rule | AFK | — | [#125](https://github.com/STotev/RuleLoom/pull/125) | [parse-rule-by-rule](specs/2026-10-26-parse-rule-by-rule-design.md) |
 | [#114](https://github.com/STotev/RuleLoom/issues/114) | Context declarations always name their provider | AFK | — | — | — |
 | [#115](https://github.com/STotev/RuleLoom/issues/115) | Typed actions and their parameters in the catalog | AFK | — | [#121](https://github.com/STotev/RuleLoom/pull/121) | [typed-actions](specs/2026-10-26-typed-actions-design.md) |
 | [#116](https://github.com/STotev/RuleLoom/issues/116) | Paths in action parameters (`$path`) | AFK | #115 | [#123](https://github.com/STotev/RuleLoom/pull/123) | [path-parameters](specs/2026-10-26-path-parameters-design.md) |

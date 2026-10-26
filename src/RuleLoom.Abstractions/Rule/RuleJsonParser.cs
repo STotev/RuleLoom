@@ -47,12 +47,48 @@ public static class RuleJsonParser
         return document.EnumerateArray().Select((rule, index) => ToRule(rule, $"$[{index}]")).ToList();
     }
 
+    /// <summary>
+    /// Parses a JSON array of rules rule by rule: a malformed rule is reported in its result and the others are still
+    /// parsed.
+    /// </summary>
+    /// <returns>One result per element of the array, in order.</returns>
+    /// <exception cref="JsonException">The JSON is malformed.</exception>
+    /// <exception cref="RuleParseException">The JSON isn't an array.</exception>
+    public static IReadOnlyList<RuleParseResult> ParseEach(string json)
+    {
+        var document = JsonSerializer.Deserialize<JsonElement>(json, DefaultOptions);
+
+        if (document.ValueKind != JsonValueKind.Array)
+            throw new RuleParseException("Expected a JSON array of rules.", "$");
+
+        return document.EnumerateArray().Select((rule, index) =>
+        {
+            try
+            {
+                return new RuleParseResult(index, ToRule(rule, $"$[{index}]"), null);
+            }
+            catch (RuleParseException ex)
+            {
+                return new RuleParseResult(index, null, ex);
+            }
+        }).ToList();
+    }
+
     private static RuleDefinition ToRule(JsonElement rule, string path)
     {
         RuleJsonValidator.ValidateRule(rule, path);
 
-        return rule.Deserialize<RuleDefinition>(DefaultOptions)
-            ?? throw new JsonException("Failed to deserialize rule definition");
+        try
+        {
+            return rule.Deserialize<RuleDefinition>(DefaultOptions)
+                ?? throw new JsonException("Failed to deserialize rule definition");
+        }
+        catch (JsonException ex) when (ex is not RuleParseException)
+        {
+            // A value of the wrong type the shape check doesn't cover; its path is relative to the rule.
+            var message = ex.Message.Split(" Path: ")[0];
+            throw new RuleParseException(message, ex.Path is { } relative ? path + relative[1..] : path);
+        }
     }
 
     private static JsonSerializerOptions CreateDefaultOptions()

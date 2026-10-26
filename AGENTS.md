@@ -201,9 +201,11 @@ environment `nuget`) and attaches the packages to the GitHub release.
   `CatalogDocument` holding only events, without the engine (producers). `CatalogDocument` (`Events`, `Contexts`,
   `Operators`, `Actions`, `Problems`; every section optional; `ToJson`/`Parse`) is the format of stores, UIs and later
   publishing; `ICatalogStore` (`LoadAsync`, `SaveAsync` upserting per entry, never deleting; `InMemoryCatalogStore`).
-- **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is
-  validated before deserialization (`RuleJsonValidator`); invalid rules throw `RuleParseException` (a `JsonException`)
-  whose `Path` is the JSONPath of the problem. `Id`, `Name`, `EventType` and `Condition` are required, and every condition
+- **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)` (all or nothing) / `ParseEach(json)` (rule by rule: a
+  `RuleParseResult` per element with the rule or its `RuleParseException`; malformed JSON or a non-array still throws);
+  property names are case-insensitive. The JSON shape is validated before deserialization (`RuleJsonValidator`);
+  invalid rules throw `RuleParseException` (a `JsonException`) whose `Path` is the JSONPath of the problem (values of the
+  wrong type found while deserializing too). `Id`, `Name`, `EventType` and `Condition` are required, and every condition
   root (rule or action) must be an operator. A parameter `{ "$path": "..." }` (its only key; ADR 0003) is parsed into a
   `RulePath` in `ActionDefinition.Parameters`; `$path` with other keys, or inside a parameter's value, is a parse error;
   any other JSON is a value.

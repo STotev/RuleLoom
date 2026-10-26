@@ -588,4 +588,48 @@ public class RuleJsonParserTests
 
     private static ValueOperand FirstValue(RuleDefinition rule) =>
         (ValueOperand)((OperatorCondition)rule.Condition).Operands[0];
+
+    [Fact]
+    public void ParseEach_MalformedRules_AreReportedAndTheOthersParse()
+    {
+        const string json =
+            """
+            [
+              { "id": "r1", "name": "R1", "eventType": "E", "condition": { "operator": "eq", "operands": [] } },
+              { "id": "r2", "name": "R2", "eventType": "E" },
+              { "id": "r3", "name": "R3", "eventType": "E", "priority": "high", "condition": { "operator": "eq", "operands": [] } },
+              { "id": "r4", "name": "R4", "eventType": "E", "condition": { "operator": "eq", "operands": [] } }
+            ]
+            """;
+
+        var results = RuleJsonParser.ParseEach(json);
+
+        Assert.Equal([0, 1, 2, 3], results.Select(r => r.Index));
+        Assert.Equal(["r1", "r4"], results.Where(r => r.IsParsed).Select(r => r.Rule!.Id));
+        Assert.Equal(["$[1].condition", "$[2].priority"], results.Where(r => !r.IsParsed).Select(r => r.Error!.Path));
+        Assert.All(results, r => Assert.True(r.IsParsed ? r.Error is null : r.Rule is null));
+    }
+
+    [Theory]
+    [InlineData("{ \"id\": \"r\" }", typeof(RuleParseException))]
+    [InlineData("[ { invalid json } ]", typeof(JsonException))]
+    public void ParseEach_NotAnArrayOrMalformedJson_Throws(string json, Type exception)
+    {
+        var ex = Assert.ThrowsAny<JsonException>(() => RuleJsonParser.ParseEach(json));
+
+        Assert.IsType(exception, ex);
+    }
+
+    [Fact]
+    public void Parse_ValueOfTheWrongType_ThrowsRuleParseExceptionAtItsPath()
+    {
+        const string rule = """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [] }, "actions": [ { "action": "a", "schedule": { "mode": "Weekly" } } ] }""";
+
+        var single = Assert.Throws<RuleParseException>(() => RuleJsonParser.Parse(rule));
+        var many = Assert.Throws<RuleParseException>(() => RuleJsonParser.ParseMany($"[ {rule}, {rule} ]"));
+
+        Assert.Equal("$.actions[0].schedule.mode", single.Path);
+        Assert.Equal("$[0].actions[0].schedule.mode", many.Path);
+        Assert.DoesNotContain("LineNumber", single.Message);
+    }
 }

@@ -5,7 +5,7 @@ namespace RuleLoom.Abstractions.Rule;
 /// <summary>
 /// Thrown by <see cref="RuleJsonParser"/> when well-formed JSON doesn't describe a valid rule.
 /// <see cref="JsonException.Path"/> holds the JSONPath of the offending element, e.g. <c>$.condition.operands[1]</c>
-/// (or <c>$[2].condition</c> for <see cref="RuleJsonParser.ParseMany"/>).
+/// (or <c>$[2].condition</c> for <see cref="RuleJsonParser.ParseMany"/> and <see cref="RuleJsonParser.ParseEach"/>).
 /// </summary>
 public sealed class RuleParseException : JsonException
 {
