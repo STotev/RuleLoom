@@ -42,5 +42,14 @@
     "actions": [
       { "action": "console-log", "parameters": { "message": "Offer gift wrapping" } }
     ]
+  },
+  {
+    "id": "review-request",
+    "name": "Review request (invalid: 'subjet' is a typo)",
+    "eventType": "OrderUpdated",
+    "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Delivered" }] },
+    "actions": [
+      { "action": "send-email", "parameters": { "to": { "$path": "Customer.Email" }, "subjet": "How was your order?" } }
+    ]
   }
 ]

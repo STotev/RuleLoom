@@ -4,13 +4,51 @@
 
 @baseUrl = http://localhost:5080
 
-### The catalog document: events and their contexts, context schemas, operators and actions, as a rule-authoring UI reads them.
-GET {{baseUrl}}/catalog
+### The catalog document: events and their contexts, context schemas, operators and actions (with their parameters),
+### as a rule-authoring UI reads them. Mapped by MapRuleLoom("/rules").
+GET {{baseUrl}}/rules/catalog
+
+### Validate a rule before saving it (MapRuleLoom). Valid: "to" is a path into the customer context.
+POST {{baseUrl}}/rules/validate
+Content-Type: application/json
+
+{
+  "id": "welcome-gold",
+  "name": "Welcome gold customers",
+  "eventType": "OrderPlaced",
+  "condition": { "operator": "eq", "operands": [{ "path": "@customer.Tier" }, { "value": "gold" }] },
+  "actions": [{ "action": "send-email", "parameters": { "to": { "$path": "@customer.Email" }, "subject": "Welcome back" } }]
+}
+
+### Validate: parameter errors ("cc" isn't a parameter, "to" is missing) and a warning (the subject is a path to a number).
+POST {{baseUrl}}/rules/validate
+Content-Type: application/json
+
+{
+  "id": "order-total",
+  "name": "Order total",
+  "eventType": "OrderPlaced",
+  "condition": { "operator": "gte", "operands": [{ "path": "Total" }, { "value": 100 }] },
+  "actions": [{ "action": "send-email", "parameters": { "cc": "sales@example.com", "subject": { "$path": "Total" } } }]
+}
+
+### Validate an array, rule by rule: the first rule is valid, the second has no condition (malformed), the third uses an
+### unknown field. Each result has its index, and paths relative to its rule.
+POST {{baseUrl}}/rules/validate
+Content-Type: application/json
+
+[
+  { "id": "big-basket", "name": "Big basket", "eventType": "OrderPlaced",
+    "condition": { "operator": "gte", "operands": [{ "path": "ItemCount" }, { "value": 5 }] } },
+  { "id": "no-condition", "name": "No condition", "eventType": "OrderPlaced" },
+  { "id": "typo", "name": "Typo", "eventType": "OrderPlaced",
+    "condition": { "operator": "gte", "operands": [{ "path": "Totl" }, { "value": 5 }] } }
+]
 
 ### acme-shop: VIP order awaiting payment from a gold customer.
 ### Matches "VIP order" (email now; @customer.Tier is gold), "Big basket" (log), "Loyalty check" (3 earlier orders,
 ### from the orderHistory context) and "Payment reminder" (scheduled 1 minute before PaymentDueAt, so about a minute
-### from now). Every acme-shop response lists "Silver upgrade" and "Shipped SMS" as invalid.
+### from now). Every acme-shop response lists "Silver upgrade", "Shipped SMS", "Gift wrap" and "Review request" as invalid.
 < {%
     request.variables.set("paymentDueAt", new Date(Date.now() + 2 * 60 * 1000).toISOString());
 %}

@@ -34,6 +34,7 @@ public sealed class ActionScheduler(ISchedulerFactory schedulerFactory)
                 .Build();
 
             job.JobDataMap[RunScheduledActionJob.TenantIdKey] = request.TenantId;
+            job.JobDataMap[RunScheduledActionJob.EventTypeKey] = request.EventType;
             job.JobDataMap[RunScheduledActionJob.ScheduledActionKey] = scheduled;
             job.JobDataMap[RunScheduledActionJob.CurrentKey] = request.Current;
             job.JobDataMap[RunScheduledActionJob.PreviousKey] = request.Previous;

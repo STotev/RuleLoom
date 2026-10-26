@@ -8,7 +8,7 @@
       { "action": "console-log", "parameters": { "message": "New ad published" } },
       {
         "action": "send-email",
-        "parameters": { "to": "Seller.Email", "subject": "How is your ad doing? Consider a price review" },
+        "parameters": { "to": { "$path": "Seller.Email" }, "subject": "How is your ad doing? Consider a price review" },
         "schedule": { "mode": "Delay", "amount": 30, "unit": "Seconds" }
       }
     ]
@@ -19,7 +19,7 @@
     "eventType": "AdUpdated",
     "condition": { "operator": "lt", "operands": [{ "path": "Price" }, { "path": "$previous.Price" }] },
     "actions": [
-      { "action": "send-email", "parameters": { "to": "Seller.Email", "subject": "Your new price is live" } },
+      { "action": "send-email", "parameters": { "to": { "$path": "Seller.Email" }, "subject": "Your new price is live" } },
       {
         "action": "console-log",
         "parameters": { "message": "Bargain: list in the under-10k section" },

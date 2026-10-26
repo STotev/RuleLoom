@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RuleLoom\RuleLoom.csproj" />
-    <ProjectReference Include="..\..\src\RuleLoom.Extensions.DependencyInjection\RuleLoom.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\src\RuleLoom.AspNetCore\RuleLoom.AspNetCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
