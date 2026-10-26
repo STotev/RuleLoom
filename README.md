@@ -38,6 +38,7 @@ and runs or schedules their actions.
 ```bash
 dotnet add package RuleLoom
 dotnet add package RuleLoom.Extensions.DependencyInjection   # optional: services.AddRuleLoom(...)
+dotnet add package RuleLoom.AspNetCore                        # optional: app.MapRuleLoom("/rules")
 ```
 
 | Package | Use it for |
@@ -45,6 +46,7 @@ dotnet add package RuleLoom.Extensions.DependencyInjection   # optional: service
 | `RuleLoom` | The engine, built-in operators, validation |
 | `RuleLoom.Abstractions` | Contracts and models only, e.g. for projects that write actions or operators |
 | `RuleLoom.Extensions.DependencyInjection` | Registration with `Microsoft.Extensions.DependencyInjection` |
+| `RuleLoom.AspNetCore` | `app.MapRuleLoom("/rules")`: endpoints serving the catalog and validating rules, for your authoring UI |
 | `RuleLoom.Schemas` | Describing events (fields, labels, contexts) as JSON Schema, for the services that raise events and those that run rules |
 
 Requires .NET 10.

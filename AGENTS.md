@@ -79,10 +79,12 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 | `RuleLoom` | `src/RuleLoom` | Default implementation: `CatalogBuilder`, engine, evaluator, operators, actions, direct factories, scheduling, validation |
 | `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Descriptions: event schemas (`EventSchema<T>` classes), context schemas (`ContextSchema<T>`) and action parameters (`ParametersSchema<T>`), generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`); the catalog document and store (`CatalogDocument`, `ICatalogStore` + `InMemoryCatalogStore`). **No dependencies at all** (not even Abstractions); producers and store packages use it without the engine; `RuleLoom.Abstractions` and `RuleLoom` reference it |
 | `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(r => r.AddCatalog(...).UseStore<T>())`: the catalog (built at startup), engine, validator and factories |
+| `RuleLoom.AspNetCore` | `src/RuleLoom.AspNetCore` | `app.MapRuleLoom(prefix)`: `GET {prefix}/catalog` and `POST {prefix}/validate` for authoring UIs; returns the route group; no storage |
 | `RuleLoom.Tests` | `tests/RuleLoom.Tests` | xUnit unit tests |
 | `RuleLoom.Tests.Integration` | `tests/RuleLoom.Tests.Integration` | xUnit end-to-end tests |
 | `RuleLoom.Schemas.Tests` | `tests/RuleLoom.Schemas.Tests` | xUnit tests of schema building and JSON |
 | `RuleLoom.Extensions.DependencyInjection.Tests` | `tests/RuleLoom.Extensions.DependencyInjection.Tests` | xUnit tests of DI registration (uses the real container) |
+| `RuleLoom.AspNetCore.Tests` | `tests/RuleLoom.AspNetCore.Tests` | xUnit tests of the endpoints over HTTP (`Microsoft.AspNetCore.TestHost`) |
 | `RuleLoom.Samples.Console` | `samples/RuleLoom.Samples.Console` | Usage sample |
 | `RuleLoom.Samples.AspNetCore` | `samples/RuleLoom.Samples.AspNetCore` | Web sample: per-tenant JSON rules, contexts, the catalog document (`GET /catalog`), Quartz for scheduled actions |
 
@@ -163,6 +165,10 @@ environment `nuget`) and attaches the packages to the GitHub release.
   `IContextProviderFactory` (`ActivatorUtilities.GetServiceOrCreateInstance`: registered services as registered, others
   created with scope dependencies and not disposed by the scope), `RuleEngine` and `RuleValidator` are Scoped;
   resolving them before startup throws.
+- **Authoring endpoints** (`RuleLoom.AspNetCore`, `MapRuleLoom(prefix)` in `Microsoft.AspNetCore.Builder`): `GET
+  {prefix}/catalog` (`catalog.ToJson()`); `POST {prefix}/validate` takes one rule or an array (`ParseEach`, then
+  `RuleValidator`) and returns a `RuleValidationResponse` per rule (`index` for arrays, `id`, `parsed`, `isValid`,
+  `errors`, `warnings`; paths relative to the rule); malformed JSON or neither object nor array → `400` problem details.
 - **Validation** has two layers: the parser checks a rule's JSON shape (`RuleParseException`), and
   `RuleValidator(catalog).Validate` (`RuleLoom.Validation`; one `RuleWalker` pass handing each node to small
   `RuleCheck`s) checks a rule against the catalog: event type not in the catalog, unknown operators/actions, operand
