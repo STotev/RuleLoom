@@ -80,6 +80,11 @@ public sealed class CatalogDocument
             {
                 writer.WriteStartObject();
                 WriteNames(writer, action.Name, action.Label, action.Description);
+                if (action.Parameters is { } parameters)
+                {
+                    writer.WritePropertyName("parameters");
+                    parameters.WriteTo(writer);
+                }
                 writer.WriteEndObject();
             }
             writer.WriteEndArray();
@@ -123,7 +128,8 @@ public sealed class CatalogDocument
                         Name(item, "An operator"), SchemaReader.String(item, "label"), SchemaReader.String(item, "description"),
                         (int?)item["minOperands"] ?? 0, (int?)item["maxOperands"])).ToList(),
                     Items(document, "actions").Select(item => new CatalogAction(
-                        Name(item, "An action"), SchemaReader.String(item, "label"), SchemaReader.String(item, "description"))).ToList(),
+                        Name(item, "An action"), SchemaReader.String(item, "label"), SchemaReader.String(item, "description"),
+                        Parameters(item))).ToList(),
                     Items(document, "problems").Select(item => new CatalogProblem(
                         SchemaReader.String(item, "kind") switch
                         {
@@ -164,6 +170,21 @@ public sealed class CatalogDocument
                 return items;
             default:
                 throw new JsonException($"'{section}' must be a JSON array.");
+        }
+    }
+
+    // An action's parameters schema, detached from the document like the section items.
+    private static ParametersSchemaDefinition? Parameters(JsonObject action)
+    {
+        switch (action["parameters"])
+        {
+            case null:
+                return null;
+            case JsonObject parameters:
+                action.Remove("parameters");
+                return new ParametersSchemaDefinition(parameters);
+            default:
+                throw new JsonException($"The parameters of action '{SchemaReader.String(action, "name")}' must be a JSON object.");
         }
     }
 

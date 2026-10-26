@@ -94,6 +94,13 @@ internal static class SchemaGenerator
         return new ContextSchemaDefinition(document);
     }
 
+    public static ParametersSchemaDefinition GenerateParameters(Type type, FieldConfigurations fields)
+    {
+        var document = new JsonObject { ["$schema"] = SchemaUri };
+        MoveMembers(GenerateType(type, fields, Serializer(ParametersSchemaDefinition.JsonOptions), "the action parameters"), document);
+        return new ParametersSchemaDefinition(document);
+    }
+
     /// <summary>The start of a schema document: its kind and name, title and description.</summary>
     private static JsonObject Document(string keyword, string name, string? label, string? description)
     {
