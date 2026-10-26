@@ -35,7 +35,7 @@ Recorded while building. None blocks 0.7.
 1. **Running a scheduled action later is still the app's code.** `RunScheduledActionJob` repeats what the engine does
    for an immediate action: build the `EvaluationContext` (event type, catalog, context provider factory), find the
    action in the catalog, create it, run it, turn exceptions into a failed result. With `$path` parameters, getting the
-   context wrong now fails quietly at run time: `new EvaluationContext(current, previous)` works for `Customer.Email`
+   context wrong now shows only when the action runs: `new EvaluationContext(current, previous)` works for `Customer.Email`
    and fails `@customer.Email` as an undeclared context. A RuleLoom entry point (e.g. running a `ScheduledAction` with
    its event's state) would remove the duplication; a candidate for the backlog.
 2. **`ScheduledAction` doesn't carry the event type**, which that context needs; the app stores it in the job data
