@@ -179,7 +179,7 @@ public sealed class Catalog
         _providers.Values.Select(p => p.Schema).OfType<ContextSchemaDefinition>(),
         _operators.Values.Select(o => new CatalogOperator(o.Name, o.Label, o.Description, o.MinOperands,
             o.MaxOperands == int.MaxValue ? null : o.MaxOperands)),
-        _actions.Values.Select(a => new CatalogAction(a.Name, a.Label, a.Description)),
+        _actions.Values.Select(a => new CatalogAction(a.Name, a.Label, a.Description, a.Parameters)),
         Problems);
 
     /// <summary>

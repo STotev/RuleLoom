@@ -27,6 +27,21 @@ public class CatalogDocumentTests
     }
 
     [Fact]
+    public void ToJson_Parse_RoundTripsActionParameters()
+    {
+        var parameters = new ParametersSchema<ParametersSchemaTests.EmailParameters>();
+        parameters.Parameter(p => p.To).Label("Recipient");
+        var document = new CatalogDocument(actions: [new CatalogAction("send-email", null, null, parameters.Build())]);
+
+        var json = document.ToJson();
+        var parsed = Assert.Single(CatalogDocument.Parse(json).Actions);
+
+        Assert.Equal("Recipient", (string?)JsonNode.Parse(json)!["actions"]![0]!["parameters"]!["properties"]!["to"]!["title"]);
+        Assert.Equal(["to", "subject", "cc", "priority"], parsed.Parameters!.Fields.Select(f => f.Name));
+        Assert.Equal(json, new CatalogDocument(actions: [parsed]).ToJson());
+    }
+
+    [Fact]
     public void ToJson_WritesSectionsAndOmitsMissingValues()
     {
         var json = JsonNode.Parse(new CatalogDocument(operators: [new CatalogOperator("and", null, null, 1, null)]).ToJson())!;
@@ -60,6 +75,7 @@ public class CatalogDocumentTests
     [InlineData("""{ "operators": [ { "label": "no name" } ] }""")]
     [InlineData("""{ "operators": [ { "name": "eq", "minOperands": "two" } ] }""")]
     [InlineData("""{ "problems": [ { "kind": "rule", "name": "x" } ] }""")]
+    [InlineData("""{ "actions": [ { "name": "notify", "parameters": "to" } ] }""")]
     public void Parse_InvalidDocuments_ThrowJsonException(string json)
     {
         Assert.Throws<JsonException>(() => CatalogDocument.Parse(json));

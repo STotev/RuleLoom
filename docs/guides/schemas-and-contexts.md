@@ -113,6 +113,10 @@ public sealed class LoyaltyCheckDescriptor : ActionDescriptor<LoyaltyCheckAction
 }
 ```
 
+An action with typed parameters (`IAction<TParameters>`) is described by its parameters type too, with or without a
+descriptor: the catalog document lists each parameter, its type and whether it's required. Derive from
+`ActionDescriptor<TAction, TParameters>` to label them with `Parameter(p => p.To).Label("Recipient")`.
+
 Operators describe themselves (`Label` and `Description` on `IConditionOperator`); the built-in ones already do.
 
 ## 6. Build the catalog

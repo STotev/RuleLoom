@@ -16,7 +16,9 @@ public sealed record CatalogOperator(string Name, string? Label, string? Descrip
 /// <param name="Name">The name rules use (matched ignoring case).</param>
 /// <param name="Label">A readable name for authoring UIs, if the action's descriptor gives one.</param>
 /// <param name="Description">An optional longer explanation.</param>
-public sealed record CatalogAction(string Name, string? Label, string? Description);
+/// <param name="Parameters">The parameters it takes, for an action with typed parameters; <c>null</c> when they aren't
+/// described.</param>
+public sealed record CatalogAction(string Name, string? Label, string? Description, ParametersSchemaDefinition? Parameters = null);
 
 /// <summary>
 /// The kind of catalog entry a <see cref="CatalogProblem"/> is about.

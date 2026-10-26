@@ -4,8 +4,8 @@ using System.Text.Json.Nodes;
 namespace RuleLoom.Schemas;
 
 /// <summary>
-/// A schema document: an <see cref="EventSchemaDefinition"/> or a <see cref="ContextSchemaDefinition"/>, written as a
-/// JSON Schema 2020-12 document with RuleLoom keywords.
+/// A schema document: an <see cref="EventSchemaDefinition"/>, a <see cref="ContextSchemaDefinition"/> or a
+/// <see cref="ParametersSchemaDefinition"/>, written as a JSON Schema 2020-12 document with RuleLoom keywords.
 /// </summary>
 public abstract class SchemaDefinition
 {

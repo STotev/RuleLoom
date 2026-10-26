@@ -70,6 +70,58 @@ public class CatalogBuilderTests
     }
 
     [Fact]
+    public void AddAction_Untyped_HasNoParameters()
+    {
+        Assert.Null(Assert.Single(new CatalogBuilder().AddAction<SendEmailAction>().Build().Actions).Parameters);
+    }
+
+    [Fact]
+    public void AddAction_TypedWithoutADescriptor_IsDescribedByItsParametersType()
+    {
+        var action = Assert.Single(new CatalogBuilder().AddAction<NotifyAction>().Build().Actions);
+
+        Assert.Null(action.Label);
+        Assert.Equal(["channel", "message"], action.Parameters!.Fields.Select(f => f.Name));
+    }
+
+    [Fact]
+    public void AddAction_TypedWithAParametersDescriptor_AddsItsLabels()
+    {
+        var action = Assert.Single(new CatalogBuilder().AddAction<RemindAction>().Build().Actions);
+        var parameters = JsonNode.Parse(action.Parameters!.ToJson())!;
+
+        Assert.Equal("Remind", action.Label);
+        Assert.Equal(["message"], action.Parameters!.Fields.Select(f => f.Name));
+        Assert.Equal("Reminder text", action.Parameters.Fields[0].Label);
+        Assert.Equal(["message"], parameters["required"]!.AsArray().Select(n => (string?)n));
+    }
+
+    [Fact]
+    public void AddAction_TypedWithAnUntypedDescriptor_KeepsItsLabelAndInfersParameters()
+    {
+        var action = Assert.Single(new CatalogBuilder().AddAction<NotifyAction, NotifyLabelDescriptor>().Build().Actions);
+
+        Assert.Equal("Notify", action.Label);
+        Assert.Equal(["channel", "message"], action.Parameters!.Fields.Select(f => f.Name));
+    }
+
+    [Fact]
+    public void Build_ActionWithTwoParametersTypes_Throws()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() => new CatalogBuilder().AddAction<TwoParametersAction>().Build());
+
+        Assert.Contains("TwoParametersAction takes several parameters types", error.Message);
+    }
+
+    [Fact]
+    public void ToDocument_WritesActionParameters()
+    {
+        var json = JsonNode.Parse(new CatalogBuilder().AddAction<RemindAction>().Build().ToJson())!;
+
+        Assert.Equal("Reminder text", (string?)json["actions"]![0]!["parameters"]!["properties"]!["message"]!["title"]);
+    }
+
+    [Fact]
     public void Build_ActionDescribedTwice_Throws()
     {
         var error = Assert.Throws<InvalidOperationException>(() => new CatalogBuilder().AddAction<TwiceDescribedAction>().Build());
@@ -259,6 +311,54 @@ public class CatalogBuilderTests
     public sealed class TwiceDescribedAction : IAction
     {
         public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
+            CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success());
+    }
+
+    public sealed record NotifyParameters(string Channel, string Message);
+
+    public sealed class NotifyAction : IAction<NotifyParameters>
+    {
+        public Task<ActionResult> ExecuteAsync(NotifyParameters parameters, ActionDefinition action, EvaluationContext context,
+            CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success());
+    }
+
+    // Private, so discovery doesn't find it next to NotifyAction.
+    private sealed class NotifyLabelDescriptor : ActionDescriptor<NotifyAction>
+    {
+        public NotifyLabelDescriptor() => Label("Notify");
+    }
+
+    public sealed class RemindParameters
+    {
+        public required string Message { get; init; }
+        public string? TrackingId { get; init; }
+    }
+
+    public sealed class RemindAction : IAction<RemindParameters>
+    {
+        public Task<ActionResult> ExecuteAsync(RemindParameters parameters, ActionDefinition action, EvaluationContext context,
+            CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success());
+    }
+
+    public sealed class RemindDescriptor : ActionDescriptor<RemindAction, RemindParameters>
+    {
+        public RemindDescriptor()
+        {
+            Label("Remind");
+            Parameter(p => p.Message).Label("Reminder text");
+            Parameter(p => p.TrackingId).Ignore();
+        }
+    }
+
+    public sealed class TwoParametersAction : IAction<NotifyParameters>, IAction<RemindParameters>
+    {
+        public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
+            CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success());
+
+        public Task<ActionResult> ExecuteAsync(NotifyParameters parameters, ActionDefinition action, EvaluationContext context,
+            CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success());
+
+        public Task<ActionResult> ExecuteAsync(RemindParameters parameters, ActionDefinition action, EvaluationContext context,
             CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success());
     }
 

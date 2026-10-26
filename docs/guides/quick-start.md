@@ -108,19 +108,29 @@ covers the format, paths and comparison rules in detail.
 
 ## Actions
 
-Implement `IAction`. Rules refer to it by its class name without the `Action` suffix, in kebab-case:
+Implement `IAction<TParameters>`: the rule's parameters arrive as a typed object. Rules refer to the action by its class
+name without the `Action` suffix, in kebab-case:
 
 ```csharp
-public sealed class SendEmailAction(IEmailService email) : IAction         // "action": "send-email"
+public sealed record SendEmailParameters(string To, string Template);   // both required: no defaults
+
+public sealed class SendEmailAction(IEmailService email) : IAction<SendEmailParameters>   // "action": "send-email"
 {
-    public async Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken ct = default)
+    public async Task<ActionResult> ExecuteAsync(SendEmailParameters parameters, ActionDefinition action,
+        EvaluationContext context, CancellationToken ct = default)
     {
-        var to = action.GetParameter<string>("to");                          // typed, with clear errors
-        await email.SendAsync(to, action.GetParameter<string>("template"), ct);
+        await email.SendAsync(parameters.To, parameters.Template, ct);
         return ActionResult.Success();
     }
 }
 ```
+
+Parameter names ignore case, and enums are read by name. Parameters that can't be read as the type (a missing `to`, text
+where a number belongs) fail only that action, with a message naming the parameter. The catalog describes the
+parameters from the type, so an authoring UI can show a form for them.
+
+An action can also implement `IAction` and read parameters one at a time with `action.GetParameter<T>("to")`, or all at
+once with `action.GetParameters<T>(context)`. Its parameters aren't described in the catalog.
 
 Add it to the catalog with `AddAction<SendEmailAction>()`. Use `[ActionName("notify")]` on the class for a different
 default, or give a name when adding it: `AddAction<SendEmailAction>("notify")`.
@@ -132,16 +142,17 @@ parameterless constructor and returns the instances you add for the others:
 var engine = new RuleEngine(catalog, new DirectActionFactory().Add(new SendEmailAction(email)));
 ```
 
-Describe an action for authoring UIs with an `ActionDescriptor<TAction>` next to it; the catalog finds it in the
-action's assembly:
+Describe an action for authoring UIs with an `ActionDescriptor<TAction, TParameters>` next to it (or
+`ActionDescriptor<TAction>` for an action without typed parameters); the catalog finds it in the action's assembly:
 
 ```csharp
-public sealed class SendEmailDescriptor : ActionDescriptor<SendEmailAction>
+public sealed class SendEmailDescriptor : ActionDescriptor<SendEmailAction, SendEmailParameters>
 {
     public SendEmailDescriptor()
     {
         Label("Send email");
         Description("Sends a templated email.");
+        Parameter(p => p.To).Label("Recipient");
     }
 }
 ```
@@ -149,7 +160,7 @@ public sealed class SendEmailDescriptor : ActionDescriptor<SendEmailAction>
 An action can have its own `condition` (evaluated after the rule's) and a `schedule`:
 
 ```json
-{ "action": "send-email", "parameters": { "template": "payment-reminder" },
+{ "action": "send-email", "parameters": { "to": "billing@example.com", "template": "payment-reminder" },
   "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "DueAt" } }
 ```
 
