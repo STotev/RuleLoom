@@ -202,6 +202,7 @@ A rule is rejected when:
 - a condition node doesn't have exactly one of `operator`, `path` or `value` (an empty `{}` is not allowed; use
   `{ "value": null }`), or its `operator`/`path` is empty
 - `operands` or `actions` isn't an array, an action has no `type`, or `parameters` isn't an object
+- a `$path` parameter has other keys, isn't a valid path, or sits inside a parameter's value
 
 Whether an operator exists or has the right number of operands isn't checked by the parser. To catch those before a
 rule is saved or run, validate it against the catalog the engine runs on:
@@ -336,7 +337,7 @@ services.AddRuleLoom(rules => rules.AddCatalog(catalog => catalog
   provider gets the context name in `request.Name`. Without `LoadedBy`, the provider registered under the context's name
   loads it.
 - **Loaded only when used, once per event.** Before evaluating, the engine loads the contexts that the event's rules
-  use (in conditions, action conditions and schedule `referencePath`s), in parallel. Contexts no rule uses aren't loaded.
+  use (in conditions, action conditions, schedule `referencePath`s and `$path` parameters), in parallel. Contexts no rule uses aren't loaded.
 - **Actions** can load any context the event declares on demand, e.g. a collection to email:
   `var watchers = await context.GetContextAsync<WatcherDto[]>("watchers", ct);` (JSON is deserialized; the untyped
   `GetContextAsync(name)` returns the value as loaded). It shares the same per-event cache.
@@ -440,17 +441,35 @@ to follow the same rules.
 ## Action Parameters
 
 An action's `parameters` are parsed into plain .NET values, the same way as condition values: strings, `int`/`long`/
-`double` numbers, booleans, `null`, lists (`List<object?>`) and objects (`Dictionary<string, object?>`). Actions read
-them with `GetParameter<T>`, which converts with the [comparison rules](#comparing-values):
+`double` numbers, booleans, `null`, lists (`List<object?>`) and objects (`Dictionary<string, object?>`).
+
+A parameter can also be a **path**, read when the action runs: an object whose only key is `$path`.
+
+```json
+{ "action": "send-email",
+  "parameters": { "to": { "$path": "@customer.Email" }, "total": { "$path": "Total" }, "subject": "Thanks for your order" } }
+```
+
+- Any other JSON is a value, including objects with a `path` key (`{ "path": "/orders" }`) and text starting with `$`.
+- `$path` with other keys, a `$path` that isn't a valid path, and a `$path` inside a parameter's value (in an object
+  or a list) are rejected with a `RuleParseException`. A path is always a parameter's whole value.
+- Paths read the event's current or previous state or a context, like condition paths. The engine loads the contexts
+  they use with the rest; a scheduled action run later loads them when it reads its parameters.
+
+Typed actions (`IAction<TParameters>`) receive the parameters as an object with the paths resolved. Other actions read
+them with `GetParametersAsync<T>(context)`, or one at a time with `GetParameterAsync<T>(name, context)` (resolving a path)
+and `GetParameter<T>(name)` (values only), which convert with the [comparison rules](#comparing-values):
 
 ```csharp
-var amount = action.GetParameter<decimal>("amount");          // JSON 250 → 250m
-var sendAt = action.GetParameter<DateTimeOffset>("sendAt");   // "2026-05-01T09:00:00Z"
+var amount = action.GetParameter<decimal>("amount");                    // JSON 250 → 250m
+var sendAt = action.GetParameter<DateTimeOffset>("sendAt");             // "2026-05-01T09:00:00Z"
 var urgent = action.TryGetParameter<bool>("urgent", out var flag) && flag;
+var to = await action.GetParameterAsync<string>("to", context, ct);     // { "$path": "@customer.Email" }
 ```
 
 A missing parameter throws `KeyNotFoundException`, and a value that can't be converted (e.g. `"100"` as `int`) throws
-`InvalidOperationException`. Names match exactly, or ignoring case when that's unambiguous.
+`InvalidOperationException`, as does `GetParameter<T>` on a path. Names match exactly, or ignoring case when that's
+unambiguous.
 
 ## Scheduling Actions
 

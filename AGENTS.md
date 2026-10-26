@@ -148,7 +148,7 @@ environment `nuget`) and attaches the packages to the GitHub release.
   registered under `LoadedBy(...)` or else `name`; `CatalogBuilder.AddContextProvider<T>(name)`). Undeclared contexts,
   and contexts on event types not in the catalog, fail the rules that use them. The `EvaluationContext` resolves the
   declared `ReferencedBy` on the current state and passes it as `ContextRequest.Reference` (`GetReference<T>()`; null
-  without one); providers are created per load by the `IContextProviderFactory`. The engine prefetches the contexts its rules use (conditions, action conditions, schedule reference paths; collected by
+  without one); providers are created per load by the `IContextProviderFactory`. The engine prefetches the contexts its rules use (conditions, action conditions, schedule reference paths, `$path` parameters; collected by
   `ContextReferences`) once per event, in parallel, into the `EvaluationContext` cache; actions use
   `GetContextAsync(name)`. A failed load throws `ContextLoadException` when resolved, failing only the rules that use it.
   Contexts have no previous state (`$previous.@x` is a parse error; `changed` on a context throws).
@@ -201,7 +201,9 @@ environment `nuget`) and attaches the packages to the GitHub release.
 - **JSON**: `RuleJsonParser.Parse(json)` / `ParseMany(json)`; property names are case-insensitive. The JSON shape is
   validated before deserialization (`RuleJsonValidator`); invalid rules throw `RuleParseException` (a `JsonException`)
   whose `Path` is the JSONPath of the problem. `Id`, `Name`, `EventType` and `Condition` are required, and every condition
-  root (rule or action) must be an operator.
+  root (rule or action) must be an operator. A parameter `{ "$path": "..." }` (its only key; ADR 0003) is parsed into a
+  `RulePath` in `ActionDefinition.Parameters`; `$path` with other keys, or inside a parameter's value, is a parse error;
+  any other JSON is a value.
 
 ### Extension points
 
@@ -216,13 +218,14 @@ environment `nuget`) and attaches the packages to the GitHub release.
   operator-specific checks on the operator (built-ins do: `changed`, the comparisons via `ComparedOperands`).
 - **Action**: implement `IAction<TParameters>` —
   `ExecuteAsync(TParameters, ActionDefinition, EvaluationContext, CancellationToken)`; a default interface member
-  implements `IAction.ExecuteAsync` with `action.GetParameters<TParameters>(context)` (JSON binding with
+  implements `IAction.ExecuteAsync` with `await action.GetParametersAsync<TParameters>(context, ct)` (paths resolved, loading
+  their contexts if needed, e.g. for scheduled actions run outside the engine; then JSON binding with
   `ParametersSchemaDefinition.JsonOptions`: names ignore case, enums by name, constructor parameters without a default
   and `required` members required; a failure throws `InvalidOperationException` naming the parameter, failing only that
   action). The catalog describes the parameters from the type; an action implementing two parameter types fails the
   build. Or implement `IAction` — `ExecuteAsync(ActionDefinition, EvaluationContext, CancellationToken)` — and read
-  parameters with `action.GetParameter<T>(name)` / `TryGetParameter<T>` (plain CLR values, converted via
-  `ValueConverter`); its parameters aren't described. Name it by its class (`SendEmailAction` → `send-email`) or
+  parameters with `action.GetParameterAsync<T>(name, context)` (resolves a path) or `GetParameter<T>(name)` /
+  `TryGetParameter<T>` (values only; plain CLR values, converted via `ValueConverter`); its parameters aren't described. Name it by its class (`SendEmailAction` → `send-email`) or
   `[ActionName("...")]`; return `ActionResult.Success()` or `ActionResult.Failed(...)`.
 - **Action descriptor**: `class XDescriptor : ActionDescriptor<XAction, XParameters>` (constructor: `Label`,
   `Description`, `Parameter(p => p.X)` with `Label`/`Description`/`Ignore`) or `ActionDescriptor<XAction>` (no
