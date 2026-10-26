@@ -27,9 +27,10 @@ public class ActionDefinition
     /// <summary>
     /// Parameters for the action. The structure depends on the action.
     /// Values are plain CLR values (from JSON: <c>null</c>, <see cref="bool"/>, <see cref="int"/>/<see cref="long"/>/
-    /// <see cref="double"/>, <see cref="string"/>, <see cref="List{T}"/> or <see cref="Dictionary{TKey,TValue}"/>).
-    /// Read them with <see cref="GetParameter{T}"/> or <see cref="TryGetParameter{T}"/>, or all at once with
-    /// <see cref="GetParameters{T}"/>.
+    /// <see cref="double"/>, <see cref="string"/>, <see cref="List{T}"/> or <see cref="Dictionary{TKey,TValue}"/>), or
+    /// a <see cref="RulePath"/> for a path (in JSON: <c>{ "$path": "@customer.Email" }</c>), resolved when read.
+    /// Read them with <see cref="GetParametersAsync{T}"/> (all at once), <see cref="GetParameterAsync{T}"/>, or, for
+    /// values only, <see cref="GetParameter{T}"/> and <see cref="TryGetParameter{T}"/>.
     /// </summary>
     public Dictionary<string, object?> Parameters { get; init; } = new();
 
@@ -43,47 +44,77 @@ public class ActionDefinition
     /// Gets a parameter converted to <typeparamref name="T"/> with the shared conversion rules
     /// (<see cref="ValueConverter"/>), e.g. a JSON number to <see cref="decimal"/>, or an ISO 8601 string to
     /// <see cref="DateTimeOffset"/>. The name matches exactly, or else ignoring case when that is unambiguous.
+    /// A path can't be read without the event: use <see cref="GetParameterAsync{T}"/>.
     /// </summary>
     /// <exception cref="KeyNotFoundException">The parameter doesn't exist.</exception>
-    /// <exception cref="InvalidOperationException">The value can't be converted to <typeparamref name="T"/>.</exception>
+    /// <exception cref="InvalidOperationException">The value is a path or can't be converted to <typeparamref name="T"/>.</exception>
     public T GetParameter<T>(string name)
     {
-        if (!TryFindParameter(name, out var value))
-            throw new KeyNotFoundException($"Action '{Action}' has no parameter '{name}'.");
+        var value = FindParameter(name);
 
-        if (!ValueConverter.TryConvert<T>(value, out var converted))
+        if (value is RulePath path)
         {
             throw new InvalidOperationException(
-                $"Parameter '{name}' of action '{Action}' is {(value is null ? "null" : value.GetType().Name)}, " +
-                $"which can't be converted to {typeof(T).Name}.");
+                $"Parameter '{name}' of action '{Action}' is the path '{path}'; read it with {nameof(GetParameterAsync)}.");
         }
 
-        return converted;
+        return Convert<T>(name, value);
     }
 
     /// <summary>
-    /// Reads all parameters as a <typeparamref name="T"/>, like System.Text.Json reads a JSON object with
+    /// Gets a parameter like <see cref="GetParameter{T}"/>, resolving it first when it's a path: on the event's state or,
+    /// for <c>@name</c> paths, on the context, which is loaded if it hasn't been.
+    /// </summary>
+    /// <param name="name">The parameter's name.</param>
+    /// <param name="context">The context the action runs in.</param>
+    /// <param name="cancellationToken">Cancels loading a context.</param>
+    /// <exception cref="KeyNotFoundException">The parameter doesn't exist.</exception>
+    /// <exception cref="InvalidOperationException">The path can't be resolved, or the value can't be converted to
+    /// <typeparamref name="T"/>.</exception>
+    public async ValueTask<T> GetParameterAsync<T>(string name, EvaluationContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var value = FindParameter(name);
+        if (value is RulePath path)
+            value = await ResolveAsync(name, path, context, cancellationToken).ConfigureAwait(false);
+
+        return Convert<T>(name, value);
+    }
+
+    /// <summary>
+    /// Reads all parameters as a <typeparamref name="T"/>, after resolving the paths among them (see
+    /// <see cref="GetParameterAsync{T}"/>), like System.Text.Json reads a JSON object with
     /// <see cref="ParametersSchemaDefinition.JsonOptions"/>: names ignore case, enums are read by name, constructor
     /// parameters without a default and <c>required</c> members must be present, and parameters <typeparamref name="T"/>
     /// doesn't have are ignored.
     /// </summary>
     /// <param name="context">The context the action runs in.</param>
-    /// <exception cref="InvalidOperationException">The parameters can't be read as <typeparamref name="T"/>; the
-    /// message names the parameter.</exception>
-    public T GetParameters<T>(EvaluationContext context)
+    /// <param name="cancellationToken">Cancels loading a context.</param>
+    /// <exception cref="InvalidOperationException">A path can't be resolved, or the parameters can't be read as
+    /// <typeparamref name="T"/>; the message names the parameter.</exception>
+    public async ValueTask<T> GetParametersAsync<T>(EvaluationContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        var values = new Dictionary<string, object?>(Parameters.Count);
+        foreach (var (name, value) in Parameters)
+        {
+            values[name] = value is RulePath path
+                ? await ResolveAsync(name, path, context, cancellationToken).ConfigureAwait(false)
+                : value;
+        }
+
         try
         {
-            return JsonSerializer.SerializeToNode(Parameters, ParametersSchemaDefinition.JsonOptions)
+            return JsonSerializer.SerializeToNode(values, ParametersSchemaDefinition.JsonOptions)
                 .Deserialize<T>(ParametersSchemaDefinition.JsonOptions)
                 ?? throw new InvalidOperationException($"The parameters of action '{Action}' can't be read as {typeof(T).Name}.");
         }
         catch (JsonException ex)
         {
-            var subject = ex.Path is { Length: > 2 } path && path.StartsWith("$.", StringComparison.Ordinal)
-                ? $"Parameter '{path[2..]}' of action '{Action}'"
+            var subject = ex.Path is { Length: > 2 } jsonPath && jsonPath.StartsWith("$.", StringComparison.Ordinal)
+                ? $"Parameter '{jsonPath[2..]}' of action '{Action}'"
                 : $"The parameters of action '{Action}'";
 
             throw new InvalidOperationException($"{subject} can't be read as {typeof(T).Name}: {ex.Message}", ex);
@@ -93,14 +124,40 @@ public class ActionDefinition
     /// <summary>
     /// Tries to get a parameter converted to <typeparamref name="T"/>; see <see cref="GetParameter{T}"/>.
     /// </summary>
-    /// <returns><c>false</c> if the parameter doesn't exist or can't be converted.</returns>
+    /// <returns><c>false</c> if the parameter doesn't exist, is a path or can't be converted.</returns>
     public bool TryGetParameter<T>(string name, [MaybeNullWhen(false)] out T value)
     {
-        if (TryFindParameter(name, out var raw) && ValueConverter.TryConvert(raw, out value))
+        if (TryFindParameter(name, out var raw) && raw is not RulePath && ValueConverter.TryConvert(raw, out value))
             return true;
 
         value = default;
         return false;
+    }
+
+    private object? FindParameter(string name) =>
+        TryFindParameter(name, out var value) ? value : throw new KeyNotFoundException($"Action '{Action}' has no parameter '{name}'.");
+
+    private T Convert<T>(string name, object? value) =>
+        ValueConverter.TryConvert<T>(value, out var converted)
+            ? converted
+            : throw new InvalidOperationException(
+                $"Parameter '{name}' of action '{Action}' is {(value is null ? "null" : value.GetType().Name)}, " +
+                $"which can't be converted to {typeof(T).Name}.");
+
+    // Loads the context a path reads, if it isn't loaded yet (e.g. a scheduled action run outside the engine).
+    private async ValueTask<object?> ResolveAsync(string name, RulePath path, EvaluationContext context, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (path.Root == PathRoot.Context)
+                await context.GetContextAsync(path.Context!, cancellationToken).ConfigureAwait(false);
+
+            return context.Resolve(path);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            throw new InvalidOperationException($"Parameter '{name}' of action '{Action}' can't be resolved ('{path}'): {ex.Message}", ex);
+        }
     }
 
     private bool TryFindParameter(string name, out object? value)
