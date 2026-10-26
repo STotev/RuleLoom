@@ -151,7 +151,7 @@ the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings
 | [#116](https://github.com/STotev/RuleLoom/issues/116) | Paths in action parameters (`$path`) | AFK | #115 | [#123](https://github.com/STotev/RuleLoom/pull/123) | [path-parameters](specs/2026-10-26-path-parameters-design.md) |
 | [#117](https://github.com/STotev/RuleLoom/issues/117) | Validate action parameters against their schema | AFK | #115, #116 | [#124](https://github.com/STotev/RuleLoom/pull/124) | [parameter-validation](specs/2026-10-26-parameter-validation-design.md) |
 | [#118](https://github.com/STotev/RuleLoom/issues/118) | `RuleLoom.AspNetCore`: `MapRuleLoom` endpoints | AFK | #81 | [#127](https://github.com/STotev/RuleLoom/pull/127) | [map-ruleloom](specs/2026-10-26-map-ruleloom-design.md) |
-| [#119](https://github.com/STotev/RuleLoom/issues/119) | Sample and guide for typed actions and `MapRuleLoom` | HITL | #81, #114–#118 | — | — |
+| [#119](https://github.com/STotev/RuleLoom/issues/119) | Sample and guide for typed actions and `MapRuleLoom` | HITL | #81, #114–#118 | [#128](https://github.com/STotev/RuleLoom/pull/128) | [sample-typed-actions](specs/2026-10-26-sample-typed-actions-design.md) |
 
 ---
 
