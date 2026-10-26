@@ -14,10 +14,12 @@
     <Project Path="src/RuleLoom.Schemas/RuleLoom.Schemas.csproj" />
     <Project Path="src/RuleLoom/RuleLoom.csproj" />
     <Project Path="src/RuleLoom.Extensions.DependencyInjection/RuleLoom.Extensions.DependencyInjection.csproj" />
+    <Project Path="src/RuleLoom.AspNetCore/RuleLoom.AspNetCore.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/RuleLoom.Tests.Integration/RuleLoom.Tests.Integration.csproj" />
     <Project Path="tests/RuleLoom.Extensions.DependencyInjection.Tests/RuleLoom.Extensions.DependencyInjection.Tests.csproj" />
+    <Project Path="tests/RuleLoom.AspNetCore.Tests/RuleLoom.AspNetCore.Tests.csproj" />
     <Project Path="tests/RuleLoom.Tests/RuleLoom.Tests.csproj" />
     <Project Path="tests/RuleLoom.Schemas.Tests/RuleLoom.Schemas.Tests.csproj" />
   </Folder>
