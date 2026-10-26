@@ -8,6 +8,9 @@ namespace RuleLoom.Abstractions.Rule;
 /// </summary>
 internal static class RuleJsonValidator
 {
+    /// <summary>The key that marks a parameter as a path: <c>{ "$path": "@customer.Email" }</c>.</summary>
+    public const string PathKey = "$path";
+
     private static readonly string[] NodeKinds = ["operator", "path", "value"];
 
     public static void ValidateRule(JsonElement rule, string path)
@@ -51,11 +54,67 @@ internal static class RuleJsonValidator
                 ValidatePathVariables(referencePath.GetString()!, $"{actionPath}.schedule.referencePath");
             }
 
-            if (TryGetProperty(action, "parameters", out var parameters) && parameters.ValueKind != JsonValueKind.Object)
-                throw new RuleParseException("'parameters' must be an object.", $"{actionPath}.parameters");
+            if (TryGetProperty(action, "parameters", out var parameters))
+                ValidateParameters(parameters, $"{actionPath}.parameters");
 
             if (TryGetProperty(action, "condition", out var condition) && condition.ValueKind != JsonValueKind.Null)
                 ValidateCondition(condition, $"{actionPath}.condition", "An action's condition");
+        }
+    }
+
+    private static void ValidateParameters(JsonElement parameters, string path)
+    {
+        if (parameters.ValueKind != JsonValueKind.Object)
+            throw new RuleParseException("'parameters' must be an object.", path);
+
+        foreach (var parameter in parameters.EnumerateObject())
+        {
+            var parameterPath = $"{path}.{parameter.Name}";
+
+            if (!IsPath(parameter.Value, out var marker))
+            {
+                RejectNestedPaths(parameter.Value, parameterPath);
+                continue;
+            }
+
+            if (parameter.Value.EnumerateObject().Count() > 1)
+            {
+                throw new RuleParseException(
+                    $"'{PathKey}' must be the only key of a path, e.g. {{\"{PathKey}\": \"@customer.Email\"}}.", parameterPath);
+            }
+
+            if (marker.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(marker.GetString()))
+                throw new RuleParseException($"'{PathKey}' must be a non-empty string.", $"{parameterPath}.{PathKey}");
+
+            ValidatePathVariables(marker.GetString()!, $"{parameterPath}.{PathKey}");
+        }
+    }
+
+    /// <summary>
+    /// Whether a parameter value is a path: an object with a <c>$path</c> key (ignoring case, like rule property names).
+    /// </summary>
+    public static bool IsPath(JsonElement value, out JsonElement path)
+    {
+        path = default;
+        return value.ValueKind == JsonValueKind.Object && TryGetProperty(value, PathKey, out path);
+    }
+
+    // Paths can't sit inside a parameter's value (lists of paths aren't supported), so they aren't read as text.
+    private static void RejectNestedPaths(JsonElement value, string path)
+    {
+        switch (value.ValueKind)
+        {
+            case JsonValueKind.Object:
+                if (IsPath(value, out _))
+                    throw new RuleParseException($"A path must be a parameter's whole value; '{PathKey}' can't be inside a value.", path);
+                foreach (var property in value.EnumerateObject())
+                    RejectNestedPaths(property.Value, $"{path}.{property.Name}");
+                break;
+            case JsonValueKind.Array:
+                var index = 0;
+                foreach (var item in value.EnumerateArray())
+                    RejectNestedPaths(item, $"{path}[{index++}]");
+                break;
         }
     }
 

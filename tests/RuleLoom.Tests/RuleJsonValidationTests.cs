@@ -46,6 +46,12 @@ public class RuleJsonValidationTests
         { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log" }, { "action": "" }] }""", "$.actions[1].action" },
         { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "parameters": [] }] }""", "$.actions[0].parameters" },
         { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "condition": { "path": "Active" } }] }""", "$.actions[0].condition" },
+        // Paths in parameters
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "parameters": { "to": { "$path": "Email", "x": 1 } } }] }""", "$.actions[0].parameters.to" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "parameters": { "to": { "$path": 5 } } }] }""", "$.actions[0].parameters.to.$path" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "parameters": { "to": { "$path": "$previous.@customer.Email" } } }] }""", "$.actions[0].parameters.to.$path" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "parameters": { "body": { "user": { "$path": "Email" } } } }] }""", "$.actions[0].parameters.body.user" },
+        { """{ "id": "r", "name": "R", "eventType": "E", "condition": {{C}}, "actions": [{ "action": "log", "parameters": { "to": [{ "$PATH": "Email" }] } }] }""", "$.actions[0].parameters.to[0]" },
         // Path variables: only $current and $previous
         { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$now" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },
         { """{ "id": "r", "name": "R", "eventType": "E", "condition": { "operator": "eq", "operands": [{ "path": "$cur.Price" }, { "value": 1 }] } }""", "$.condition.operands[0].path" },

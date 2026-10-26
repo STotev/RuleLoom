@@ -1,4 +1,5 @@
 using System.Text.Json;
+using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
@@ -555,6 +556,34 @@ public class RuleJsonParserTests
         Assert.Equal(new List<object?> { "a", 1 }, parameters["tags"]);
         Assert.Equal(new Dictionary<string, object?> { ["retry"] = 2 }, parameters["options"]);
         Assert.DoesNotContain(parameters.Values, v => v is JsonElement);
+    }
+
+    [Fact]
+    public void Parse_PathParameters_AreParsedPaths_OtherObjectsStayValues()
+    {
+        const string json =
+            """
+            {
+              "id": "paths", "name": "Paths", "eventType": "E",
+              "condition": { "operator": "eq", "operands": [{ "value": 1 }, { "value": 1 }] },
+              "actions": [
+                {
+                  "action": "notify",
+                  "parameters": {
+                    "to": { "$path": "@customer.Email" }, "total": { "$PATH": "$previous.Total" },
+                    "webhook": { "path": "/orders" }, "label": "$path"
+                  }
+                }
+              ]
+            }
+            """;
+
+        var parameters = RuleJsonParser.Parse(json).Actions[0].Parameters;
+
+        Assert.Equal(RulePath.Parse("@customer.Email"), parameters["to"]);
+        Assert.Equal(RulePath.Parse("$previous.Total"), parameters["total"]);
+        Assert.Equal(new Dictionary<string, object?> { ["path"] = "/orders" }, parameters["webhook"]);
+        Assert.Equal("$path", parameters["label"]);
     }
 
     private static ValueOperand FirstValue(RuleDefinition rule) =>
