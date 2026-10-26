@@ -30,27 +30,34 @@ public sealed partial class TenantRuleStore(IWebHostEnvironment environment, Rul
         foreach (var file in Directory.EnumerateFiles(folder, "*.json").Order())
         {
             var fileName = Path.GetFileName(file);
-            List<RuleDefinition> rules;
+            IReadOnlyList<RuleParseResult> results;
 
             try
             {
-                rules = RuleJsonParser.ParseMany(await File.ReadAllTextAsync(file, cancellationToken));
+                results = RuleJsonParser.ParseEach(await File.ReadAllTextAsync(file, cancellationToken));
             }
             catch (JsonException ex)
             {
-                // A shape error anywhere in the file rejects the whole file.
+                // Malformed JSON, or not an array: there are no rules to tell apart.
                 invalid.Add(new InvalidRule(fileName, null, [$"{ex.Path}: {ex.Message}"]));
                 continue;
             }
 
-            foreach (var rule in rules)
+            foreach (var result in results)
             {
-                var validation = validator.Validate(rule);
+                if (!result.IsParsed)
+                {
+                    // A malformed rule is skipped; the rest of the file still loads.
+                    invalid.Add(new InvalidRule(fileName, null, [result.Error.Message]));
+                    continue;
+                }
+
+                var validation = validator.Validate(result.Rule);
 
                 if (validation.IsValid)
-                    valid.Add(rule);
+                    valid.Add(result.Rule);
                 else
-                    invalid.Add(new InvalidRule(fileName, rule.Name, validation.Errors.Select(e => $"{e.Path}: {e.Message}").ToList()));
+                    invalid.Add(new InvalidRule(fileName, result.Rule.Name, validation.Errors.Select(e => $"{e.Path}: {e.Message}").ToList()));
             }
         }
 

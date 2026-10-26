@@ -34,5 +34,13 @@
     "actions": [
       { "action": "send-sms", "parameters": { "to": "Customer.Phone" } }
     ]
+  },
+  {
+    "id": "gift-wrap",
+    "name": "Gift wrap (malformed: no condition)",
+    "eventType": "OrderPlaced",
+    "actions": [
+      { "action": "console-log", "parameters": { "message": "Offer gift wrapping" } }
+    ]
   }
 ]
