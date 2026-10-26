@@ -208,6 +208,8 @@ foreach (var error in result.Errors)
 The validator checks the rule against the catalog:
 
 - the event type is in the catalog, and the operators and actions exist, with the right number of operands;
+- a typed action's parameters match its parameters type: no unknown parameters, every required one, values of the right
+  type;
 - paths are fields of the event or of the contexts it declares. In the sample, a typo in a context path is reported
   with its location: `$.condition.operands[0].path: 'Teir' is not a field of '@customer'.`;
 - comparisons that can never match (a number against text) are `Warnings`, which don't make a rule invalid.

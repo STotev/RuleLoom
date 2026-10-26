@@ -280,7 +280,8 @@ foreach (var error in validator.Validate(rule).Errors)
 ```
 
 The rule's event type must be in the catalog. Its paths are checked against the event's schema and its contexts'
-schemas, and comparisons that can never match are reported as `Warnings`.
+schemas, a typed action's parameters against its parameters type, and comparisons that can never match are reported as
+`Warnings`.
 
 ## Next steps
 
