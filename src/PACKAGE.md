@@ -18,6 +18,7 @@ runs or schedules their actions.
 | `RuleLoom` | The engine, built-in operators, validation |
 | `RuleLoom.Abstractions` | Contracts and models only (no dependencies) |
 | `RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(...)` |
+| `RuleLoom.AspNetCore` | `app.MapRuleLoom("/rules")`: the catalog and rule validation endpoints for an authoring UI |
 | `RuleLoom.Schemas` | Event schemas (fields, labels, contexts) as JSON Schema, generated from your DTOs |
 
 ## Example

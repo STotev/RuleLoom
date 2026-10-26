@@ -12,6 +12,7 @@ schedule **actions**. Rules can be written in code or as JSON, so end users can 
 ```bash
 dotnet add package RuleLoom
 dotnet add package RuleLoom.Extensions.DependencyInjection   # optional: services.AddRuleLoom(...)
+dotnet add package RuleLoom.AspNetCore                        # optional: app.MapRuleLoom("/rules")
 ```
 
 | Package | Use it for |
@@ -20,6 +21,7 @@ dotnet add package RuleLoom.Extensions.DependencyInjection   # optional: service
 | `RuleLoom.Abstractions` | Contracts and models, including the `Catalog` |
 | `RuleLoom` | The engine, `CatalogBuilder`, built-in operators, `ConsoleLogAction`, `RuleValidator` |
 | `RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(...)` |
+| `RuleLoom.AspNetCore` | `app.MapRuleLoom("/rules")`: the catalog and validation endpoints for an authoring UI |
 
 ## Your first rule
 
@@ -282,6 +284,29 @@ foreach (var error in validator.Validate(rule).Errors)
 The rule's event type must be in the catalog. Its paths are checked against the event's schema and its contexts'
 schemas, a typed action's parameters against its parameters type, and comparisons that can never match are reported as
 `Warnings`.
+
+## Endpoints for an authoring UI
+
+An ASP.NET Core app that serves its own rule-authoring UI can map the two endpoints it needs (with `AddRuleLoom`):
+
+```csharp
+app.MapRuleLoom("/rules")
+   .RequireAuthorization();   // the route group: authorization stays yours
+```
+
+- `GET /rules/catalog` returns the catalog document.
+- `POST /rules/validate` takes one rule or an array and returns, per rule, its `id` (and `index` for an array),
+  whether it `parsed`, `isValid`, and its `errors` and `warnings`, each with a path relative to the rule:
+
+```json
+[
+  { "index": 0, "id": "vip-order", "parsed": true, "isValid": true, "errors": [], "warnings": [] },
+  { "index": 1, "parsed": false, "isValid": false, "errors": [{ "path": "$.condition", "message": "'condition' is required." }], "warnings": [] }
+]
+```
+
+Arrays are parsed rule by rule, so a malformed rule doesn't hide the others' problems; JSON that can't be parsed, or
+isn't a rule or an array, is a `400`. Rules aren't stored: saving them is your app's.
 
 ## Next steps
 
