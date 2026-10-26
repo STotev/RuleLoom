@@ -41,6 +41,15 @@ internal abstract class RuleCheck
     {
     }
 
+    /// <summary>
+    /// An action's parameters, after their paths were visited, with those paths by parameter name; <c>location</c> is the
+    /// action's.
+    /// </summary>
+    public virtual void Parameters(ActionDefinition action, IReadOnlyDictionary<string, PathNode> paths, string location,
+        ValidationProblems problems)
+    {
+    }
+
     /// <summary>An action's schedule; <c>location</c> is the action's, the schedule is at <c>{location}.schedule</c>.</summary>
     public virtual void Schedule(ScheduleMetadata schedule, string location, ValidationProblems problems)
     {
@@ -48,7 +57,7 @@ internal abstract class RuleCheck
 }
 
 /// <summary>
-/// A path in a rule (an operand or a schedule's reference path), parsed once.
+/// A path in a rule (an operand, a parameter or a schedule's reference path), parsed once.
 /// </summary>
 /// <param name="Text">The path as written.</param>
 /// <param name="Parsed">The parsed path, or <c>null</c> when it isn't valid.</param>

@@ -6,7 +6,7 @@ namespace RuleLoom.Validation;
 
 /// <summary>
 /// Walks a rule once, in document order, and hands each part to every check: the rule, its condition, the actions with
-/// their conditions, and every path (condition operands and schedule reference paths).
+/// their conditions and parameters, and every path (condition operands, parameters and schedule reference paths).
 /// </summary>
 internal sealed class RuleWalker(Catalog catalog, IReadOnlyList<RuleCheck> checks)
 {
@@ -29,6 +29,17 @@ internal sealed class RuleWalker(Catalog catalog, IReadOnlyList<RuleCheck> check
 
             if (action.Condition is not null)
                 Root(action.Condition, $"{location}.condition", "An action's condition", problems);
+
+            var paths = new Dictionary<string, PathNode>();
+
+            foreach (var (name, value) in action.Parameters)
+            {
+                if (value is RulePath path)
+                    paths[name] = Path(path.ToString(), $"{location}.parameters.{name}.$path", problems);
+            }
+
+            foreach (var check in checks)
+                check.Parameters(action, paths, location, problems);
 
             if (action.Schedule is not { } schedule)
                 continue;
