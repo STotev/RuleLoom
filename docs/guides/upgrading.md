@@ -3,6 +3,7 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
+- [0.6 → 0.7](#06--07): a parameter `{ "$path": ... }` is a path
 - [0.5 → 0.6](#05--06): the engine, validator and DI run on a catalog; paths starting with `@` or `#` are no longer property names
 - [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
 - [0.3 → 0.4](#03--04): actions are named by registration, `IAction`, dependency injection
@@ -10,6 +11,16 @@ first, with what to change. Each version's GitHub release notes link the pull re
 - [0.1 → 0.2](#01--02): action results, action factory, scheduling
 
 ---
+
+## 0.6 → 0.7
+
+### A parameter `{ "$path": ... }` is a path
+
+An action parameter whose value is an object with a `$path` key is now a path, read when the action runs
+(`"to": { "$path": "@customer.Email" }`). `$path` with other keys, or inside a parameter's value, is rejected when
+the rule is parsed. Rules are affected only if they pass such an object as a literal value; there's no escape for it
+yet, so pass it under another key. Other parameters are unchanged, and actions that resolve path strings themselves
+keep working.
 
 ## 0.5 → 0.6
 

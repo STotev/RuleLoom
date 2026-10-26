@@ -53,6 +53,21 @@ public class RuleEngineContextTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ParameterPaths_PrefetchTheirContexts()
+    {
+        var customer = new FakeContextProvider(new { Email = "ada@example.com" });
+        var action = new RecordingAction((context, _) => Task.FromResult((string?)context.Resolve("@customer.Email")));
+        var engine = Engine(action, ("customer", customer));
+        var rule = Rule("welcome", Op("gt", Path("Total"), Value(0)),
+            new ActionDefinition { Action = "record", Parameters = { ["to"] = RulePath.Parse("@customer.Email") } });
+
+        var result = await engine.ExecuteAsync("OrderPlaced", Order, [rule], TestContext.Current.CancellationToken);
+
+        Assert.Equal("ada@example.com", result.Rules[0].ActionResults[0].Message);
+        Assert.Equal(1, customer.Calls);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ActionConditionAndReferencePath_SeeContexts()
     {
         var action = new RecordingAction();

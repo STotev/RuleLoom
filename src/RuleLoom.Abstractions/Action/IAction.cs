@@ -20,7 +20,7 @@ public interface IAction
 
 /// <summary>
 /// An action that receives its parameters as a <typeparamref name="TParameters"/>, read from the rule with
-/// <see cref="ActionDefinition.GetParameters{T}"/>. The catalog describes its parameters from the type (and an
+/// <see cref="ActionDefinition.GetParametersAsync{T}"/> (paths resolved). The catalog describes its parameters from the type (and an
 /// <see cref="ActionDescriptor{TAction, TParameters}"/>, if any): constructor parameters without a default and
 /// <c>required</c> members are required.
 /// </summary>
@@ -38,9 +38,11 @@ public interface IAction<TParameters> : IAction
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Reads the parameters and executes the action with them.
+    /// Reads the parameters, resolving paths, and executes the action with them.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The parameters can't be read as <typeparamref name="TParameters"/>.</exception>
-    Task<ActionResult> IAction.ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken) =>
-        ExecuteAsync(action.GetParameters<TParameters>(context), action, context, cancellationToken);
+    /// <exception cref="InvalidOperationException">A path can't be resolved, or the parameters can't be read as
+    /// <typeparamref name="TParameters"/>.</exception>
+    async Task<ActionResult> IAction.ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken) =>
+        await ExecuteAsync(await action.GetParametersAsync<TParameters>(context, cancellationToken).ConfigureAwait(false),
+            action, context, cancellationToken).ConfigureAwait(false);
 }

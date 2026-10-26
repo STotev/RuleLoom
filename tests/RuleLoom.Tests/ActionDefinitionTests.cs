@@ -103,7 +103,7 @@ public class ActionDefinitionTests
     }
 
     [Fact]
-    public void GetParameters_ReadsThemAsTheType_NamesIgnoringCase()
+    public async Task GetParametersAsync_ReadsThemAsTheType_NamesIgnoringCase()
     {
         var action = new ActionDefinition
         {
@@ -111,18 +111,19 @@ public class ActionDefinitionTests
             Parameters = { ["TO"] = "ada@example.com", ["amount"] = 100, ["status"] = "active", ["recipients"] = Action.Parameters["recipients"], ["extra"] = 1 }
         };
 
-        var parameters = action.GetParameters<EmailParameters>(Context);
+        var parameters = await action.GetParametersAsync<EmailParameters>(Context, TestContext.Current.CancellationToken);
 
         Assert.Equal(("ada@example.com", 100m, Status.Active, null), (parameters.To, parameters.Amount, parameters.Status, parameters.Note));
         Assert.Equal(["a@example.com", "b@example.com"], parameters.Recipients);
     }
 
     [Fact]
-    public void GetParameters_MissingRequired_ThrowsNamingIt()
+    public async Task GetParametersAsync_MissingRequired_ThrowsNamingIt()
     {
         var action = new ActionDefinition { Action = "send-email", Parameters = { ["amount"] = 1 } };
 
-        var ex = Assert.Throws<InvalidOperationException>(() => action.GetParameters<EmailParameters>(Context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            action.GetParametersAsync<EmailParameters>(Context, TestContext.Current.CancellationToken).AsTask());
 
         Assert.StartsWith("The parameters of action 'send-email' can't be read as EmailParameters:", ex.Message);
         Assert.Contains("'to'", ex.Message);
@@ -132,13 +133,69 @@ public class ActionDefinitionTests
     [InlineData("amount", "lots")]
     [InlineData("to", null)]
     [InlineData("status", "Archived")]
-    public void GetParameters_WrongValue_ThrowsNamingTheParameter(string name, object? value)
+    public async Task GetParametersAsync_WrongValue_ThrowsNamingTheParameter(string name, object? value)
     {
         var action = new ActionDefinition { Action = "send-email", Parameters = { ["to"] = "ada@example.com", ["amount"] = 1, [name] = value } };
 
-        var ex = Assert.Throws<InvalidOperationException>(() => action.GetParameters<EmailParameters>(Context));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            action.GetParametersAsync<EmailParameters>(Context, TestContext.Current.CancellationToken).AsTask());
 
         Assert.StartsWith($"Parameter '{name}' of action 'send-email' can't be read as EmailParameters:", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetParametersAsync_Paths_ResolveOnTheStateAndLoadContexts()
+    {
+        var customer = new FakeContextProvider(new { Email = "ada@example.com" });
+        var context = new TestCatalog().Provider("customer", customer).Event("OrderPlaced", "customer")
+            .Context(new { Total = 640.5m }, new { Note = "repeat customer" }, "OrderPlaced");
+        var action = new ActionDefinition
+        {
+            Action = "send-email",
+            Parameters =
+            {
+                ["to"] = RulePath.Parse("@customer.Email"),
+                ["amount"] = RulePath.Parse("Total"),
+                ["note"] = RulePath.Parse("$previous.Note")
+            }
+        };
+
+        var parameters = await action.GetParametersAsync<EmailParameters>(context, TestContext.Current.CancellationToken);
+
+        Assert.Equal(("ada@example.com", 640.5m, "repeat customer"), (parameters.To, parameters.Amount, parameters.Note));
+        Assert.Equal(1, customer.Calls);
+    }
+
+    [Fact]
+    public async Task GetParametersAsync_PathToAContextTheEventDoesNotDeclare_ThrowsNamingTheParameter()
+    {
+        var action = new ActionDefinition { Action = "send-email", Parameters = { ["to"] = RulePath.Parse("@customer.Email"), ["amount"] = 1 } };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            action.GetParametersAsync<EmailParameters>(Context, TestContext.Current.CancellationToken).AsTask());
+
+        Assert.StartsWith("Parameter 'to' of action 'send-email' can't be resolved ('@customer.Email'):", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetParameterAsync_ResolvesAPathOrReadsAValue()
+    {
+        var action = new ActionDefinition { Action = "send-email", Parameters = { ["amount"] = RulePath.Parse("Total"), ["to"] = "ada@example.com" } };
+        var context = new EvaluationContext(new { Total = 640.5m });
+
+        Assert.Equal(640.5m, await action.GetParameterAsync<decimal>("AMOUNT", context, TestContext.Current.CancellationToken));
+        Assert.Equal("ada@example.com", await action.GetParameterAsync<string>("to", context, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void GetParameter_Path_ThrowsPointingAtTheAsyncRead()
+    {
+        var action = new ActionDefinition { Action = "send-email", Parameters = { ["to"] = RulePath.Parse("Customer.Email") } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => action.GetParameter<string>("to"));
+
+        Assert.Equal("Parameter 'to' of action 'send-email' is the path 'Customer.Email'; read it with GetParameterAsync.", ex.Message);
+        Assert.False(action.TryGetParameter<string>("to", out _));
     }
 
     [Fact]

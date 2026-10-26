@@ -65,6 +65,7 @@ public static class RuleJsonParser
             Converters =
             {
                 new ConditionNodeJsonConverter(),
+                new ParametersJsonConverter(),
                 new ClrValueJsonConverter(),
                 new JsonStringEnumConverter()
             }
@@ -232,6 +233,47 @@ internal static class JsonClrValues
                 .ToDictionary(p => p.Name, p => ToClrValue(p.Value)),
             _ => element.GetRawText()
         };
+    }
+}
+
+/// <summary>
+/// Reads action parameters: a <c>{ "$path": ... }</c> object (checked by <see cref="RuleJsonValidator"/>) as a
+/// <see cref="RulePath"/>, anything else as a plain CLR value; writes paths back as <c>{ "$path": ... }</c>.
+/// </summary>
+internal sealed class ParametersJsonConverter : JsonConverter<Dictionary<string, object?>>
+{
+    public override Dictionary<string, object?> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using var document = JsonDocument.ParseValue(ref reader);
+
+        return document.RootElement.EnumerateObject().ToDictionary(
+            parameter => parameter.Name,
+            parameter => RuleJsonValidator.IsPath(parameter.Value, out var path)
+                ? RulePath.Parse(path.GetString()!)
+                : JsonClrValues.ToClrValue(parameter.Value));
+    }
+
+    public override void Write(Utf8JsonWriter writer, Dictionary<string, object?> value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+
+        foreach (var (name, parameter) in value)
+        {
+            writer.WritePropertyName(name);
+
+            if (parameter is RulePath path)
+            {
+                writer.WriteStartObject();
+                writer.WriteString(RuleJsonValidator.PathKey, path.ToString());
+                writer.WriteEndObject();
+            }
+            else
+            {
+                JsonSerializer.Serialize(writer, parameter, options);
+            }
+        }
+
+        writer.WriteEndObject();
     }
 }
 

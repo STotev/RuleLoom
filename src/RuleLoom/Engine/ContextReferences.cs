@@ -5,7 +5,8 @@ using RuleLoom.Abstractions.Rule;
 namespace RuleLoom.Engine;
 
 /// <summary>
-/// Finds the contexts (<c>@name</c>) that rules use in paths: rule and action conditions, and schedule reference paths.
+/// Finds the contexts (<c>@name</c>) that rules use in paths: rule and action conditions, schedule reference paths and
+/// action parameters.
 /// </summary>
 internal static class ContextReferences
 {
@@ -21,6 +22,9 @@ internal static class ContextReferences
             {
                 AddFrom(action.Condition, names);
                 AddPath(action.Schedule?.ReferencePath, names);
+
+                foreach (var path in action.Parameters.Values.OfType<RulePath>())
+                    AddContext(path, names);
             }
         }
 
@@ -44,7 +48,13 @@ internal static class ContextReferences
     private static void AddPath(string? path, HashSet<string> names)
     {
         // Invalid paths fail when the rule resolves them.
-        if (path is not null && RulePath.TryParse(path, out var parsed, out _) && parsed.Root == PathRoot.Context)
-            names.Add(parsed.Context!);
+        if (path is not null && RulePath.TryParse(path, out var parsed, out _))
+            AddContext(parsed, names);
+    }
+
+    private static void AddContext(RulePath path, HashSet<string> names)
+    {
+        if (path.Root == PathRoot.Context)
+            names.Add(path.Context!);
     }
 }

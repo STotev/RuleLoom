@@ -125,12 +125,14 @@ public sealed class SendEmailAction(IEmailService email) : IAction<SendEmailPara
 }
 ```
 
-Parameter names ignore case, and enums are read by name. Parameters that can't be read as the type (a missing `to`, text
+A parameter can be read from the event or a context when the action runs:
+`"to": { "$path": "Customer.Email" }` (see [action parameters](json-rules.md#action-parameters)). Parameter names ignore
+case, and enums are read by name. Parameters that can't be read as the type (a missing `to`, text
 where a number belongs) fail only that action, with a message naming the parameter. The catalog describes the
 parameters from the type, so an authoring UI can show a form for them.
 
 An action can also implement `IAction` and read parameters one at a time with `action.GetParameter<T>("to")`, or all at
-once with `action.GetParameters<T>(context)`. Its parameters aren't described in the catalog.
+once with `action.GetParametersAsync<T>(context)`. Its parameters aren't described in the catalog.
 
 Add it to the catalog with `AddAction<SendEmailAction>()`. Use `[ActionName("notify")]` on the class for a different
 default, or give a name when adding it: `AddAction<SendEmailAction>("notify")`.
