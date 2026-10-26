@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Scheduling;
 using RuleLoom.Abstractions.Values;
+using RuleLoom.Schemas;
 
 namespace RuleLoom.Abstractions.Action;
 
@@ -26,7 +28,8 @@ public class ActionDefinition
     /// Parameters for the action. The structure depends on the action.
     /// Values are plain CLR values (from JSON: <c>null</c>, <see cref="bool"/>, <see cref="int"/>/<see cref="long"/>/
     /// <see cref="double"/>, <see cref="string"/>, <see cref="List{T}"/> or <see cref="Dictionary{TKey,TValue}"/>).
-    /// Read them with <see cref="GetParameter{T}"/> or <see cref="TryGetParameter{T}"/>.
+    /// Read them with <see cref="GetParameter{T}"/> or <see cref="TryGetParameter{T}"/>, or all at once with
+    /// <see cref="GetParameters{T}"/>.
     /// </summary>
     public Dictionary<string, object?> Parameters { get; init; } = new();
 
@@ -56,6 +59,35 @@ public class ActionDefinition
         }
 
         return converted;
+    }
+
+    /// <summary>
+    /// Reads all parameters as a <typeparamref name="T"/>, like System.Text.Json reads a JSON object with
+    /// <see cref="ParametersSchemaDefinition.JsonOptions"/>: names ignore case, enums are read by name, constructor
+    /// parameters without a default and <c>required</c> members must be present, and parameters <typeparamref name="T"/>
+    /// doesn't have are ignored.
+    /// </summary>
+    /// <param name="context">The context the action runs in.</param>
+    /// <exception cref="InvalidOperationException">The parameters can't be read as <typeparamref name="T"/>; the
+    /// message names the parameter.</exception>
+    public T GetParameters<T>(EvaluationContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        try
+        {
+            return JsonSerializer.SerializeToNode(Parameters, ParametersSchemaDefinition.JsonOptions)
+                .Deserialize<T>(ParametersSchemaDefinition.JsonOptions)
+                ?? throw new InvalidOperationException($"The parameters of action '{Action}' can't be read as {typeof(T).Name}.");
+        }
+        catch (JsonException ex)
+        {
+            var subject = ex.Path is { Length: > 2 } path && path.StartsWith("$.", StringComparison.Ordinal)
+                ? $"Parameter '{path[2..]}' of action '{Action}'"
+                : $"The parameters of action '{Action}'";
+
+            throw new InvalidOperationException($"{subject} can't be read as {typeof(T).Name}: {ex.Message}", ex);
+        }
     }
 
     /// <summary>

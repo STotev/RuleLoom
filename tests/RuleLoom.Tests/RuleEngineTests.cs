@@ -99,6 +99,37 @@ public class RuleEngineTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_TypedActionWithUnreadableParameters_FailsOnlyThatAction()
+    {
+        var factory = new TestActionFactory(new Dictionary<string, IAction>
+        {
+            ["typed"] = new CountAction(),
+            ["ok"] = new DelegatingAction((_, _, _) => Task.FromResult(ActionResult.Success("ok")))
+        });
+        var engine = Engine(new TestConditionEvaluator(ConditionResult: true), factory);
+        var rule = new RuleDefinition
+        {
+            Id = "rule-a",
+            Name = "Rule A",
+            EventType = "Event",
+            Condition = RuleCondition,
+            Actions =
+            [
+                new ActionDefinition { Action = "typed", Parameters = { ["count"] = 2 } },
+                new ActionDefinition { Action = "typed", Parameters = { ["count"] = "two" } },
+                new ActionDefinition { Action = "ok" }
+            ]
+        };
+
+        var actions = (await engine.ExecuteAsync("Event", new { }, [rule], TestContext.Current.CancellationToken)).Rules[0].ActionResults;
+
+        Assert.Equal("counted 2", actions[0].Message);
+        Assert.Equal(ActionExecutionStatus.Failed, actions[1].Status);
+        Assert.StartsWith("Parameter 'count' of action 'typed'", actions[1].Error!.Message);
+        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, actions[2].Status);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ActionConditionFalse_ReturnsSkippedResult()
     {
         var evaluator = new TestConditionEvaluator(ConditionResult: true, ActionConditionResult: false);
@@ -466,6 +497,14 @@ public class RuleEngineTests
             EvaluationContext context,
             CancellationToken cancellationToken = default) =>
             execute(action, context, cancellationToken);
+    }
+
+    private sealed record CountParameters(int Count);
+
+    private sealed class CountAction : IAction<CountParameters>
+    {
+        public Task<ActionResult> ExecuteAsync(CountParameters parameters, ActionDefinition action, EvaluationContext context,
+            CancellationToken cancellationToken = default) => Task.FromResult(ActionResult.Success($"counted {parameters.Count}"));
     }
 
     private sealed class CountingAction(Func<ActionDefinition, EvaluationContext, CancellationToken, Task<ActionResult>> execute) : IAction

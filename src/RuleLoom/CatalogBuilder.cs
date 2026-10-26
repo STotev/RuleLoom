@@ -176,7 +176,11 @@ public sealed class CatalogBuilder
         var actions = _actions.Select(a =>
         {
             var descriptor = Describe<IActionDescriptor>(a.Descriptor, typeof(ActionDescriptor<>), a.Type, "action", [a.Type.Assembly]);
-            return new ActionRegistration(a.Name, a.Type, descriptor?.Label, descriptor?.Description);
+            var parameters = ParametersType(a.Type) is { } parametersType
+                ? descriptor?.BuildParameters() ?? InferParameters(parametersType)
+                : null;
+
+            return new ActionRegistration(a.Name, a.Type, descriptor?.Label, descriptor?.Description, parameters);
         }).ToList();
 
         return new Catalog(events.Build().Events, providers, _operators, actions, stored);
@@ -278,6 +282,32 @@ public sealed class CatalogBuilder
         }
 
         return null;
+    }
+
+    // The parameters type of an IAction<TParameters>; null for an untyped action.
+    private static Type? ParametersType(Type actionType)
+    {
+        var types = actionType.GetInterfaces()
+            .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAction<>))
+            .Select(i => i.GetGenericArguments()[0])
+            .ToList();
+
+        return types.Count switch
+        {
+            0 => null,
+            1 => types[0],
+            _ => throw new InvalidOperationException(
+                $"Action {actionType.Name} takes several parameters types ({string.Join(", ", types.Select(t => t.Name))}); " +
+                "an action can implement IAction<TParameters> once.")
+        };
+    }
+
+    // Describes parameters by their type alone, when no descriptor describes them.
+    private static ParametersSchemaDefinition InferParameters(Type parametersType)
+    {
+        var schemaType = typeof(ParametersSchema<>).MakeGenericType(parametersType);
+        return (ParametersSchemaDefinition)schemaType.GetMethod(nameof(ParametersSchema<>.Build))!
+            .Invoke(Activator.CreateInstance(schemaType), BindingFlags.DoNotWrapExceptions, null, null, null)!;
     }
 
     // Untyped data (object or JSON) has no fields to describe.

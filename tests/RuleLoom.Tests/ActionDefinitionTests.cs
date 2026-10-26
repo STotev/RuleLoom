@@ -1,3 +1,4 @@
+using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 
 namespace RuleLoom.Tests;
@@ -99,6 +100,67 @@ public class ActionDefinitionTests
     public void TryGetParameter_MissingOrUnconvertible_ReturnsFalse(string name)
     {
         Assert.False(Action.TryGetParameter<int>(name, out _));
+    }
+
+    [Fact]
+    public void GetParameters_ReadsThemAsTheType_NamesIgnoringCase()
+    {
+        var action = new ActionDefinition
+        {
+            Action = "send-email",
+            Parameters = { ["TO"] = "ada@example.com", ["amount"] = 100, ["status"] = "active", ["recipients"] = Action.Parameters["recipients"], ["extra"] = 1 }
+        };
+
+        var parameters = action.GetParameters<EmailParameters>(Context);
+
+        Assert.Equal(("ada@example.com", 100m, Status.Active, null), (parameters.To, parameters.Amount, parameters.Status, parameters.Note));
+        Assert.Equal(["a@example.com", "b@example.com"], parameters.Recipients);
+    }
+
+    [Fact]
+    public void GetParameters_MissingRequired_ThrowsNamingIt()
+    {
+        var action = new ActionDefinition { Action = "send-email", Parameters = { ["amount"] = 1 } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => action.GetParameters<EmailParameters>(Context));
+
+        Assert.StartsWith("The parameters of action 'send-email' can't be read as EmailParameters:", ex.Message);
+        Assert.Contains("'to'", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("amount", "lots")]
+    [InlineData("to", null)]
+    [InlineData("status", "Archived")]
+    public void GetParameters_WrongValue_ThrowsNamingTheParameter(string name, object? value)
+    {
+        var action = new ActionDefinition { Action = "send-email", Parameters = { ["to"] = "ada@example.com", ["amount"] = 1, [name] = value } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => action.GetParameters<EmailParameters>(Context));
+
+        Assert.StartsWith($"Parameter '{name}' of action 'send-email' can't be read as EmailParameters:", ex.Message);
+    }
+
+    [Fact]
+    public async Task TypedAction_RunAsAnAction_ReceivesItsParameters()
+    {
+        IAction action = new EmailAction();
+        var definition = new ActionDefinition { Action = "send-email", Parameters = { ["to"] = "ada@example.com", ["amount"] = 5 } };
+
+        var result = await action.ExecuteAsync(definition, Context, TestContext.Current.CancellationToken);
+
+        Assert.Equal("ada@example.com: 5", result.Message);
+    }
+
+    private static readonly EvaluationContext Context = new(new { });
+
+    public sealed record EmailParameters(string To, decimal Amount, Status Status = Status.Draft, string? Note = null, IReadOnlyList<string>? Recipients = null);
+
+    private sealed class EmailAction : IAction<EmailParameters>
+    {
+        public Task<ActionResult> ExecuteAsync(EmailParameters parameters, ActionDefinition action, EvaluationContext context,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(ActionResult.Success($"{parameters.To}: {parameters.Amount}"));
     }
 
     private static void AssertUnconvertible(Func<object?> read, string name, string from, string to)
