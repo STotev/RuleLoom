@@ -114,8 +114,23 @@ public sealed class LoyaltyCheckDescriptor : ActionDescriptor<LoyaltyCheckAction
 ```
 
 An action with typed parameters (`IAction<TParameters>`) is described by its parameters type too, with or without a
-descriptor: the catalog document lists each parameter, its type and whether it's required. Derive from
-`ActionDescriptor<TAction, TParameters>` to label them with `Parameter(p => p.To).Label("Recipient")`.
+descriptor: the catalog document lists each parameter, its type and whether it's required. The sample's `send-email`
+derives from `ActionDescriptor<TAction, TParameters>` to label them:
+
+```csharp
+public sealed record SendEmailParameters(string To, string Subject);
+
+public sealed class SendEmailDescriptor : ActionDescriptor<SendEmailAction, SendEmailParameters>
+{
+    public SendEmailDescriptor()
+    {
+        Label("Send email");
+        Description("Emails a recipient, usually an address from the event or a context.");
+        Parameter(p => p.To).Label("Recipient").Description("The email address; pick a path such as Customer.Email.");
+        Parameter(p => p.Subject).Label("Subject");
+    }
+}
+```
 
 Operators describe themselves (`Label` and `Description` on `IConditionOperator`); the built-in ones already do.
 
@@ -173,9 +188,14 @@ Rules read a context with `@name.Path`. The engine loads only the contexts the e
       { "operator": "eq", "operands": [{ "path": "@customer.Tier" }, { "value": "gold" }] }
     ]
   },
-  "actions": [{ "action": "send-email", "parameters": { "to": "Customer.Email", "subject": "A gift is on its way" } }]
+  "actions": [{ "action": "send-email", "parameters": { "to": { "$path": "@customer.Email" }, "subject": "A gift is on its way" } }]
 }
 ```
+
+Action parameters can be paths too: `{ "$path": "@customer.Email" }` is read from the customer's profile when the
+action runs. The engine loads the contexts parameter paths use along with the others, and a scheduled action loads
+them when it runs (the sample's `RunScheduledActionJob` creates its `EvaluationContext` with the event type, the catalog
+and the context provider factory, as the engine does).
 
 Rules can't use paths into a list, so collections are for actions. An action loads any context its event declares:
 
@@ -209,18 +229,21 @@ The validator checks the rule against the catalog:
 
 - the event type is in the catalog, and the operators and actions exist, with the right number of operands;
 - a typed action's parameters match its parameters type: no unknown parameters, every required one, values of the right
-  type;
+  type. In the sample, the "Review request" rule is reported with
+  `$.actions[0].parameters.subjet: Action 'send-email' has no parameter 'subjet'.` and the missing `subject`;
 - paths are fields of the event or of the contexts it declares. In the sample, a typo in a context path is reported
   with its location: `$.condition.operands[0].path: 'Teir' is not a field of '@customer'.`;
 - comparisons that can never match (a number against text) are `Warnings`, which don't make a rule invalid.
 
 ## 9. Show the catalog to rule authors
 
-`catalog.ToJson()` writes the whole vocabulary as one document, ready for an authoring UI. The sample serves it at
-`GET /catalog`:
+`catalog.ToJson()` writes the whole vocabulary as one document, ready for an authoring UI. With the
+`RuleLoom.AspNetCore` package, `MapRuleLoom` serves it at `GET {prefix}/catalog`, next to `POST {prefix}/validate`,
+which validates a rule (or an array of rules) and returns its errors and warnings with their paths. The sample maps
+both:
 
 ```csharp
-app.MapGet("/catalog", (Catalog catalog) => Results.Text(catalog.ToJson(), "application/json"));
+app.MapRuleLoom("/rules");   // a real app adds .RequireAuthorization()
 ```
 
 ```json
@@ -246,7 +269,19 @@ app.MapGet("/catalog", (Catalog catalog) => Results.Text(catalog.ToJson(), "appl
     }
   ],
   "operators": [{ "name": "eq", "label": "equals", "description": "...", "minOperands": 2, "maxOperands": 2 }],
-  "actions": [{ "name": "loyalty-check", "label": "Loyalty check", "description": "..." }],
+  "actions": [
+    { "name": "loyalty-check", "label": "Loyalty check", "description": "..." },
+    {
+      "name": "send-email",
+      "label": "Send email",
+      "description": "...",
+      "parameters": {
+        "type": "object",
+        "properties": { "to": { "type": "string", "title": "Recipient" }, "subject": { "type": "string", "title": "Subject" } },
+        "required": ["to", "subject"]
+      }
+    }
+  ],
   "problems": []
 }
 ```
