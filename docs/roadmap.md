@@ -1,6 +1,6 @@
 # RuleLoom Roadmap
 
-**Last reviewed**: 2026-10-25
+**Last reviewed**: 2026-10-26
 
 The single overview of what has been built, what is next, and what is planned but not yet scheduled.
 Details live in GitHub issues and in [`specs/`](specs/); this page links to them rather than repeating them.
@@ -25,6 +25,7 @@ connect to historical docs — they were reused inconsistently between documents
 | 0.3.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.3.0) 2026-10-06 | PRD #22 API hardening (one breaking release; migration guide follows in #6) |
 | 0.4.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.4.0) 2026-10-06 | Action names by registration, `IAction`, dependency injection, upgrading guide |
 | 0.5.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.5.0) 2026-10-15; the first release on [NuGet](https://www.nuget.org/packages/RuleLoom) | JSON state, ISO date comparison, required rule ids, `ConsoleLogAction`, ASP.NET Core sample |
+| 0.6.0 | [Released](https://github.com/STotev/RuleLoom/releases/tag/v0.6.0) 2026-10-25 | Event schemas (`RuleLoom.Schemas`), contexts, validation against schemas, the catalog, previous state from changed fields |
 
 ---
 
@@ -133,11 +134,24 @@ the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings
 
 | Milestone | Contents | Notes |
 |---|---|---|
-| **0.7: Authoring surface & hosting** | The transport-free catalog moved into 0.6 as the [catalog](specs/2026-10-25-catalog-design.md); **action parameter descriptors** on `ActionDescriptor<T>` (parameters that are values or paths); every context declaration naming its provider in the catalog document ([finding](specs/2026-10-25-schemas-contexts-sample-design.md#findings)); `RuleLoom.AspNetCore` with `MapRuleLoom` (schemas, operators, actions, validate, schema registration endpoints); **schema publishing** (`UseSchemaPublishing(p => p.UseHttp(...))`) and **storage packages** (e.g. PostgreSQL); optional build-time schema generation; explicit state snapshotter; **event envelope** `RuleEvent` as decided in 0.5 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape) | Optional packages; no rule CRUD. The PRD also decides **scopes** (applications / bounded contexts) and rule groups, see the vision |
-| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
+| **0.7: Typed actions & authoring endpoints** ([PRD #113](https://github.com/STotev/RuleLoom/issues/113)) | **Typed actions** (`IAction<TParameters>`, parameters described by their type and `ActionDescriptor<TAction, TParameters>`, in the catalog document as JSON Schema); **paths in parameters** (`{ "$path": "@customer.Email" }`, [ADR 0003](adr/0003-paths-in-parameters-are-marked.md)); parameters validated against their schema; `RuleLoom.AspNetCore` with `MapRuleLoom` (catalog, validate); rule arrays parsed rule by rule (#81); every context declaration naming its provider | One application first; no rule CRUD. Detail below |
+| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; **event envelope** `RuleEvent` as decided in 0.5, moved from 0.7 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape); `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Open design questions in the vision's "Running scheduled actions later" |
 | **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides, a **documentation site** built from `docs/` with more extensive examples (see below) | 1.0 marks a stable API; packages are already published from 0.5.0 |
+| **Parked: service-to-service** | Schema publishing (`UseSchemaPublishing(p => p.UseHttp(...))`) and registration endpoints; storage packages (e.g. PostgreSQL); optional build-time schema generation; explicit state snapshotter; **scopes** (applications / bounded contexts, see the vision) | Monolith first (2026-10-24): one application, one catalog, event types unique per catalog. Picked up when several applications share an engine |
 | **After 0.7** | **Fluent rule builder** producing `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the schema builder's expression → path translation | Mainly for in-process users; placed once 0.7 settles |
 | **Post-1.0** | Operations dashboard and execution store implementations; EF Core snapshotter; scheduler integration packages; typed rule consumers and dispatch, with transport adapters (e.g. MassTransit); path variables and functions; more operators | Order to be decided; see the vision's *Under consideration* |
+
+### 0.7 — PRD [#113](https://github.com/STotev/RuleLoom/issues/113)
+
+| Issue | Slice | Type | Blocked by | PR | Spec |
+|---|---|---|---|---|---|
+| [#81](https://github.com/STotev/RuleLoom/issues/81) | Parse rule arrays rule by rule | AFK | — | — | — |
+| [#114](https://github.com/STotev/RuleLoom/issues/114) | Context declarations always name their provider | AFK | — | — | — |
+| [#115](https://github.com/STotev/RuleLoom/issues/115) | Typed actions and their parameters in the catalog | AFK | — | — | — |
+| [#116](https://github.com/STotev/RuleLoom/issues/116) | Paths in action parameters (`$path`) | AFK | #115 | — | — |
+| [#117](https://github.com/STotev/RuleLoom/issues/117) | Validate action parameters against their schema | AFK | #115, #116 | — | — |
+| [#118](https://github.com/STotev/RuleLoom/issues/118) | `RuleLoom.AspNetCore`: `MapRuleLoom` endpoints | AFK | #81 | — | — |
+| [#119](https://github.com/STotev/RuleLoom/issues/119) | Sample and guide for typed actions and `MapRuleLoom` | HITL | #81, #114–#118 | — | — |
 
 ---
 
@@ -154,7 +168,6 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 | Separate `EvaluationContext` data from path resolution (`IPathResolver`) | Testability | analysis §6 |
 | Path whitelisting for untrusted rules | Security, when end users author rules; comes with schema-based validation in **0.6** | analysis §13 |
 | Rule indexing by event type | Performance | analysis §9 |
-| Parse rule arrays rule by rule ([#81](https://github.com/STotev/RuleLoom/issues/81)) | One malformed rule rejects the whole `ParseMany` array today | 0.5 spike findings |
 | Package layering review (before 1.0) | `RuleLoom.Abstractions` holds implementation (JSON parser, `PathResolver`, `EvaluationContext`, value comparison, `RulePath`) and references `RuleLoom.Schemas`; an abstractions package is usually the one others reference. Decide what is contract and what moves to `RuleLoom` | #107 discussion |
 
 ### Scheduling follow-ups (deferred from PRD #1)
@@ -220,7 +233,7 @@ parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variab
 
 ### Schema & validation
 **0.6** ([PRD #87](https://github.com/STotev/RuleLoom/issues/87)) delivers schemas, contexts, path validation and the
-catalog (#109); action parameter descriptors follow in 0.7. Design decisions are in [`vision.md`](vision.md#decided). Earlier
+catalog (#109); typed actions and parameter validation follow in 0.7 ([PRD #113](https://github.com/STotev/RuleLoom/issues/113)). Design decisions are in [`vision.md`](vision.md#decided). Earlier
 sketch: old roadmap §1.2.
 
 The schema is intended as the single source for:

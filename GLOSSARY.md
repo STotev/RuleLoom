@@ -39,8 +39,12 @@ A named test that conditions are built from (`eq`, `changed`, `and`).
 A named piece of application code that a rule runs when it matches.
 _Avoid_: Executor
 
+**Path**:
+Where a rule reads a value: the event's current or previous state, or a context (`Total`, `$previous.Status`, `@customer.Tier`).
+_Avoid_: Property path, selector
+
 **Parameter**:
-A value that a rule gives an action (`"to": "@customer.Email"`). Parameters are authored in rules and described by the action.
+What a rule gives an action: a value (`"subject": "Welcome"`) or a path read when the action runs (`"to": { "$path": "@customer.Email" }`). Parameters are authored in rules and described by the action.
 _Avoid_: Argument, option
 
 **Setting**:
