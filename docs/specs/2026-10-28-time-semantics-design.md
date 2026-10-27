@@ -25,7 +25,7 @@ spread over `ValueConverter`, `ValueComparer` and `ScheduleCalculator`.
 |---|---|
 | Meaning of a date-time without an offset | Wall-clock time in a configured time zone (IANA id), default UTC, so nothing changes until an app configures one. An offset always wins |
 | Where it's configured | On the catalog: `CatalogBuilder.UseTimeZone("Europe/Sofia")`; written in the catalog document as `"timeZone"` for authoring UIs. An unknown id fails the catalog build at startup (so a container without time-zone data fails immediately) |
-| Per evaluation | Each `EvaluationContext` carries the catalog's rules; a later per-evaluation override (e.g. from the `RuleEvent` envelope) hands it another instance. Not built in 0.8 unless `RuleEvent` needs it |
+| Per evaluation | Each `EvaluationContext` is given a `TemporalRules` (the catalog's), so a later per-evaluation override (e.g. from the `RuleEvent` envelope) hands it another instance without changing the converter. 0.8 builds neither the override nor a way to configure one; decided with `RuleEvent` |
 | `DateTimeKind.Local` | Kept: the machine's zone (`TimeZoneInfo.Local`). Documented as machine-dependent and discouraged when rules run on several machines |
 | Times of day (`TimeOnly`, "after 18:00") | Out of scope; they come with path functions or a time-of-day operator (backlog) |
 
@@ -65,19 +65,44 @@ carries the catalog's instance; operators reach it through `ctx.AreEqual` / `ctx
 |---|---|---|
 | Times RuleLoom calculates (schedules) | Lenient: moved forward by the gap | The earlier occurrence |
 | Values the app supplies without an offset (state, rule values, parameters) | Invalid: rejected | The earlier occurrence |
-| `DateTimeKind.Local` values | Invalid: rejected | Native .NET conversion (standard time, the later occurrence), as today |
+| `DateTimeKind.Local` values | Invalid: rejected | Native .NET conversion: preserves the known occurrence where available; otherwise normally assumes standard time (the later occurrence during a typical fall-back) |
+
+So: `Local` values use the machine's zone, impossible ones throw `InvalidTemporalValueException`, and ambiguous ones keep
+native .NET semantics, because a `DateTime` from `ToLocalTime()` can carry which occurrence it is, while an ordinary
+constructed `Local` value doesn't necessarily. `Unspecified` values use the catalog's time zone and choose the earlier
+occurrence. Preserving an already-known moment wins over every ambiguous wall-clock value resolving the same way.
 
 ### Invalid data and unsupported conversions
 
-- **Unsupported**: the value isn't a date or date-time (`true`, non-ISO text). `TryConvert` returns `false`;
-  comparisons treat the values as incomparable, as today.
-- **Invalid**: a wall-clock time that doesn't exist in its zone. `TemporalRules` throws a public, sealed
-  `InvalidTemporalValueException` naming the value and the zone; `ValueConverter` and `ValueComparer` don't catch it, so
-  the engine fails the rule (condition) or the action (schedule reference, parameter), with the message in `Error`.
-- **Schema-aware**: where a schema says a field is a date or a date-time, the problem names the field. `RuleValidator`
-  checks rule values and parameter values compared with or bound to such fields against the catalog's `TemporalRules`:
-  invalid wall-clock times are errors at the value's JSONPath, and text that isn't ISO for a date or date-time field
-  stays a warning (as today for comparisons).
+The key distinction is between a **failed conversion** and a **validly expressed wall-clock date-time that can't exist
+in its zone**.
+
+| Situation | Behaviour |
+|---|---|
+| Unrecognised text in a generic comparison (no known temporal type) | Incomparable, with the validator's existing warning |
+| Text that isn't ISO for a field known to be a date or date-time | The existing type-validation diagnostic, at its existing severity (a warning in 0.8); a severity policy, separate from temporal resolution |
+| A valid offset-less date-time falling into a daylight-saving gap | `InvalidTemporalValueException` |
+| A valid date-time in a repeated daylight-saving hour | Resolved as in the table above |
+| A valid date-time with an explicit offset | That moment, as supplied |
+
+- **Unsupported** values (`true`, non-ISO text): `TryConvert` returns `false`; comparisons treat them as incomparable,
+  as today.
+- **Invalid** values: `TemporalRules` throws a public, sealed `InvalidTemporalValueException`; `ValueConverter` and
+  `ValueComparer` don't catch it, so the engine fails the rule (condition) or the action (schedule reference,
+  parameter), with the message in `Error`.
+
+**Runtime diagnostics** name the invalid value and the time zone, and the field or path when it's known: for a path,
+the path as resolved (including the part continued on the runtime value, for JSON state or `object` properties).
+
+**`RuleValidator`** checks date and date-time literals whose expected type is known, against the catalog's time zone:
+condition values compared with a date or date-time field, and action parameter values whose type comes from the
+action's parameters schema (not the event schema). An impossible wall-clock time is an error at the literal's JSONPath.
+A schedule's `referencePath` is checked for its declared field type only; the timestamp it reads is checked at run
+time.
+
+**Two kinds of location**: a validation problem's JSONPath is where the offending literal or reference is written in
+the rule document (`$.condition.operands[1]`); a runtime error names the event property path the value came from
+(`PaymentDueAt`). The two aren't mixed.
 
 ### Breaking changes (0.8, `feat!`, no compatibility switch)
 
