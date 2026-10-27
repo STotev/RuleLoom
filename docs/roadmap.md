@@ -175,33 +175,16 @@ Grouped by theme. Each item needs a decision (keep / drop / reorder) and, if kep
 | Item | Notes | Source |
 |---|---|---|
 | Scheduler backends (`IScheduler`; Hangfire, Quartz, background service) | RuleLoom currently only computes `ScheduledFor`; integration packages are post-1.0 | PRD #1 Out of Scope |
-| Timezone support | UTC-only today; decide together with the time-semantics review below (**0.8**) | PRD #1 Out of Scope |
+| Timezone support | Decided in the time-semantics review below: the catalog's time zone (**0.8**) | PRD #1 Out of Scope |
 | `BlockPastEvents` flag; validation of zero/negative `Amount` | Past dates are currently returned as-is; **0.8** | PRD #1 plan |
 | Cron / recurring schedules, business-day calculations | | PRD #1 Out of Scope; old roadmap Phase 4.4 |
 
 ### Time semantics review (needs a proper breakdown)
-Scheduled as the first part of **0.8**. Keeping the current behaviour for now, but it needs a dedicated discussion
-and design before 1.0. Raised on
-2026-10-06 while reviewing #33 / PR #48.
-
-**Today**, every date conversion goes through `ValueConverter` (#30) and assumes UTC when no time zone is known:
-- `DateTime` with `Kind = Unspecified` is treated as UTC — in condition comparisons (`eq`, `gt`, …), schedule
-  `ReferencePath` values (#33) and `GetParameter<DateTime/DateTimeOffset>` (#35).
-- ISO 8601 strings without an offset (`"2026-05-01T09:00:00"`) are UTC, and date-only strings (`"2026-05-01"`) are
-  UTC midnight.
-
-**The risk**: `Unspecified` values are common (most databases/ORMs return them) and usually mean *local* time. In the
-US, treating such a value as UTC shifts it by 4–10 hours (and by a different amount across DST changes), so a
-reminder scheduled "2 hours before 09:00" fires at the wrong time, and date comparisons can land on the wrong day.
-Date-only values are arguably calendar dates, not instants.
-
-**To work out**:
-- What `Unspecified` should mean: reject it (fail loudly), use a configured default time zone (engine option or
-  DI), treat it as server-local time (fragile on servers), or take it from a per-field time zone in the Schema System.
-- Whether date-only values should compare as calendar dates (`DateOnly`) rather than UTC midnight instants.
-- How offset-less ISO strings in rules relate to that same default.
-- How this interacts with **Timezone support** for schedules, and with scheduler backends that dispatch at local times.
-- Migration: whichever default is chosen changes results for existing rules.
+**Decided 2026-10-28** in a design review: [spec](specs/2026-10-28-time-semantics-design.md),
+[ADR 0004](adr/0004-time-zone-and-calendar-dates.md). Date-times without an offset are read in the catalog's time zone
+(IANA id, default UTC); dates are calendar days; `Days` in schedules are calendar days; one public `TemporalRules`
+holds the policy (on `TimeZoneInfo`). Breaking for dates, without a compatibility switch. Becomes three issues of
+0.8's PRD. Times of day (`TimeOnly`) wait for path functions.
 
 ### Path variables and functions (for consideration)
 Raised on 2026-10-06 while reviewing #38 / PR #50. Worth a design pass before more `$` names are added.
@@ -219,7 +202,9 @@ parser's `RuleJsonValidator` (which rejects unknown `$` names). Every new variab
   application-specific ones, registered alongside operators and actions (and through DI, #5).
 - **Functions**, e.g. `#now()`, `#today()`, `#now(Europe/London)`, with the `#` sigil reserved for them in 0.6
   (`@` is taken by contexts, PRD #87). They'd have to use the injected `TimeProvider`, so they stay deterministic in
-  tests, and they tie directly into the **time semantics review** above.
+  tests, and they tie directly into the **time semantics review** above. Times of day (`TimeOnly`, "after 18:00") were
+  deferred to this item by that review: `#now()`/`#today()` should return values in the catalog's time zone
+  (`TemporalRules`).
 
 **Questions**:
 - Syntax: settled in 0.6 — `$` for RuleLoom's variables, `@` for contexts, `#` for functions.
