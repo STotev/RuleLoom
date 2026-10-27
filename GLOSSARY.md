@@ -39,6 +39,18 @@ A named test that conditions are built from (`eq`, `changed`, `and`).
 A named piece of application code that a rule runs when it matches.
 _Avoid_: Executor
 
+**Time zone**:
+The zone, named by its IANA id (`Europe/Sofia`), in which a date-time that states no offset is read. UTC unless configured.
+_Avoid_: Local time, server time
+
+**Date-time**:
+A moment in time. One that states an offset is that moment wherever it's read; one that doesn't is wall-clock time in the time zone.
+_Avoid_: Timestamp, instant (in docs for rule authors)
+
+**Date**:
+A calendar day without a time of day (`2026-05-01`). It's never a moment in time, not even midnight.
+_Avoid_: Midnight date
+
 **Path**:
 Where a rule reads a value: the event's current or previous state, or a context (`Total`, `$previous.Status`, `@customer.Tier`).
 _Avoid_: Property path, selector
