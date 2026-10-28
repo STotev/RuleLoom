@@ -6,7 +6,7 @@ Overdue)
 **Builds on:** the 0.5 spike's [findings](2026-10-14-aspnetcore-sample-design.md#findings) (envelope, entry point,
 keys) and the 0.7 sample's [findings](2026-10-26-sample-typed-actions-design.md#findings)
 **Date:** 2026-10-29
-**Status:** Agreed in a design review with the maintainer; issues are cut when 0.8's PRD is written
+**Status:** Agreed in a design review with the maintainer; planned in [PRD #134](https://github.com/STotev/RuleLoom/issues/134)
 
 ---
 
