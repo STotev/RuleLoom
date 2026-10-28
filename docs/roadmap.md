@@ -273,9 +273,9 @@ rule versioning and lifecycle (draft/active/archived) as data in the rule model,
 trace. Detail: old roadmap Phase 3.
 
 ### Infrastructure & scale (old Phase 4)
-Persistence and distributed events (MassTransit/RabbitMQ) are the consumer's. The execution observer hook is in
-**0.8**, the catalog REST API in **0.7**, and the operations dashboard is post-1.0. Still open: structured `ILogger`
-logging (the engine reports failures only in its results today). Detail: old roadmap Phase 4.
+Persistence and distributed events (MassTransit/RabbitMQ) are the consumer's. OpenTelemetry traces and metrics and
+`ILogger` logging are in **0.8** ([spec](specs/2026-10-29-observability-design.md)), the catalog REST API was in
+**0.7**, and the operations dashboard (with an observer hook for execution history) is post-1.0. Detail: old roadmap Phase 4.
 
 ---
 
