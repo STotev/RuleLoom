@@ -2,7 +2,7 @@
 
 **Milestone:** 0.8 (Scheduling); replaces the planned "execution observer hook"
 **Date:** 2026-10-29
-**Status:** Agreed in a design review with the maintainer; issues are cut when 0.8's PRD is written
+**Status:** Agreed in a design review with the maintainer; planned in [PRD #134](https://github.com/STotev/RuleLoom/issues/134)
 
 ---
 

@@ -5,7 +5,7 @@
 **Decision:** [ADR 0004](../adr/0004-time-zone-and-calendar-dates.md); terms in `GLOSSARY.md` (Time zone, Date-time,
 Date)
 **Date:** 2026-10-28
-**Status:** Agreed in a design review with the maintainer; issues are cut when 0.8's PRD is written
+**Status:** Agreed in a design review with the maintainer; planned in [PRD #134](https://github.com/STotev/RuleLoom/issues/134)
 
 ---
 

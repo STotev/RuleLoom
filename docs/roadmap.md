@@ -130,13 +130,13 @@ From 0.5.0: NuGet packages published by the release workflow with trusted publis
 ## 🎯 Milestones
 
 Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
-becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66), **0.6** is done (PRD #87), see *Done*, and **0.7** is done (PRD #113, below);
+becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66), **0.6** is done (PRD #87), see *Done*, **0.7** is done (PRD #113, below), and **0.8** is planned (PRD #134, below);
 the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings) shaped 0.7–0.8 below.
 
 | Milestone | Contents | Notes |
 |---|---|---|
 | **0.7: Typed actions & authoring endpoints** ([PRD #113](https://github.com/STotev/RuleLoom/issues/113)) | **Typed actions** (`IAction<TParameters>`, parameters described by their type and `ActionDescriptor<TAction, TParameters>`, in the catalog document as JSON Schema); **paths in parameters** (`{ "$path": "@customer.Email" }`, [ADR 0003](adr/0003-paths-in-parameters-are-marked.md)); parameters validated against their schema; `RuleLoom.AspNetCore` with `MapRuleLoom` (catalog, validate); rule arrays parsed rule by rule (#81); every context declaration naming its provider | One application first; no rule CRUD. Detail below |
-| **0.8: Scheduling** | [Time semantics review](#time-semantics-review-needs-a-proper-breakdown) first; **event envelope** `RuleEvent` as decided in 0.5, moved from 0.7 (`ExecuteAsync(RuleEvent, rules)` beside the existing overloads, `EvaluationContext.Event`, `$event.` paths, `Subject`, `EventId`, `changes`, JSON shape); `ScheduledAction.Key` (`{ruleId}:{actionIndex}:{subject}`); cancellation/replacement semantics; scheduled-action entry point `ExecuteScheduledAsync(scheduledAction, ruleEvent)` with a status for deferred runs; serializable scheduled actions for persistent job stores; past-time and amount validation; "dispatching scheduled actions" guide; execution observer hook | Envelope, subjects and running scheduled actions **decided 2026-10-29**: [spec](specs/2026-10-29-rule-event-and-scheduled-actions-design.md), [ADR 0005](adr/0005-scheduled-actions-are-rechecked-when-due.md) (re-checked when due against the subject loaded fresh; overdue actions; `RuleEngineOptions`). Observer hook still to design. Earlier input: the vision's "Running scheduled actions later"; the 0.7 sample's [findings](specs/2026-10-26-sample-typed-actions-design.md#findings) show the cost of running them in app code (with `$path`, a wrong `EvaluationContext` shows only when the action runs) |
+| **0.8: Time, scheduled actions & observability** ([PRD #134](https://github.com/STotev/RuleLoom/issues/134)) | **Time semantics** (catalog time zone, calendar dates, `TemporalRules`; [ADR 0004](adr/0004-time-zone-and-calendar-dates.md)); **event envelope** `RuleEvent` with `$event.` paths; **subjects** loaded fresh for scheduled actions; `ExecuteScheduledAsync` re-checking rules when due ([ADR 0005](adr/0005-scheduled-actions-are-rechecked-when-due.md)); keys and JSON for persistent job stores; due times in the past and overdue actions (`RuleEngineOptions`); **OpenTelemetry** and `ILogger`; "dispatching scheduled actions" guide | Designed 2026-10-28/29: [time semantics](specs/2026-10-28-time-semantics-design.md), [envelope and scheduled actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md), [observability](specs/2026-10-29-observability-design.md). Detail below |
 | **0.9 / 1.0: Release readiness** | Benchmarks ([#27](https://github.com/STotev/RuleLoom/issues/27)), XML docs, guides, a **documentation site** built from `docs/` with more extensive examples (see below) | 1.0 marks a stable API; packages are already published from 0.5.0 |
 | **Parked: service-to-service** | Schema publishing (`UseSchemaPublishing(p => p.UseHttp(...))`) and registration endpoints; storage packages (e.g. PostgreSQL); optional build-time schema generation; explicit state snapshotter; **scopes** (applications / bounded contexts, see the vision) | Monolith first (2026-10-24): one application, one catalog, event types unique per catalog. Picked up when several applications share an engine |
 | **After 0.7** | **Fluent rule builder** producing `RuleDefinition` in code (`o => o.Total` → `"Total"`), sharing the schema builder's expression → path translation | Mainly for in-process users; placed once 0.7 settles |
@@ -154,6 +154,20 @@ the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings
 | [#118](https://github.com/STotev/RuleLoom/issues/118) | `RuleLoom.AspNetCore`: `MapRuleLoom` endpoints | AFK | #81 | [#127](https://github.com/STotev/RuleLoom/pull/127) | [map-ruleloom](specs/2026-10-26-map-ruleloom-design.md) |
 | [#119](https://github.com/STotev/RuleLoom/issues/119) | Sample and guide for typed actions and `MapRuleLoom` | HITL | #81, #114–#118 | [#128](https://github.com/STotev/RuleLoom/pull/128) | [sample-typed-actions](specs/2026-10-26-sample-typed-actions-design.md) |
 
+
+### 0.8 — PRD [#134](https://github.com/STotev/RuleLoom/issues/134)
+
+| Issue | Slice | Type | Blocked by | PR | Spec |
+|---|---|---|---|---|---|
+| [#135](https://github.com/STotev/RuleLoom/issues/135) | `TemporalRules` and the catalog's time zone | AFK | — | — | [time-semantics](specs/2026-10-28-time-semantics-design.md) |
+| [#136](https://github.com/STotev/RuleLoom/issues/136) | Dates as calendar days | AFK | #135 | — | [time-semantics](specs/2026-10-28-time-semantics-design.md) |
+| [#137](https://github.com/STotev/RuleLoom/issues/137) | Schedules in calendar days and from dates | AFK | #135 | — | [time-semantics](specs/2026-10-28-time-semantics-design.md) |
+| [#138](https://github.com/STotev/RuleLoom/issues/138) | The `RuleEvent` envelope and `$event` paths | AFK | — | — | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
+| [#139](https://github.com/STotev/RuleLoom/issues/139) | Event subjects and scheduled-action keys | AFK | #138 | — | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
+| [#140](https://github.com/STotev/RuleLoom/issues/140) | `ExecuteScheduledAsync` | AFK | #139 | — | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
+| [#141](https://github.com/STotev/RuleLoom/issues/141) | Due times in the past and overdue actions | AFK | #140 | — | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
+| [#142](https://github.com/STotev/RuleLoom/issues/142) | OpenTelemetry traces and metrics, and logging | AFK | #140 | — | [observability](specs/2026-10-29-observability-design.md) |
+| [#143](https://github.com/STotev/RuleLoom/issues/143) | Sample and guides: dispatching scheduled actions | HITL | #135–#142 | — | — |
 ---
 
 ## 📋 Backlog — not yet scheduled
