@@ -88,11 +88,11 @@ Decided so far (the last two confirmed by the ASP.NET Core spike, 2026-10-15):
   (rule ids are required since #77), so consumers can upsert or cancel jobs in Hangfire/Quartz. Schedulers may need the
   key on more than the job (Quartz triggers), which the dispatching guide should show.
 
-Open — **the main question for the scheduling PRD:** how later events cancel or replace pending actions. One model:
-when the same event fires again for the same key, a still-matching rule returns the action again with the same key
-(the consumer upserts the job), and a rule that no longer matches reports the key as **no longer wanted** (the
-consumer cancels it). Today a `NotMatched` rule reports no scheduled actions at all. If this works, run-time
-re-checks of conditions may be unnecessary ("scheduled means committed").
+**Decided 2026-10-29** ([spec](specs/2026-10-29-rule-event-and-scheduled-actions-design.md),
+[ADR 0005](adr/0005-scheduled-actions-are-rechecked-when-due.md)): a pending action stops being wanted through the
+rules that created it. When it's due, the rule's and the action's conditions are re-checked against the event's
+subject loaded fresh (declared by the event schema) and the event's previous state; deleted, disabled or edited rules
+skip it. Withdrawn keys and explicit cancellation were rejected as the main mechanism.
 
 Also: past times, retries and duplicates; serializable scheduled actions for persistent job stores; the **time
 semantics review** (time zones, `Unspecified` dates); and a "dispatching scheduled actions" guide showing the

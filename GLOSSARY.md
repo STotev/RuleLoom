@@ -25,6 +25,14 @@ The name of something that happened in the application (`order-placed`), which a
 **Event schema**:
 The description of an event type's fields and the contexts it declares.
 
+**Subject**:
+The entity an event is about (an order), identified by a field of the event's data. An event type can say how to load its subject as it is now, so that a scheduled action is checked and run against current data.
+_Avoid_: Entity, aggregate, self-context
+
+**Overdue**:
+A scheduled action whose due time passed by more than the grace period the app allows, because the scheduler ran it late. An app can choose to skip overdue actions.
+_Avoid_: Past event, missed, misfired
+
 **Context**:
 Related data that an event type declares under a name (`@toAccount`), which rules read alongside the event.
 
