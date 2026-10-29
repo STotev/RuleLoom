@@ -32,6 +32,12 @@ public class EvaluationContext
     public object? Previous { get; }
 
     /// <summary>
+    /// The event being processed, with its envelope (id, subject, source, time, metadata); <c>null</c> for a context
+    /// created from state alone. Rules read it with <c>$event.</c> paths.
+    /// </summary>
+    public RuleEvent? Event { get; }
+
+    /// <summary>
     /// Creates a new evaluation context without contexts.
     /// </summary>
     /// <param name="current">The current state.</param>
@@ -64,12 +70,26 @@ public class EvaluationContext
     }
 
     /// <summary>
+    /// Creates a new evaluation context for <paramref name="event"/>: its state, its envelope (<see cref="Event"/>,
+    /// <c>$event.</c> paths) and the contexts its event type declares in <paramref name="catalog"/>.
+    /// </summary>
+    /// <param name="event">The event being processed.</param>
+    /// <param name="catalog">The catalog with the event's schema and the context providers.</param>
+    /// <param name="contextProviders">Creates the providers.</param>
+    public EvaluationContext(RuleEvent @event, Catalog catalog, IContextProviderFactory contextProviders)
+        : this((@event ?? throw new ArgumentNullException(nameof(@event))).Current, @event.Previous, @event.EventType, catalog, contextProviders)
+    {
+        Event = @event;
+    }
+
+    /// <summary>
     /// Resolves a property path from the context.
     /// A leading <c>$current.</c> or <c>$previous.</c> (case-insensitive) selects the state; any other path,
     /// including nested ones such as <c>Address.City</c>, resolves against <see cref="Current"/>.
     /// <c>$current</c> or <c>$previous</c> alone returns the whole state object. Other names starting with <c>$</c>
     /// are reserved. A leading <c>@name</c> resolves on the context <c>name</c>, which must already be loaded (the
-    /// engine loads the contexts its rules use; see <see cref="GetContextAsync"/>).
+    /// engine loads the contexts its rules use; see <see cref="GetContextAsync"/>). A leading <c>$event.</c> reads the
+    /// envelope (<see cref="Event"/>; <c>null</c> without one).
     /// </summary>
     /// <param name="path">The property path to resolve.</param>
     /// <returns>The resolved value, or null if the path doesn't exist.</returns>
@@ -89,6 +109,9 @@ public class EvaluationContext
     public object? Resolve(RulePath path)
     {
         ArgumentNullException.ThrowIfNull(path);
+
+        if (path.Root == PathRoot.Event)
+            return EventPaths.Resolve(Event, path);
 
         var root = path.Root switch
         {
@@ -151,7 +174,11 @@ public class EvaluationContext
         try
         {
             var provider = _contextProviders!.Create(context.Provider);
-            var request = new ContextRequest(name, _eventType!, Current, Previous) { Reference = ResolveReference(context.Declaration) };
+            var request = new ContextRequest(name, _eventType!, Current, Previous)
+            {
+                Reference = ResolveReference(context.Declaration),
+                Event = Event
+            };
 
             return await provider.GetAsync(request, cancellationToken).ConfigureAwait(false);
         }

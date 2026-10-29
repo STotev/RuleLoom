@@ -143,7 +143,7 @@ public class RuleValidatorTests
     [Theory]
     [InlineData("#now", "Paths starting with '#' are reserved for functions: '#now'.")]
     [InlineData("@", "A context path needs a name after '@', e.g. '@customer.Tier': '@'.")]
-    [InlineData("$state.Price", "Unknown variable '$state' in path '$state.Price'. Use $current or $previous.")]
+    [InlineData("$state.Price", "Unknown variable '$state' in path '$state.Price'. Use $current, $previous or $event.")]
     [InlineData("$previous.@customer.Tier", "Contexts have no current or previous state; use '@customer.Tier' instead of '$previous.@customer.Tier'.")]
     public void Validate_PathsTheParserRejects_AreErrorsInRulesBuiltInCode(string path, string message)
     {
