@@ -15,6 +15,9 @@ public sealed class OperatorContext
     private readonly OperatorCondition _condition;
     private readonly IConditionEvaluator? _evaluator;
 
+    // The paths resolved so far and their values, to name the path of an invalid date-time.
+    private List<(string Path, object? Value)>? _resolved;
+
     /// <summary>
     /// Creates a context for evaluating <paramref name="condition"/>. The evaluator creates these; construct one
     /// directly to unit-test an operator.
@@ -61,7 +64,7 @@ public sealed class OperatorContext
     public object? GetValue(int index) => GetOperand(index) switch
     {
         ValueOperand value => value.Value,
-        PathOperand path => EvaluationContext.Resolve(path.Path),
+        PathOperand path => Remember(path.Path, EvaluationContext.Resolve(path.Path)),
         OperatorCondition nested => EvaluateNested(nested, index),
         var other => throw UnsupportedOperand(other, index)
     };
@@ -94,24 +97,58 @@ public sealed class OperatorContext
     /// <summary>
     /// Resolves any path against the current/previous state, as a path operand would.
     /// </summary>
-    public object? Resolve(string path) => EvaluationContext.Resolve(path);
+    public object? Resolve(string path) => Remember(path, EvaluationContext.Resolve(path));
 
     /// <summary>
     /// Resolves a parsed path against the current/previous state or a context (see <see cref="RulePath"/>).
     /// </summary>
-    public object? Resolve(RulePath path) => EvaluationContext.Resolve(path);
+    public object? Resolve(RulePath path) => Remember(path.ToString(), EvaluationContext.Resolve(path));
 
     /// <summary>
-    /// Compares two values for equality with the shared comparison rules (<see cref="ValueComparer.AreEqual"/>).
+    /// Compares two values for equality with the shared comparison rules (<see cref="ValueComparer.AreEqual"/>), reading
+    /// date-times with the evaluation's <see cref="Values.TemporalRules"/>.
     /// </summary>
-    public bool AreEqual(object? left, object? right) => ValueComparer.AreEqual(left, right);
+    /// <exception cref="InvalidTemporalValueException">A value is a wall-clock time that doesn't exist in its zone; the
+    /// exception names the path it was resolved from.</exception>
+    public bool AreEqual(object? left, object? right)
+    {
+        try
+        {
+            return ValueComparer.AreEqual(left, right, EvaluationContext.TemporalRules);
+        }
+        catch (InvalidTemporalValueException ex) when (PathOf(ex) is { } path)
+        {
+            throw ex.At(path);
+        }
+    }
 
     /// <summary>
-    /// Orders two values with the shared comparison rules (<see cref="ValueComparer.TryCompare"/>).
+    /// Orders two values with the shared comparison rules (<see cref="ValueComparer.TryCompare"/>), reading date-times
+    /// with the evaluation's <see cref="Values.TemporalRules"/>.
     /// </summary>
     /// <returns><c>false</c> if the values can't be ordered.</returns>
-    public bool TryCompare(object? left, object? right, out int result) =>
-        ValueComparer.TryCompare(left, right, out result);
+    /// <exception cref="InvalidTemporalValueException">A value is a wall-clock time that doesn't exist in its zone; the
+    /// exception names the path it was resolved from.</exception>
+    public bool TryCompare(object? left, object? right, out int result)
+    {
+        try
+        {
+            return ValueComparer.TryCompare(left, right, EvaluationContext.TemporalRules, out result);
+        }
+        catch (InvalidTemporalValueException ex) when (PathOf(ex) is { } path)
+        {
+            throw ex.At(path);
+        }
+    }
+
+    private object? Remember(string path, object? value)
+    {
+        (_resolved ??= []).Add((path, value));
+        return value;
+    }
+
+    private string? PathOf(InvalidTemporalValueException ex) =>
+        ex.Path is null ? _resolved?.FirstOrDefault(r => r.Value is not null && TemporalRules.Format(r.Value) == ex.Value).Path : null;
 
     private ConditionNode GetOperand(int index)
     {

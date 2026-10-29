@@ -5,6 +5,7 @@ using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
+using RuleLoom.Abstractions.Values;
 using RuleLoom.Operators;
 using RuleLoom.Schemas;
 
@@ -26,6 +27,7 @@ public sealed class CatalogBuilder
     private readonly List<IConditionOperator> _builtIns;
     private readonly List<Assembly> _assemblies = [];
     private JsonSerializerOptions? _options;
+    private string? _timeZone;
 
     /// <summary>
     /// Creates a builder with the built-in operators.
@@ -40,6 +42,18 @@ public sealed class CatalogBuilder
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options;
+        return this;
+    }
+
+    /// <summary>
+    /// The time zone date-times without an offset are read in: wall-clock time there (e.g. what a database returns as
+    /// <see cref="DateTimeKind.Unspecified"/>). An IANA id such as <c>Europe/Sofia</c>; UTC when not set. A time zone
+    /// this machine doesn't know fails <see cref="Build"/>.
+    /// </summary>
+    public CatalogBuilder UseTimeZone(string timeZoneId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(timeZoneId);
+        _timeZone = timeZoneId;
         return this;
     }
 
@@ -183,7 +197,23 @@ public sealed class CatalogBuilder
             return new ActionRegistration(a.Name, a.Type, descriptor?.Label, descriptor?.Description, parameters);
         }).ToList();
 
-        return new Catalog(events.Build().Events, providers, _operators, actions, stored);
+        return new Catalog(events.Build().Events, providers, _operators, actions, stored, CreateTemporalRules());
+    }
+
+    private TemporalRules CreateTemporalRules()
+    {
+        if (_timeZone is null)
+            return TemporalRules.Utc;
+
+        try
+        {
+            return new TemporalRules(TimeZoneInfo.FindSystemTimeZoneById(_timeZone));
+        }
+        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
+        {
+            throw new InvalidOperationException(
+                $"Time zone '{_timeZone}' isn't known on this machine (an IANA id such as 'Europe/Sofia'; containers may need time-zone data, e.g. the tzdata package).", ex);
+        }
     }
 
     private ContextSchemaDefinition? DescribeContext(ProviderEntry provider)

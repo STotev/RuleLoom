@@ -133,7 +133,7 @@ internal sealed class ParameterCheck(Catalog catalog, SchemaPaths? schemaPaths) 
         FieldType.Integer => value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out _),
         FieldType.Number => value.ValueKind == JsonValueKind.Number,
         FieldType.Boolean => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
-        FieldType.DateTime => value.ValueKind == JsonValueKind.String && ValueConverter.TryConvert<DateTimeOffset>(value.GetString(), out _),
+        FieldType.DateTime => value.ValueKind == JsonValueKind.String && FieldTypes.IsDateTimeText(value.GetString()),
         FieldType.Date => value.ValueKind == JsonValueKind.String &&
                           DateOnly.TryParseExact(value.GetString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _),
         FieldType.Enum => value.ValueKind == JsonValueKind.String &&

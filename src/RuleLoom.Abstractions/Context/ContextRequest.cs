@@ -24,6 +24,9 @@ public sealed record ContextRequest(string Name, string EventType, object? Curre
     /// </summary>
     public object? Reference { get; init; }
 
+    /// <summary>How date-times are read: the catalog's time zone (<see cref="GetReference{T}"/> converts with it).</summary>
+    public TemporalRules TemporalRules { get; init; } = TemporalRules.Utc;
+
     /// <summary>
     /// Resolves a path on the subject (e.g. <c>CustomerId</c> or <c>$previous.CustomerId</c>), with the same rules as
     /// rule paths. Contexts can't be resolved from here.
@@ -45,7 +48,7 @@ public sealed record ContextRequest(string Name, string EventType, object? Curre
         // Keys are often read as text: numbers, GUIDs and other values convert to their invariant string form.
         string text when typeof(T) == typeof(Guid) && Guid.TryParse(text, out var id) => (T)(object)id,
         IFormattable formattable when typeof(T) == typeof(string) => (T)(object)formattable.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
-        var value => ValueConverter.TryConvert<T>(value, out var converted)
+        var value => ValueConverter.TryConvert<T>(value, TemporalRules, out var converted)
             ? converted
             : throw new InvalidCastException($"The reference to context '{Name}' ({value}) can't be converted to {typeof(T).Name}.")
     };
