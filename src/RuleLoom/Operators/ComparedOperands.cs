@@ -41,7 +41,7 @@ internal static class ComparedOperands
         FieldType.Boolean => value is bool,
         FieldType.String => value is string or DateTime or DateTimeOffset or Enum,
         FieldType.DateTime or FieldType.Date => value is DateTime or DateTimeOffset ||
-                                                value is string text && ValueConverter.TryConvert<DateTimeOffset>(text, out _),
+                                                value is string text && FieldTypes.IsDateTimeText(text),
         _ => true
     };
 

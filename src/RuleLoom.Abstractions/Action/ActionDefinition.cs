@@ -44,10 +44,13 @@ public class ActionDefinition
     /// Gets a parameter converted to <typeparamref name="T"/> with the shared conversion rules
     /// (<see cref="ValueConverter"/>), e.g. a JSON number to <see cref="decimal"/>, or an ISO 8601 string to
     /// <see cref="DateTimeOffset"/>. The name matches exactly, or else ignoring case when that is unambiguous.
-    /// A path can't be read without the event: use <see cref="GetParameterAsync{T}"/>.
+    /// A path can't be read without the event: use <see cref="GetParameterAsync{T}"/>. Without the event there's no
+    /// catalog either, so a date-time without an offset is read as UTC; <see cref="GetParameterAsync{T}"/> reads it in the
+    /// catalog's time zone.
     /// </summary>
     /// <exception cref="KeyNotFoundException">The parameter doesn't exist.</exception>
     /// <exception cref="InvalidOperationException">The value is a path or can't be converted to <typeparamref name="T"/>.</exception>
+    /// <exception cref="InvalidTemporalValueException">The value is a wall-clock time that doesn't exist in its zone.</exception>
     public T GetParameter<T>(string name)
     {
         var value = FindParameter(name);
@@ -58,12 +61,13 @@ public class ActionDefinition
                 $"Parameter '{name}' of action '{Action}' is the path '{path}'; read it with {nameof(GetParameterAsync)}.");
         }
 
-        return Convert<T>(name, value);
+        return Convert<T>(name, value, null, TemporalRules.Utc);
     }
 
     /// <summary>
     /// Gets a parameter like <see cref="GetParameter{T}"/>, resolving it first when it's a path: on the event's state or,
-    /// for <c>@name</c> paths, on the context, which is loaded if it hasn't been.
+    /// for <c>@name</c> paths, on the context, which is loaded if it hasn't been. Date-times are read with the context's
+    /// <see cref="EvaluationContext.TemporalRules"/>.
     /// </summary>
     /// <param name="name">The parameter's name.</param>
     /// <param name="context">The context the action runs in.</param>
@@ -71,15 +75,17 @@ public class ActionDefinition
     /// <exception cref="KeyNotFoundException">The parameter doesn't exist.</exception>
     /// <exception cref="InvalidOperationException">The path can't be resolved, or the value can't be converted to
     /// <typeparamref name="T"/>.</exception>
+    /// <exception cref="InvalidTemporalValueException">The value is a wall-clock time that doesn't exist in its zone.</exception>
     public async ValueTask<T> GetParameterAsync<T>(string name, EvaluationContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var value = FindParameter(name);
-        if (value is RulePath path)
+        var path = value as RulePath;
+        if (path is not null)
             value = await ResolveAsync(name, path, context, cancellationToken).ConfigureAwait(false);
 
-        return Convert<T>(name, value);
+        return Convert<T>(name, value, path, context.TemporalRules);
     }
 
     /// <summary>
@@ -87,12 +93,13 @@ public class ActionDefinition
     /// <see cref="GetParameterAsync{T}"/>), like System.Text.Json reads a JSON object with
     /// <see cref="ParametersSchemaDefinition.JsonOptions"/>: names ignore case, enums are read by name, constructor
     /// parameters without a default and <c>required</c> members must be present, and parameters <typeparamref name="T"/>
-    /// doesn't have are ignored.
+    /// doesn't have are ignored. Date-times are read with the context's <see cref="EvaluationContext.TemporalRules"/>.
     /// </summary>
     /// <param name="context">The context the action runs in.</param>
     /// <param name="cancellationToken">Cancels loading a context.</param>
     /// <exception cref="InvalidOperationException">A path can't be resolved, or the parameters can't be read as
     /// <typeparamref name="T"/>; the message names the parameter.</exception>
+    /// <exception cref="InvalidTemporalValueException">A date-time is a wall-clock time that doesn't exist in its zone.</exception>
     public async ValueTask<T> GetParametersAsync<T>(EvaluationContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -105,11 +112,18 @@ public class ActionDefinition
                 : value;
         }
 
+        var options = TemporalJsonConverters.Options(context.TemporalRules);
+
         try
         {
-            return JsonSerializer.SerializeToNode(values, ParametersSchemaDefinition.JsonOptions)
-                .Deserialize<T>(ParametersSchemaDefinition.JsonOptions)
+            return JsonSerializer.SerializeToNode(values, options).Deserialize<T>(options)
                 ?? throw new InvalidOperationException($"The parameters of action '{Action}' can't be read as {typeof(T).Name}.");
+        }
+        catch (InvalidTemporalValueException ex)
+        {
+            // Name the parameter (or the path it was read from) the invalid date-time came from.
+            var (name, value) = values.FirstOrDefault(v => v.Value is not null && TemporalRules.Format(v.Value) == ex.Value);
+            throw name is null ? ex : Attribute(ex, name, Parameters[name] as RulePath);
         }
         catch (JsonException ex)
         {
@@ -127,7 +141,7 @@ public class ActionDefinition
     /// <returns><c>false</c> if the parameter doesn't exist, is a path or can't be converted.</returns>
     public bool TryGetParameter<T>(string name, [MaybeNullWhen(false)] out T value)
     {
-        if (TryFindParameter(name, out var raw) && raw is not RulePath && ValueConverter.TryConvert(raw, out value))
+        if (TryFindParameter(name, out var raw) && raw is not RulePath && ValueConverter.TryConvert(raw, TemporalRules.Utc, out value))
             return true;
 
         value = default;
@@ -137,12 +151,30 @@ public class ActionDefinition
     private object? FindParameter(string name) =>
         TryFindParameter(name, out var value) ? value : throw new KeyNotFoundException($"Action '{Action}' has no parameter '{name}'.");
 
-    private T Convert<T>(string name, object? value) =>
-        ValueConverter.TryConvert<T>(value, out var converted)
-            ? converted
+    private T Convert<T>(string name, object? value, RulePath? path, TemporalRules temporalRules)
+    {
+        bool converted;
+        T? result;
+
+        try
+        {
+            converted = ValueConverter.TryConvert(value, temporalRules, out result);
+        }
+        catch (InvalidTemporalValueException ex)
+        {
+            throw Attribute(ex, name, path);
+        }
+
+        return converted
+            ? result!
             : throw new InvalidOperationException(
                 $"Parameter '{name}' of action '{Action}' is {(value is null ? "null" : value.GetType().Name)}, " +
                 $"which can't be converted to {typeof(T).Name}.");
+    }
+
+    // An invalid date-time names the path it was read from, or else the parameter.
+    private InvalidTemporalValueException Attribute(InvalidTemporalValueException ex, string name, RulePath? path) =>
+        path is not null ? ex.At(path.ToString()) : ex.From($"Parameter '{name}' of action '{Action}'");
 
     // Loads the context a path reads, if it isn't loaded yet (e.g. a scheduled action run outside the engine).
     private async ValueTask<object?> ResolveAsync(string name, RulePath path, EvaluationContext context, CancellationToken cancellationToken)

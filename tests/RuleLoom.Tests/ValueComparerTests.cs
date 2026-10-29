@@ -75,8 +75,8 @@ public class ValueComparerTests
     [MemberData(nameof(Equality))]
     public void AreEqual_Values_FollowsComparisonRules(object? left, object? right, bool expected)
     {
-        Assert.Equal(expected, ValueComparer.AreEqual(left, right));
-        Assert.Equal(expected, ValueComparer.AreEqual(right, left));
+        Assert.Equal(expected, ValueComparer.AreEqual(left, right, TemporalRules.Utc));
+        Assert.Equal(expected, ValueComparer.AreEqual(right, left, TemporalRules.Utc));
     }
 
     public static TheoryData<object?, object?, int> Orderable => new()
@@ -103,10 +103,10 @@ public class ValueComparerTests
     [MemberData(nameof(Orderable))]
     public void TryCompare_ComparableValues_ReturnsOrdering(object? left, object? right, int expected)
     {
-        Assert.True(ValueComparer.TryCompare(left, right, out var result));
+        Assert.True(ValueComparer.TryCompare(left, right, TemporalRules.Utc, out var result));
         Assert.Equal(expected, result);
 
-        Assert.True(ValueComparer.TryCompare(right, left, out var reversed));
+        Assert.True(ValueComparer.TryCompare(right, left, TemporalRules.Utc, out var reversed));
         Assert.Equal(-expected, reversed);
     }
 
@@ -133,16 +133,16 @@ public class ValueComparerTests
     [MemberData(nameof(NotOrderable))]
     public void TryCompare_IncomparableValues_ReturnsFalse(object? left, object? right)
     {
-        Assert.False(ValueComparer.TryCompare(left, right, out _));
-        Assert.False(ValueComparer.TryCompare(right, left, out _));
+        Assert.False(ValueComparer.TryCompare(left, right, TemporalRules.Utc, out _));
+        Assert.False(ValueComparer.TryCompare(right, left, TemporalRules.Utc, out _));
     }
 
     [Fact]
     public void AreEqual_FloatAgainstDouble_ComparesAsDouble()
     {
         // 0.1f widened to double is 0.100000001…, so it doesn't equal the double 0.1 (documented precision rule).
-        Assert.False(ValueComparer.AreEqual(0.1f, 0.1));
-        Assert.True(ValueComparer.AreEqual(0.5f, 0.5));
+        Assert.False(ValueComparer.AreEqual(0.1f, 0.1, TemporalRules.Utc));
+        Assert.True(ValueComparer.AreEqual(0.5f, 0.5, TemporalRules.Utc));
     }
 
     public enum Status
@@ -172,14 +172,14 @@ public class ValueComparerTests
     [InlineData("""[1, 2]""", """[2, 1]""", false)]
     public void AreEqual_JsonContent_ComparesDeeply(string left, string right, bool expected)
     {
-        Assert.Equal(expected, ValueComparer.AreEqual(JsonDocument.Parse(left).RootElement, JsonDocument.Parse(right).RootElement));
-        Assert.Equal(expected, ValueComparer.AreEqual(JsonNode.Parse(left), JsonNode.Parse(right)));
+        Assert.Equal(expected, ValueComparer.AreEqual(JsonDocument.Parse(left).RootElement, JsonDocument.Parse(right).RootElement, TemporalRules.Utc));
+        Assert.Equal(expected, ValueComparer.AreEqual(JsonNode.Parse(left), JsonNode.Parse(right), TemporalRules.Utc));
     }
 
     [Fact]
     public void AreEqual_JsonElementAgainstJsonNode_IsFalse()
     {
-        Assert.False(ValueComparer.AreEqual(JsonDocument.Parse("{}").RootElement, JsonNode.Parse("{}")));
-        Assert.False(ValueComparer.AreEqual(JsonDocument.Parse("{}").RootElement, "{}"));
+        Assert.False(ValueComparer.AreEqual(JsonDocument.Parse("{}").RootElement, JsonNode.Parse("{}"), TemporalRules.Utc));
+        Assert.False(ValueComparer.AreEqual(JsonDocument.Parse("{}").RootElement, "{}", TemporalRules.Utc));
     }
 }

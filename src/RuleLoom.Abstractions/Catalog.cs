@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
+using RuleLoom.Abstractions.Values;
 using RuleLoom.Schemas;
 
 namespace RuleLoom.Abstractions;
@@ -35,7 +36,9 @@ public sealed class Catalog
     /// <param name="operators">The operators rule conditions can use.</param>
     /// <param name="actions">The registered actions.</param>
     /// <param name="stored">What a catalog store holds: its event and context schemas are added where code defines
-    /// none; its operators and actions are ignored (they can't run without code).</param>
+    /// none; its operators and actions are ignored (they can't run without code), and so is its time zone.</param>
+    /// <param name="temporalRules">How date-times are read: the time zone date-times without an offset are in;
+    /// <see cref="Values.TemporalRules.Utc"/> when not given.</param>
     /// <exception cref="InvalidOperationException">An entry defined in code is broken; the message lists every
     /// problem.</exception>
     public Catalog(
@@ -43,8 +46,11 @@ public sealed class Catalog
         IEnumerable<ContextProviderRegistration> contextProviders,
         IEnumerable<IConditionOperator> operators,
         IEnumerable<ActionRegistration> actions,
-        CatalogDocument? stored = null)
+        CatalogDocument? stored = null,
+        TemporalRules? temporalRules = null)
     {
+        TemporalRules = temporalRules ?? TemporalRules.Utc;
+
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(contextProviders);
         ArgumentNullException.ThrowIfNull(operators);
@@ -111,6 +117,11 @@ public sealed class Catalog
 
     /// <summary>The registered actions.</summary>
     public IReadOnlyList<ActionRegistration> Actions => [.. _actions.Values];
+
+    /// <summary>
+    /// How the engine, the validator and actions read date-times: the catalog's time zone (UTC unless configured).
+    /// </summary>
+    public TemporalRules TemporalRules { get; }
 
     /// <summary>The broken links found in store-contributed entries; each fails only the rules that use it.</summary>
     public IReadOnlyList<CatalogProblem> Problems { get; }
@@ -180,7 +191,8 @@ public sealed class Catalog
         _operators.Values.Select(o => new CatalogOperator(o.Name, o.Label, o.Description, o.MinOperands,
             o.MaxOperands == int.MaxValue ? null : o.MaxOperands)),
         _actions.Values.Select(a => new CatalogAction(a.Name, a.Label, a.Description, a.Parameters)),
-        Problems);
+        Problems,
+        TemporalRules.TimeZone.Id);
 
     /// <summary>
     /// Writes the catalog as JSON (<see cref="CatalogDocument.ToJson"/>), e.g. to generate an authoring UI.

@@ -1,3 +1,4 @@
+using RuleLoom.Abstractions.Values;
 using RuleLoom.Schemas;
 
 namespace RuleLoom;
@@ -17,4 +18,10 @@ internal static class FieldTypes
         FieldType.Array => "a list",
         _ => "any value"
     };
+
+    /// <summary>
+    /// Whether text is a strict ISO 8601 date or date-time: its form only. UTC never skips a wall-clock time, so this
+    /// never throws; whether the time exists in the catalog's time zone is a separate check.
+    /// </summary>
+    public static bool IsDateTimeText(string? text) => text is not null && TemporalRules.Utc.TryGetInstant(text, out _);
 }

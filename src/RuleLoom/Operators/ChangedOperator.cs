@@ -23,7 +23,7 @@ public class ChangedOperator : IConditionOperator
             throw new InvalidOperationException(problem);
 
         // The operand may already name a state ("$current.Price"); changed always compares both.
-        return !ValueComparer.AreEqual(context.Resolve(path.InState(PathRoot.Current)), context.Resolve(path.InState(PathRoot.Previous)));
+        return !context.AreEqual(context.Resolve(path.InState(PathRoot.Current)), context.Resolve(path.InState(PathRoot.Previous)));
     }
 
     public void ValidateOperands(OperandValidationContext context)

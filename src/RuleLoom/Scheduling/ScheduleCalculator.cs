@@ -41,9 +41,20 @@ internal static class ScheduleCalculator
                 $"ReferencePath '{schedule.ReferencePath}' resolved to null. Ensure the property exists and has a value.");
         }
 
-        // Same conversion as rule comparisons: DateTime/DateTimeOffset as UTC instants, strings as strict ISO 8601.
-        if (ValueConverter.TryConvert<DateTimeOffset>(resolved, out var instant))
-            return instant.ToUniversalTime();
+        // Read like rule comparisons: by the catalog's TemporalRules; strings as strict ISO 8601.
+        bool isDateTime;
+        DateTimeOffset instant;
+        try
+        {
+            isDateTime = context.TemporalRules.TryGetInstant(resolved, out instant);
+        }
+        catch (InvalidTemporalValueException ex) when (ex.Path is null)
+        {
+            throw new InvalidTemporalValueException(ex.Value, ex.TimeZone, schedule.ReferencePath);
+        }
+
+        if (isDateTime)
+            return instant;
 
         throw new InvalidOperationException(resolved is string text
             ? $"ReferencePath '{schedule.ReferencePath}' resolved to string '{text}', which is not an ISO 8601 date-time " +
