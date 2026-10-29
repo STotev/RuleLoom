@@ -162,7 +162,7 @@ the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings
 | [#135](https://github.com/STotev/RuleLoom/issues/135) | `TemporalRules` and the catalog's time zone | AFK | — | — | [time-semantics](specs/2026-10-28-time-semantics-design.md) |
 | [#136](https://github.com/STotev/RuleLoom/issues/136) | Dates as calendar days | AFK | #135 | — | [time-semantics](specs/2026-10-28-time-semantics-design.md) |
 | [#137](https://github.com/STotev/RuleLoom/issues/137) | Schedules in calendar days and from dates | AFK | #135 | — | [time-semantics](specs/2026-10-28-time-semantics-design.md) |
-| [#138](https://github.com/STotev/RuleLoom/issues/138) | The `RuleEvent` envelope and `$event` paths | AFK | — | — | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
+| [#138](https://github.com/STotev/RuleLoom/issues/138) | The `RuleEvent` envelope and `$event` paths | AFK | — | [#146](https://github.com/STotev/RuleLoom/pull/146) | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
 | [#139](https://github.com/STotev/RuleLoom/issues/139) | Event subjects and scheduled-action keys | AFK | #138 | — | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
 | [#140](https://github.com/STotev/RuleLoom/issues/140) | `ExecuteScheduledAsync` | AFK | #139 | — | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
 | [#141](https://github.com/STotev/RuleLoom/issues/141) | Due times in the past and overdue actions | AFK | #140 | — | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
