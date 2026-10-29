@@ -100,7 +100,8 @@ environment `nuget`) and attaches the packages to the GitHub release.
 ### Execution flow (`RuleEngine.ExecuteAsync`)
 
 ```
-(eventType, current, previous, rules) → RuleEngineResult { Rules, HasFailures, ScheduledActions }
+(RuleEvent, rules) → RuleEngineResult { Rules, HasFailures, ScheduledActions }
+  (the (eventType, current, previous, rules) overloads are a RuleEvent without envelope data)
   → rules with another EventType are not included
   → order by Priority descending (higher runs first); cancellation checked before each rule and action
   → per rule (RuleExecutionResult with RuleId, RuleName, Status, Error, ActionResults):
@@ -135,17 +136,26 @@ environment `nuget`) and attaches the packages to the GitHub release.
 - **Names ignore case** (`OrdinalIgnoreCase`): operator names, action names, event types and property path
   segments (exact-case property match wins; ambiguous case-insensitive matches resolve to `null`). Operator, action,
   provider or event names that differ only in case fail the catalog's build. String values stay case-sensitive.
-- **Paths** are parsed once by `RulePath` (`Root` Current/Previous/Context, `Context`, `Property`; cached; the only
+- **Paths** are parsed once by `RulePath` (`Root` Current/Previous/Context/Event, `Context`, `Property`; cached; the only
   place that knows the syntax: never split path strings elsewhere) and resolve via `PathResolver` (compiled, cached
   expressions): `"Price"` = current,
   `"$current.Price"` / `"$previous.Price"` explicit; operators pick a state the same way (`ctx.Resolve("$previous.Price")`).
-  Other `$` names are reserved (the parser rejects them); `current.`/`previous.` without `$` are plain property names.
+  `$event.` reads the envelope (`EventPaths`: `EventType`, `EventId`, `Subject`, `Source`, `OccurredAt`, `Metadata.<key>`;
+  `null` without a `RuleEvent`; no state, so `$previous.$event`/`changed` on it are errors; the validator checks the
+  fields, not metadata keys). Other `$` names are reserved (the parser rejects them); `current.`/`previous.` without `$`
+  are plain property names.
   Missing properties resolve to `null`. A cached entry compiles the longest prefix resolvable on declared types; the
   rest continues on the runtime value: JSON state (`JsonElement`/`JsonNode`, walked by the internal `JsonPathWalker`,
   leaves mapped to `string`/`bool`/`long`/`decimal`/`double`, objects and arrays returned as JSON) or a more specific
   CLR type (properties declared as `object`/interfaces/base types). A `PreviousState.FromChanges(current, changes)` passed
   as the previous state is an overlay: paths are looked up in the JSON `changes` (old values of changed fields) first,
   then in `current`. `#` paths are reserved for functions.
+- **Event envelope** (`RuleEvent` in `RuleLoom.Abstractions`; spec `2026-10-29-rule-event-and-scheduled-actions-design.md`):
+  `EventType`, `Current`, `Previous`, plus `EventId`, `Subject`, `Source`, `OccurredAt`, `Metadata` (app-defined, e.g. a
+  tenant id). `RuleEngine.ExecuteAsync(RuleEvent, rules)`; `EvaluationContext.Event` (from
+  `new EvaluationContext(ruleEvent, catalog, providers)`) and `ContextRequest.Event`. `ToJson()`/`Parse(json)`: camelCase,
+  state as JSON (`JsonElement` after parsing), previous state as `previous` or `changes` (`PreviousState.FromChanges`),
+  `occurredAt` must state its offset. Deduplication by `EventId` is the app's.
 - **Contexts**: `@name.Path` reads related data the event's schema declares (`Context("name")`, loaded by the provider
   registered under `LoadedBy(...)` or else `name`; `CatalogBuilder.AddContextProvider<T>(name)`). Undeclared contexts,
   and contexts on event types not in the catalog, fail the rules that use them. The `EvaluationContext` resolves the
