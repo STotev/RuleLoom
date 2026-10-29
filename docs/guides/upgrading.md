@@ -3,6 +3,7 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
+- [0.7 → 0.8](#07--08): `ValueComparer` and `ValueConverter` take `TemporalRules`; impossible `Local` times are rejected
 - [0.6 → 0.7](#06--07): a parameter `{ "$path": ... }` is a path; `FieldDefinition` has `IsRequired`; optionally, typed actions, path parameters and `MapRuleLoom`
 - [0.5 → 0.6](#05--06): the engine, validator and DI run on a catalog; paths starting with `@` or `#` are no longer property names
 - [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
@@ -11,6 +12,25 @@ first, with what to change. Each version's GitHub release notes link the pull re
 - [0.1 → 0.2](#01--02): action results, action factory, scheduling
 
 ---
+
+## 0.7 → 0.8
+
+### `ValueComparer` and `ValueConverter` take `TemporalRules`
+
+Date-times without an offset are now read in the catalog's time zone (`CatalogBuilder.UseTimeZone`, UTC by default), so
+the comparison and conversion methods need to know it: `ValueComparer.AreEqual(left, right, temporalRules)`,
+`ValueComparer.TryCompare(left, right, temporalRules, out result)` and `ValueConverter.TryConvert(value, type,
+temporalRules, out result)` (and `TryConvert<T>(value, temporalRules, out result)`). In operators, keep using
+`ctx.AreEqual`/`ctx.TryCompare`, which pass the evaluation's rules; elsewhere pass `context.TemporalRules`,
+`catalog.TemporalRules`, or `TemporalRules.Utc` for the old behaviour. Without `UseTimeZone`, results don't change.
+
+### Date-times the clocks skip are invalid
+
+A wall-clock time that can't exist in its zone (skipped when daylight saving starts) now fails the rule or action
+that reads it with an `InvalidTemporalValueException`, instead of being read with a guessed offset. For `Unspecified`
+values and text this only happens once a time zone is configured; `DateTime` values with `Kind = Local` are checked
+against the machine's time zone, so such values are rejected now. Typed actions also read date-time parameters without
+an offset in the catalog's time zone (they used to be read in the machine's own offset for `DateTimeOffset`).
 
 ## 0.6 → 0.7
 
