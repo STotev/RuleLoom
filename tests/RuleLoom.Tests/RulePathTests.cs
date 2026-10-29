@@ -26,7 +26,7 @@ public class RulePathTests
     [InlineData("#now", "Paths starting with '#' are reserved for functions: '#now'.")]
     [InlineData("@", "A context path needs a name after '@', e.g. '@customer.Tier': '@'.")]
     [InlineData("@.Tier", "A context path needs a name after '@', e.g. '@customer.Tier': '@.Tier'.")]
-    [InlineData("$now.Price", "Unknown variable '$now' in path '$now.Price'. Use $current or $previous.")]
+    [InlineData("$now.Price", "Unknown variable '$now' in path '$now.Price'. Use $current, $previous or $event.")]
     [InlineData("$current.@customer.Tier", "Contexts have no current or previous state; use '@customer.Tier' instead of '$current.@customer.Tier'.")]
     public void TryParse_InvalidPaths_ReturnTheReason(string text, string message)
     {

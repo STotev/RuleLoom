@@ -24,6 +24,9 @@ public sealed record ContextRequest(string Name, string EventType, object? Curre
     /// </summary>
     public object? Reference { get; init; }
 
+    /// <summary>The event being processed, with its envelope (e.g. a tenant id in its metadata); <c>null</c> without one.</summary>
+    public RuleEvent? Event { get; init; }
+
     /// <summary>
     /// Resolves a path on the subject (e.g. <c>CustomerId</c> or <c>$previous.CustomerId</c>), with the same rules as
     /// rule paths. Contexts can't be resolved from here.

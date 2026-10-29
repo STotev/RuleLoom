@@ -11,6 +11,17 @@ namespace RuleLoom.Validation;
 /// <param name="event">The schema of the rule's event.</param>
 internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
 {
+    // The envelope's fields ($event.), as a schema: metadata keys are app-defined, so nothing below it is checked.
+    private static readonly IReadOnlyList<FieldDefinition> EnvelopeFields =
+    [
+        Envelope("EventType", FieldType.String, isNullable: false),
+        Envelope("EventId", FieldType.String),
+        Envelope("Subject", FieldType.String),
+        Envelope("Source", FieldType.String),
+        Envelope("OccurredAt", FieldType.DateTime),
+        Envelope("Metadata", FieldType.Any)
+    ];
+
     private readonly Dictionary<PathNode, FieldDefinition?> _resolved = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>The field a path points at, or <c>null</c> when it's wrong, invalid or can't be checked.</summary>
@@ -48,6 +59,13 @@ internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
 
             (fields, owner) = (context.Fields, $"'{name}'");
         }
+        else if (parsed.Root == PathRoot.Event)
+        {
+            if (parsed.Property.Length == 0)
+                return null;
+
+            (fields, owner) = (EnvelopeFields, "the event's envelope ($event)");
+        }
         else
         {
             if (parsed.Property.Length == 0)
@@ -80,6 +98,9 @@ internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
             }
         }
     }
+
+    private static FieldDefinition Envelope(string name, FieldType type, bool isNullable = true) =>
+        new(name, type, isNullable, IsRequired: false, Label: null, Description: null, [], [], null);
 
     private static FieldDefinition? Report(ValidationProblems problems, PathNode path, string message)
     {

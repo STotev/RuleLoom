@@ -35,6 +35,7 @@ public class ChangedOperator : IConditionOperator
     // changed compares a property's current and previous value: a context has no previous state, a whole state no property.
     private static string? Problem(RulePath path, string text) =>
         path.Root == PathRoot.Context ? $"'changed' can't be used on a context ('{text}'): contexts have no previous state."
+        : path.Root == PathRoot.Event ? $"'changed' can't be used on the event's envelope ('{text}'): it has no previous state."
         : path.Property.Length == 0 ? $"'changed' needs a property, not the whole state: '{text}'."
         : null;
 }

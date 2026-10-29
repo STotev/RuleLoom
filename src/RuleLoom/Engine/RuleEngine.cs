@@ -34,17 +34,34 @@ public sealed class RuleEngine(
 
     /// <summary>
     /// Evaluates every rule for <paramref name="eventType"/> against the current and previous state and processes
-    /// the actions of the rules that match.
+    /// the actions of the rules that match: an event without envelope data (see <see cref="ExecuteAsync(RuleEvent, IEnumerable{RuleDefinition}, CancellationToken)"/>).
     /// </summary>
     /// <returns>One result per rule whose event type matched; failures are reported in the results, not thrown.</returns>
     /// <exception cref="OperationCanceledException">Cancellation was requested.</exception>
-    public async Task<RuleEngineResult> ExecuteAsync(
+    public Task<RuleEngineResult> ExecuteAsync(
         string eventType,
         object current,
         object? previous,
         IEnumerable<RuleDefinition> rules,
+        CancellationToken cancellationToken = default) =>
+        ExecuteAsync(new RuleEvent(eventType, current, previous), rules, cancellationToken);
+
+    /// <summary>
+    /// Evaluates every rule for the event's type against its current and previous state and processes the actions of
+    /// the rules that match. Rules read the envelope with <c>$event.</c> paths; actions and operators read it from
+    /// <see cref="EvaluationContext.Event"/>.
+    /// </summary>
+    /// <returns>One result per rule whose event type matched; failures are reported in the results, not thrown.</returns>
+    /// <exception cref="OperationCanceledException">Cancellation was requested.</exception>
+    public async Task<RuleEngineResult> ExecuteAsync(
+        RuleEvent @event,
+        IEnumerable<RuleDefinition> rules,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(@event);
+        ArgumentNullException.ThrowIfNull(rules);
+
+        var eventType = @event.EventType;
         var ruleResults = new List<RuleExecutionResult>();
         var scheduledActions = new List<ScheduledAction>();
 
@@ -53,7 +70,7 @@ public sealed class RuleEngine(
             .OrderByDescending(r => r.Priority)
             .ToList();
 
-        var context = new EvaluationContext(current, previous, eventType, _catalog, _contextProviders);
+        var context = new EvaluationContext(@event, _catalog, _contextProviders);
 
         await PrefetchContextsAsync(eventType, context, matchingRules, cancellationToken);
 
