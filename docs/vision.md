@@ -210,6 +210,42 @@ or skip events whose type has no schema, or whose payload doesn't fit it, instea
 Optional strictness on top of untyped JSON support. To consider in the 0.6 design; the ASP.NET Core spike confirmed
 the gap (a missing or mistyped field just resolves to `null`).
 
+### Publishing schemas, OpenTelemetry style
+Raised 2026-11-06. When a service that raises events isn't the one that runs the rules, it has to hand its event
+schemas (its catalog document) to that service. Schema publishing is already planned (parked with service-to-service);
+this is a shape for its API, modelled on how OpenTelemetry is set up in .NET: one builder per signal, and **exporters**
+that are swapped without changing what's collected.
+
+```csharp
+services.AddRuleLoom(rules => rules
+    .AddCatalog(catalog => catalog.AddFromAssemblyOf<OrderPlacedSchema>())
+    .WithPublishing(publishing => publishing
+        .ForApplication("orders")                                   // whose schemas these are (see Scopes)
+        .AddHttpExporter(o => o.Endpoint = new Uri("https://rules.example.com/rules"))));
+// or .AddFileExporter("catalog.json") in a build pipeline, .AddConsoleExporter() while developing
+```
+
+How OpenTelemetry does it, for reference:
+- **A defined protocol**: OTLP (OpenTelemetry Protocol), protobuf over gRPC or HTTP. Exporters push to anything that
+  speaks it: usually the **OpenTelemetry Collector** (receives, processes, forwards), or a backend that accepts OTLP
+  directly (Jaeger, Grafana Tempo, many hosted services).
+- **Push or pull**: OTLP exporters push; the Prometheus exporter instead exposes an endpoint that Prometheus scrapes on
+  a schedule.
+
+The same split fits RuleLoom:
+- **The protocol** is the catalog document (JSON Schema with `x-ruleloom-*`, `CatalogDocument.ToJson()`), sent to an
+  agreed endpoint, e.g. `PUT {prefix}/catalogs/{application}`.
+- **The receiving end** is the rules service's `MapRuleLoom`, extended with a receiver that saves pushed documents
+  through its `ICatalogStore` (whose contract, upsert per entry and never delete, already suits it). That's the
+  Collector's role.
+- **Pull already works**: every service that maps `MapRuleLoom` serves `GET {prefix}/catalog`, so the rules service
+  could fetch documents on a schedule, the way Prometheus scrapes.
+- **Exporters**: HTTP push first; a file exporter for build-time generation (already parked); later a message bus.
+
+Open: authentication between services, versioning documents (what happens when a producer drops a field rules use),
+and whether pull, push or both come first. Ties into **Scopes** (one engine for several applications), which decides
+what `ForApplication` names.
+
 ### Also on the roadmap backlog
 Time semantics review, path variables and functions, more operators, benchmarks (#27) — see the
 [roadmap](roadmap.md#-backlog--not-yet-scheduled).
