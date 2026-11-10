@@ -1,4 +1,5 @@
 using Quartz;
+using RuleLoom.Abstractions;
 using RuleLoom.Actions;
 using RuleLoom.Engine;
 using RuleLoom.Samples.AspNetCore;
@@ -34,7 +35,8 @@ app.MapPost("/events", async (
     if (rules is null)
         return Results.NotFound(new { error = $"Unknown tenant '{request.TenantId}'." });
 
-    var result = await engine.ExecuteAsync(request.EventType, request.Current, request.Previous, rules.Valid, cancellationToken);
+    var @event = new RuleEvent(request.EventType, request.Current, request.Previous) { Subject = request.EntityId };
+    var result = await engine.ExecuteAsync(@event, rules.Valid, cancellationToken);
     var jobs = await scheduler.ScheduleAsync(request, result.ScheduledActions, cancellationToken);
 
     return Results.Ok(EventResponse.From(result, rules.Invalid, jobs));

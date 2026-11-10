@@ -681,8 +681,7 @@ public class RuleEngineIntegrationTests
         Assert.Equal(dueAt.AddHours(-2), rule.ActionResults[1].ScheduledFor);
 
         var scheduled = Assert.Single(result.ScheduledActions);
-        Assert.Equal(1, scheduled.Result.ActionIndex);
-        Assert.Equal("Reminder", scheduled.Action.GetParameter<string>("message"));
+        Assert.Equal((1, "test-log"), (scheduled.ActionIndex, scheduled.ActionName));
 
         Assert.Equal(["Thanks for your order!"], _logMessages);
     }
@@ -908,7 +907,7 @@ public class RuleEngineIntegrationTests
 
         // Assert
         var scheduled = Assert.Single(result.ScheduledActions);
-        Assert.Equal(new DateTimeOffset(2026, 10, 22, 9, 0, 0, TimeSpan.Zero), scheduled.Result.ScheduledFor);
+        Assert.Equal(new DateTimeOffset(2026, 10, 22, 9, 0, 0, TimeSpan.Zero), scheduled.ScheduledFor);
         Assert.Empty(_logMessages);
     }
 

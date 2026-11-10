@@ -148,16 +148,13 @@ public class RuleEngineResultTests
         Assert.Collection(result.ScheduledActions,
             s =>
             {
-                Assert.Equal(("r1", "First"), (s.RuleId, s.RuleName));
-                Assert.Same(delayed, s.Action);
-                Assert.Equal(Now.AddHours(2), s.Result.ScheduledFor);
-                Assert.Equal(1, s.Result.ActionIndex);
+                Assert.Equal(("r1", 1, delayed.Action), (s.RuleId, s.ActionIndex, s.ActionName));
+                Assert.Equal(Now.AddHours(2), s.ScheduledFor);
             },
             s =>
             {
-                Assert.Equal(("r2", "Second"), (s.RuleId, s.RuleName));
-                Assert.Same(advanced, s.Action);
-                Assert.Equal(Now.AddDays(-1), s.Result.ScheduledFor);
+                Assert.Equal(("r2", 0, advanced.Action), (s.RuleId, s.ActionIndex, s.ActionName));
+                Assert.Equal(Now.AddDays(-1), s.ScheduledFor);
             });
         Assert.Equal(1, _ok.Calls);
     }

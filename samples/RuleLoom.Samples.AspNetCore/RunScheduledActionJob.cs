@@ -20,6 +20,7 @@ public sealed class RunScheduledActionJob(
     Catalog catalog,
     IActionFactory actionFactory,
     IContextProviderFactory contextProviders,
+    TenantRuleStore ruleStore,
     ILogger<RunScheduledActionJob> logger) : IJob
 {
     public const string TenantIdKey = "tenantId";
@@ -35,11 +36,17 @@ public sealed class RunScheduledActionJob(
         var scheduled = (ScheduledAction)data[ScheduledActionKey]!;
         var state = new EvaluationContext(data[CurrentKey], data[PreviousKey], (string)data[EventTypeKey]!, catalog, contextProviders);
 
-        var result = await RunAsync(scheduled.Action, state, cancellationToken);
+        // A scheduled action is a reference: run the rule's current version of it, if it still has one.
+        var rules = await ruleStore.LoadAsync(tenantId, cancellationToken);
+        var action = rules?.Valid.FirstOrDefault(r => r.Id == scheduled.RuleId)?.Actions.ElementAtOrDefault(scheduled.ActionIndex);
+
+        var result = action is not null && string.Equals(action.Action, scheduled.ActionName, StringComparison.OrdinalIgnoreCase)
+            ? await RunAsync(action, state, cancellationToken)
+            : ActionResult.Skipped($"Rule '{scheduled.RuleId}' no longer has action {scheduled.ActionIndex} ('{scheduled.ActionName}').");
 
         logger.LogInformation(
             "Scheduled action '{Action}' of rule '{Rule}' for tenant '{Tenant}' ran: {Status} {Message}",
-            scheduled.Action.Action, scheduled.RuleName, tenantId, result.Status, result.Message ?? result.Error?.Message);
+            scheduled.ActionName, scheduled.RuleId, tenantId, result.Status, result.Message ?? result.Error?.Message);
     }
 
     private async Task<ActionResult> RunAsync(ActionDefinition action, EvaluationContext state, CancellationToken cancellationToken)

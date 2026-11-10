@@ -85,7 +85,7 @@ public class TimeZoneTests
         var result = await engine.ExecuteAsync("Event", new { DueAt = "2026-07-01T09:00" }, [Rule(Op("eq", Value(1), Value(1)), action)],
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(new DateTimeOffset(2026, 7, 1, 5, 0, 0, TimeSpan.Zero), Assert.Single(result.ScheduledActions).Result.ScheduledFor);
+        Assert.Equal(new DateTimeOffset(2026, 7, 1, 5, 0, 0, TimeSpan.Zero), Assert.Single(result.ScheduledActions).ScheduledFor);
     }
 
     [Fact]

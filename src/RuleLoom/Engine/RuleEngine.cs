@@ -71,6 +71,7 @@ public sealed class RuleEngine(
             .ToList();
 
         var context = new EvaluationContext(@event, _catalog, _contextProviders);
+        var subject = new Lazy<SubjectIdentity?>(() => SubjectOf(@event, context));
 
         await PrefetchContextsAsync(eventType, context, matchingRules, cancellationToken);
 
@@ -108,7 +109,10 @@ public sealed class RuleEngine(
                 actionResults.Add(result);
 
                 if (result.Status == ActionExecutionStatus.Scheduled)
-                    scheduledActions.Add(new ScheduledAction(rule.Id, rule.Name, action, result));
+                {
+                    scheduledActions.Add(new ScheduledAction(rule.Id, index, action.Action, result.ScheduledFor!.Value,
+                        ScheduledAction.CreateKey(rule.Id, index, subject.Value)));
+                }
             }
 
             ruleResults.Add(CreateRuleResult(rule, RuleExecutionStatus.Matched, actionResults));
@@ -127,6 +131,20 @@ public sealed class RuleEngine(
         CancellationToken cancellationToken = default)
     {
         return ExecuteAsync(eventType, data, null, rules, cancellationToken);
+    }
+
+    /// <summary>
+    /// The event's subject: read from its data when its schema declares the subject's identity, otherwise
+    /// <see cref="RuleEvent.Subject"/>.
+    /// </summary>
+    private SubjectIdentity? SubjectOf(RuleEvent @event, EvaluationContext context)
+    {
+        if (!_catalog.TryGetEvent(@event.EventType, out var schema) || schema.Subject is not { Identity: var identity })
+            return SubjectIdentity.From(@event.Subject);
+
+        return identity.IsComposite
+            ? SubjectIdentity.From(identity.Parts.Select(part => KeyValuePair.Create(part.Key, context.Resolve(part.Value))))
+            : SubjectIdentity.From(context.Resolve(identity.Path!));
     }
 
     /// <summary>
