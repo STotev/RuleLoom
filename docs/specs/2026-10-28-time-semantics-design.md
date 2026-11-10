@@ -124,4 +124,18 @@ With the default zone (UTC), date-times keep their results. The upgrading guide 
 
 ## Deviations
 
-None yet.
+Recorded for slice 1 ([#135](https://github.com/STotev/RuleLoom/issues/135)):
+
+- **No UTC defaults in the public API.** `ValueConverter.TryConvert` and `ValueComparer.AreEqual`/`TryCompare` take a
+  `TemporalRules` parameter instead of defaulting to UTC, so no caller assumes UTC without saying so
+  (`TemporalRules.Utc` is explicit). Operators keep `ctx.AreEqual`/`ctx.TryCompare`, which pass the evaluation's rules.
+- **`GetParameter<T>(name)` reads UTC.** It has no evaluation context, so no catalog; `GetParameterAsync` and
+  `GetParametersAsync` read with the context's rules. Typed parameters are bound with converters built on the rules,
+  which also fixes System.Text.Json reading offset-less text as a `DateTimeOffset` in the machine's offset.
+- **A stored document's `timeZone` is ignored**, like its operators and actions: the time zone is configuration in
+  code (`UseTimeZone`); the document only reports it.
+- **Date-only text until slice 2**: still a moment, the start of its day in the time zone (a skipped midnight moves
+  forward), until [#136](https://github.com/STotev/RuleLoom/issues/136) makes dates calendar days.
+- **Naming the source**: `InvalidTemporalValueException.Path` is set for values read from a rule path (operands, `changed`,
+  schedule reference paths, `$path` parameters); a literal parameter is named in the message ("Parameter 'sendAt' of
+  action 'remind' is …").

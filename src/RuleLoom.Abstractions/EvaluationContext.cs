@@ -3,6 +3,7 @@ using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using RuleLoom.Abstractions.Context;
+using RuleLoom.Abstractions.Values;
 using RuleLoom.Schemas;
 
 namespace RuleLoom.Abstractions;
@@ -38,6 +39,11 @@ public class EvaluationContext
     public RuleEvent? Event { get; }
 
     /// <summary>
+    /// How date-times are read: the catalog's time zone, or <see cref="Values.TemporalRules.Utc"/> without a catalog.
+    /// </summary>
+    public TemporalRules TemporalRules { get; } = TemporalRules.Utc;
+
+    /// <summary>
     /// Creates a new evaluation context without contexts.
     /// </summary>
     /// <param name="current">The current state.</param>
@@ -67,6 +73,7 @@ public class EvaluationContext
         _eventType = eventType;
         _catalog = catalog;
         _contextProviders = contextProviders;
+        TemporalRules = catalog.TemporalRules;
     }
 
     /// <summary>
@@ -177,7 +184,8 @@ public class EvaluationContext
             var request = new ContextRequest(name, _eventType!, Current, Previous)
             {
                 Reference = ResolveReference(context.Declaration),
-                Event = Event
+                Event = Event,
+                TemporalRules = TemporalRules
             };
 
             return await provider.GetAsync(request, cancellationToken).ConfigureAwait(false);

@@ -12,9 +12,10 @@ namespace RuleLoom.Abstractions.Values;
 /// <item>Numbers compare by value across numeric types (as <see cref="double"/> if either side is
 /// <see cref="float"/>/<see cref="double"/>, otherwise as <see cref="decimal"/>). <c>NaN</c> never matches.</item>
 /// <item>Enums match by name (case-insensitive) or underlying number; different enum types never match.</item>
-/// <item><see cref="DateTime"/>/<see cref="DateTimeOffset"/> compare as UTC instants (<c>Unspecified</c> is UTC);
-/// a string on the other side must be strict ISO 8601.</item>
-/// <item>Two strict ISO 8601 strings compare as UTC instants; an ISO date string against any other string can't be
+/// <item><see cref="DateTime"/>/<see cref="DateTimeOffset"/> compare as moments, read by the given
+/// <see cref="TemporalRules"/> (a date-time without an offset is wall-clock time in its time zone); a string on the
+/// other side must be strict ISO 8601.</item>
+/// <item>Two strict ISO 8601 strings compare as moments; an ISO date string against any other string can't be
 /// compared (not equal, not ordered). Other strings compare ordinally (case-sensitive).</item>
 /// <item>JSON objects and arrays (<see cref="JsonElement"/>, <see cref="JsonNode"/>) are equal when their content is
 /// (same JSON model on both sides) and are never ordered.</item>
@@ -28,15 +29,21 @@ public static class ValueComparer
     /// <summary>
     /// Determines whether two values are equal under the comparison rules.
     /// </summary>
-    public static bool AreEqual(object? left, object? right)
+    /// <param name="left">The left value.</param>
+    /// <param name="right">The right value.</param>
+    /// <param name="temporalRules">How date-times are read (the catalog's, or <see cref="TemporalRules.Utc"/>).</param>
+    /// <exception cref="InvalidTemporalValueException">A value is a wall-clock time that doesn't exist in its zone.</exception>
+    public static bool AreEqual(object? left, object? right, TemporalRules temporalRules)
     {
+        ArgumentNullException.ThrowIfNull(temporalRules);
+
         if (left is null || right is null)
             return left is null && right is null;
 
         if (left is JsonElement or JsonNode || right is JsonElement or JsonNode)
             return JsonEquals(left, right);
 
-        var comparison = Compare(left, right);
+        var comparison = Compare(left, right, temporalRules);
         if (comparison is not null)
             return comparison == 0;
 
@@ -49,16 +56,19 @@ public static class ValueComparer
     /// </summary>
     /// <param name="left">The left value.</param>
     /// <param name="right">The right value.</param>
+    /// <param name="temporalRules">How date-times are read (the catalog's, or <see cref="TemporalRules.Utc"/>).</param>
     /// <param name="result">Negative if <paramref name="left"/> is smaller, zero if equal, positive if greater.</param>
     /// <returns><c>false</c> if the values can't be ordered (e.g. a number and a non-numeric string, or a null).</returns>
-    public static bool TryCompare(object? left, object? right, out int result)
+    /// <exception cref="InvalidTemporalValueException">A value is a wall-clock time that doesn't exist in its zone.</exception>
+    public static bool TryCompare(object? left, object? right, TemporalRules temporalRules, out int result)
     {
+        ArgumentNullException.ThrowIfNull(temporalRules);
         result = 0;
 
         if (left is null || right is null)
             return false;
 
-        var comparison = Compare(left, right);
+        var comparison = Compare(left, right, temporalRules);
 
         // Strings are fully handled by Compare (a date against other text is deliberately incomparable).
         if (comparison is null && left is not string && left.GetType() == right.GetType() && left is IComparable comparable)
@@ -71,42 +81,33 @@ public static class ValueComparer
         return true;
     }
 
-    private static int? Compare(object left, object right)
+    private static int? Compare(object left, object right, TemporalRules temporalRules)
     {
         if (ValueConverter.IsNumber(left) && ValueConverter.IsNumber(right))
             return CompareNumbers(left, right);
 
         if (left is Enum || right is Enum)
-            return CompareEnums(left, right);
+            return CompareEnums(left, right, temporalRules);
 
         if (left is DateTime or DateTimeOffset || right is DateTime or DateTimeOffset)
-            return CompareDates(left, right);
+            return CompareDates(left, right, temporalRules);
 
         if (left is string leftText && right is string rightText)
-            return CompareStrings(leftText, rightText);
+            return CompareStrings(leftText, rightText, temporalRules);
 
         return null;
     }
 
-    private static int? CompareStrings(string left, string right)
+    private static int? CompareStrings(string left, string right, TemporalRules temporalRules)
     {
-        var leftIsDate = TryParseIsoDate(left, out var leftInstant);
-        var rightIsDate = TryParseIsoDate(right, out var rightInstant);
+        var leftIsDate = temporalRules.TryGetInstant(left, out var leftInstant);
+        var rightIsDate = temporalRules.TryGetInstant(right, out var rightInstant);
 
         if (leftIsDate && rightIsDate)
             return leftInstant.UtcTicks.CompareTo(rightInstant.UtcTicks);
 
         // A date against arbitrary text can't be compared; two ordinary strings compare ordinally.
         return leftIsDate || rightIsDate ? null : Math.Sign(string.CompareOrdinal(left, right));
-    }
-
-    private static bool TryParseIsoDate(string text, out DateTimeOffset instant)
-    {
-        instant = default;
-
-        // Cheap shape check (yyyy-...) so ordinary strings skip the parse.
-        return text.Length >= 10 && char.IsAsciiDigit(text[0]) && text[4] == '-' &&
-               ValueConverter.TryConvertToDateTimeOffset(text, out instant);
     }
 
     private static bool JsonEquals(object left, object right) => (left, right) switch
@@ -132,7 +133,7 @@ public static class ValueComparer
         return Convert.ToDecimal(left).CompareTo(Convert.ToDecimal(right));
     }
 
-    private static int? CompareEnums(object left, object right)
+    private static int? CompareEnums(object left, object right, TemporalRules temporalRules)
     {
         if (left is Enum && right is Enum)
         {
@@ -144,7 +145,7 @@ public static class ValueComparer
         var enumType = left is Enum ? left.GetType() : right.GetType();
         var other = left is Enum ? right : left;
 
-        if (!ValueConverter.TryConvert(other, enumType, out var converted))
+        if (!ValueConverter.TryConvert(other, enumType, temporalRules, out var converted))
             return null;
 
         return left is Enum
@@ -152,10 +153,9 @@ public static class ValueComparer
             : CompareNumbers(UnderlyingValue(converted!), UnderlyingValue(right));
     }
 
-    private static int? CompareDates(object left, object right)
+    private static int? CompareDates(object left, object right, TemporalRules temporalRules)
     {
-        if (!ValueConverter.TryConvertToDateTimeOffset(left, out var leftInstant) ||
-            !ValueConverter.TryConvertToDateTimeOffset(right, out var rightInstant))
+        if (!temporalRules.TryGetInstant(left, out var leftInstant) || !temporalRules.TryGetInstant(right, out var rightInstant))
         {
             return null;
         }
