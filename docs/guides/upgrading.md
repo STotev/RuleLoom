@@ -46,10 +46,11 @@ ActionIndex, ActionName, ScheduledFor, Key)`. `RuleName`, `Action` (the definiti
 |---|---|
 | `scheduled.Result.ScheduledFor` | `scheduled.ScheduledFor` (not nullable) |
 | `scheduled.Result.ActionIndex` | `scheduled.ActionIndex` |
-| `scheduled.Action` | the rule's current action at `ActionIndex` when it's due (checking `ActionName`) |
+| `scheduled.Action` | `engine.ExecuteScheduledAsync(scheduled, storedEvent, rules)` when it's due: it finds the rule's current action and checks it again |
 | your own job key | `scheduled.Key` (`{ruleId}:{actionIndex}:{subject}`), prefixed with your tenant if rule ids repeat |
 
-Run the rule's current version when the job fires, so edits to a rule apply to its pending actions. `Key` needs a
+Run it with `ExecuteScheduledAsync` when the job fires, which replaces a job that looked up and ran the action itself:
+edits to a rule apply to its pending actions, and its conditions are checked again. `Key` needs a
 subject: declare it in the event's schema (`Subject(o => o.Number)`) or set `RuleEvent.Subject`. Store a scheduled
 action with `ToJson()` and read it back with `ScheduledAction.Parse`.
 

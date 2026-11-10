@@ -82,7 +82,7 @@ come from `MapRuleLoom`; a real app secures them with `RequireAuthorization()`.
 | `Customers.cs` | The `customer` and `orderHistory` context providers, the customer profile's schema, and an in-memory customer directory (`ada@example.com` is gold with three earlier orders, `bob@example.com` bronze with none) |
 | `TenantRuleStore.cs` | Reads, parses and validates a tenant's rule files |
 | `ActionScheduler.cs` | One Quartz job per scheduled action, keyed `{tenant}/{ScheduledAction.Key}` (`{rule}:{action index}:{entity}`); the same event sent again replaces the pending job |
-| `RunScheduledActionJob.cs` | Runs the rule's current version of the action when due (skipped if the rule no longer has it), with the state of the event that scheduled it and its contexts as they are then (conditions aren't checked again) |
+| `RunScheduledActionJob.cs` | Runs a scheduled action when due with one call, `RuleEngine.ExecuteScheduledAsync`, given the event that scheduled it and the tenant's current rules: the rule and the action are checked again, and the rule's current version runs |
 | `SendEmailAction.cs` | A typed action (`IAction<SendEmailParameters>`) that logs an email; its descriptor labels it and its parameters in the catalog |
 | `LoyaltyCheckAction.cs` | A custom action that reads the `orderHistory` collection context, with its descriptor |
 

@@ -60,7 +60,8 @@ Subject(o => o.Number).LoadedBy("order");                 // or a composite iden
 
 The identity keys scheduled actions (`ScheduledAction.Key`), so the same event delivered again replaces a pending job.
 `LoadedBy` names the provider that loads the subject as it is now (a `ContextProvider<Order>` registered as `order`,
-given the identity as its reference), so a scheduled action can be checked against current data when it's due. The
+given the identity as its reference), so `ExecuteScheduledAsync` checks a scheduled action's rule and condition against
+the order as it is when the action is due (`Status eq AwaitingPayment` then means "still unpaid"). The
 subject isn't a `@context`: rule authors see one set of fields. The catalog checks that the provider is registered and
 the identity's fields exist.
 
