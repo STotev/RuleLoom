@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file. It is generated
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/) — do not edit it by hand.
 
+## [0.8.0](https://github.com/STotev/RuleLoom/compare/v0.7.0...v0.8.0) (2026-11-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* event subjects and keyed scheduled actions ([#149](https://github.com/STotev/RuleLoom/issues/149))
+* TemporalRules and the catalog's time zone ([#145](https://github.com/STotev/RuleLoom/issues/145))
+
+### Features
+
+* event subjects and keyed scheduled actions ([#149](https://github.com/STotev/RuleLoom/issues/149)) ([7eb61d2](https://github.com/STotev/RuleLoom/commit/7eb61d2f312e4e579d5717715bf431157ccd3047))
+* TemporalRules and the catalog's time zone ([#145](https://github.com/STotev/RuleLoom/issues/145)) ([46b9b97](https://github.com/STotev/RuleLoom/commit/46b9b973c73aa48a05a8dfa4b62872761d717fef))
+* the RuleEvent envelope and $event paths ([#146](https://github.com/STotev/RuleLoom/issues/146)) ([3296f4a](https://github.com/STotev/RuleLoom/commit/3296f4af353791efaea5a5dd1331c52910dbf68d))
+
 ## [0.7.0](https://github.com/STotev/RuleLoom/compare/v0.6.0...v0.7.0) (2026-10-26)
 
 
