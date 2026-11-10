@@ -11,16 +11,9 @@ namespace RuleLoom.Validation;
 /// <param name="event">The schema of the rule's event.</param>
 internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
 {
-    // The envelope's fields ($event.), as a schema: metadata keys are app-defined, so nothing below it is checked.
-    private static readonly IReadOnlyList<FieldDefinition> EnvelopeFields =
-    [
-        Envelope("EventType", FieldType.String, isNullable: false),
-        Envelope("EventId", FieldType.String),
-        Envelope("Subject", FieldType.String),
-        Envelope("Source", FieldType.String),
-        Envelope("OccurredAt", FieldType.DateTime),
-        Envelope("Metadata", FieldType.Any)
-    ];
+    // The envelope's fields ($event.), described from RuleEvent like any data type, so they follow its properties. The
+    // state has its own roots ($current, $previous). Metadata is a dictionary: its app-defined keys aren't checked.
+    private static readonly IReadOnlyList<FieldDefinition> EnvelopeFields = DescribeEnvelope();
 
     private readonly Dictionary<PathNode, FieldDefinition?> _resolved = new(ReferenceEqualityComparer.Instance);
 
@@ -99,8 +92,13 @@ internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
         }
     }
 
-    private static FieldDefinition Envelope(string name, FieldType type, bool isNullable = true) =>
-        new(name, type, isNullable, IsRequired: false, Label: null, Description: null, [], [], null);
+    private static IReadOnlyList<FieldDefinition> DescribeEnvelope()
+    {
+        var envelope = new ParametersSchema<RuleEvent>();
+        envelope.Parameter(e => e.Current).Ignore();
+        envelope.Parameter(e => e.Previous).Ignore();
+        return envelope.Build().Fields;
+    }
 
     private static FieldDefinition? Report(ValidationProblems problems, PathNode path, string message)
     {

@@ -140,9 +140,10 @@ environment `nuget`) and attaches the packages to the GitHub release.
   place that knows the syntax: never split path strings elsewhere) and resolve via `PathResolver` (compiled, cached
   expressions): `"Price"` = current,
   `"$current.Price"` / `"$previous.Price"` explicit; operators pick a state the same way (`ctx.Resolve("$previous.Price")`).
-  `$event.` reads the envelope (`EventPaths`: `EventType`, `EventId`, `Subject`, `Source`, `OccurredAt`, `Metadata.<key>`;
-  `null` without a `RuleEvent`; no state, so `$previous.$event`/`changed` on it are errors; the validator checks the
-  fields, not metadata keys). Other `$` names are reserved (the parser rejects them); `current.`/`previous.` without `$`
+  `$event.` reads the envelope by `RuleEvent`'s properties (`EventPaths`: resolved like any object, plus a key step for
+  the `Metadata` dictionary; the validator describes the envelope from the type, so new properties need no list
+  updates; `null` without a `RuleEvent`; no state, so `$previous.$event`/`changed` on it are errors; metadata keys aren't
+  checked). Other `$` names are reserved (the parser rejects them); `current.`/`previous.` without `$`
   are plain property names.
   Missing properties resolve to `null`. A cached entry compiles the longest prefix resolvable on declared types; the
   rest continues on the runtime value: JSON state (`JsonElement`/`JsonNode`, walked by the internal `JsonPathWalker`,

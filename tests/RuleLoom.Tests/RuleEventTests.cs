@@ -98,6 +98,30 @@ public class RuleEventTests
         Assert.Same(Placed, context.Event);
     }
 
+    // Guards the envelope's structure: every property (but the state, which has $current and $previous) is readable with
+    // $event. and known to the validator. A new property fails here until the sample event above sets it.
+    [Fact]
+    public void EveryEnvelopeProperty_IsAnEventPath_TheValidatorKnows()
+    {
+        var context = new EvaluationContext(Placed, new TestCatalog().Build(), new TestCatalog());
+        var validator = new RuleValidator(new TestCatalog().Event("OrderPlaced").Build());
+        var properties = typeof(RuleEvent).GetProperties()
+            .Where(p => p.Name is not (nameof(RuleEvent.Current) or nameof(RuleEvent.Previous)))
+            .ToList();
+
+        Assert.NotEmpty(properties);
+        foreach (var property in properties)
+        {
+            var value = property.GetValue(Placed);
+            var path = $"$event.{property.Name}";
+            var rule = new RuleDefinition { Id = "r", Name = "R", EventType = "OrderPlaced", Condition = Op("eq", Path(path), Value(null)) };
+
+            Assert.True(value is not null, $"Set {property.Name} on the sample event.");
+            Assert.Equal(value, context.Resolve(path));
+            Assert.Empty(validator.Validate(rule).Errors);
+        }
+    }
+
     [Fact]
     public void Resolve_EventPath_WithoutAnEvent_IsNull()
     {
