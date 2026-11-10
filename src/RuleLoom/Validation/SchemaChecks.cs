@@ -1,4 +1,7 @@
 using RuleLoom.Abstractions;
+using RuleLoom.Abstractions.Scheduling;
+using RuleLoom.Abstractions.Rule;
+using RuleLoom.Abstractions.Action;
 using RuleLoom.Schemas;
 
 namespace RuleLoom.Validation;
@@ -67,6 +70,16 @@ internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
             (fields, owner) = (@event.Fields, @event.EventType);
         }
 
+        return Walk(fields, owner, parsed, path, problems);
+    }
+
+    /// <summary>
+    /// The field <paramref name="parsed"/>'s property names among <paramref name="fields"/> (of <paramref name="owner"/>),
+    /// reporting a field that doesn't exist or can't be gone into; <c>null</c> then, or when it can't be checked.
+    /// </summary>
+    public static FieldDefinition? Walk(IReadOnlyList<FieldDefinition> fields, string owner, RulePath parsed, PathNode path,
+        ValidationProblems problems)
+    {
         var segments = parsed.Segments;
         for (var index = 0; ; index++)
         {
@@ -111,4 +124,42 @@ internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
 internal sealed class SchemaPathCheck(SchemaPaths paths) : RuleCheck
 {
     public override void Path(PathNode path, ValidationProblems problems) => paths.Resolve(path, problems);
+}
+
+/// <summary>
+/// A scheduled action is checked and run against its subject as its loader returns it when the action is due
+/// (<c>Subject(...).LoadedBy(...)</c>), so the current-state paths it reads (its rule's condition, its own condition and
+/// parameters; not its schedule's reference path, read when it's scheduled) must be fields of that subject too.
+/// </summary>
+/// <param name="subjectFields">The fields of the subject the loader returns.</param>
+/// <param name="owner">How messages name it, e.g. <c>the subject loaded by 'order' when the action runs</c>.</param>
+/// <param name="eventPaths">The event's paths, resolved first: a path that isn't a field of the event is reported there.</param>
+internal sealed class SubjectPathCheck(IReadOnlyList<FieldDefinition> subjectFields, string owner, SchemaPaths eventPaths) : RuleCheck
+{
+    private bool _ruleSchedules;
+    private bool _inActions;
+    private bool _readWhenDue;
+
+    public override void Rule(RuleDefinition rule, ValidationProblems problems) =>
+        _ruleSchedules = rule.Actions.Any(IsScheduled);
+
+    public override void Action(ActionDefinition action, string location, ValidationProblems problems) =>
+        (_inActions, _readWhenDue) = (true, IsScheduled(action));
+
+    // The schedule's reference path, visited after this, is read when the action is scheduled.
+    public override void Schedule(ScheduleMetadata schedule, string location, ValidationProblems problems) => _readWhenDue = false;
+
+    public override void Path(PathNode path, ValidationProblems problems)
+    {
+        if (!(_inActions ? _readWhenDue : _ruleSchedules) ||
+            path.Parsed is not { Root: PathRoot.Current, Property.Length: > 0 } parsed ||
+            eventPaths.Resolve(path, problems) is null)
+        {
+            return;
+        }
+
+        SchemaPaths.Walk(subjectFields, owner, parsed, path, problems);
+    }
+
+    private static bool IsScheduled(ActionDefinition action) => action.Schedule is { Mode: not ScheduleMode.Immediate };
 }
