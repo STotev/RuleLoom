@@ -101,7 +101,7 @@ foreach (var scheduled in result.ScheduledActions)                        // the
 ```
 
 `order` can be a .NET object or JSON received from another service. `result.Rules` reports every rule for the event
-(`Matched`, `NotMatched` or `Failed`) and every action (`ExecutedImmediately`, `Scheduled`, `Skipped` or `Failed`).
+(`Matched`, `NotMatched` or `Failed`) and every action (`Executed`, `Scheduled`, `Skipped` or `Failed`).
 
 ## Operators
 

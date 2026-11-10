@@ -84,7 +84,7 @@ public class RuleEngineContextTests
         var result = await engine.ExecuteAsync("OrderPlaced", Order, [rule], TestContext.Current.CancellationToken);
 
         var actions = result.Rules[0].ActionResults;
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, actions[0].Status);
+        Assert.Equal(ActionExecutionStatus.Executed, actions[0].Status);
         Assert.Equal(new DateTimeOffset(2026, 10, 31, 0, 0, 0, TimeSpan.Zero), actions[1].ScheduledFor);
         Assert.Equal(1, customer.Calls);
     }

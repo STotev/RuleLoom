@@ -27,7 +27,7 @@ public class RuleEngineTests
         Assert.Single(result);
         Assert.Equal("Rule A", result[0].RuleName);
         Assert.Single(result[0].ActionResults);
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, result[0].ActionResults[0].Status);
+        Assert.Equal(ActionExecutionStatus.Executed, result[0].ActionResults[0].Status);
         Assert.Equal("done", result[0].ActionResults[0].Message);
     }
 
@@ -60,7 +60,7 @@ public class RuleEngineTests
         Assert.Equal(2, result[0].ActionResults.Count);
         Assert.Equal(ActionExecutionStatus.Failed, result[0].ActionResults[0].Status);
         Assert.NotNull(result[0].ActionResults[0].Error);
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, result[0].ActionResults[1].Status);
+        Assert.Equal(ActionExecutionStatus.Executed, result[0].ActionResults[1].Status);
         Assert.Equal("known-success", result[0].ActionResults[1].Message);
     }
 
@@ -95,7 +95,7 @@ public class RuleEngineTests
         Assert.Equal(2, result[0].ActionResults.Count);
         Assert.Equal(ActionExecutionStatus.Failed, result[0].ActionResults[0].Status);
         Assert.IsType<InvalidOperationException>(result[0].ActionResults[0].Error);
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, result[0].ActionResults[1].Status);
+        Assert.Equal(ActionExecutionStatus.Executed, result[0].ActionResults[1].Status);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class RuleEngineTests
         Assert.Equal("counted 2", actions[0].Message);
         Assert.Equal(ActionExecutionStatus.Failed, actions[1].Status);
         Assert.StartsWith("Parameter 'count' of action 'typed'", actions[1].Error!.Message);
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, actions[2].Status);
+        Assert.Equal(ActionExecutionStatus.Executed, actions[2].Status);
     }
 
     [Fact]
@@ -204,7 +204,7 @@ public class RuleEngineTests
         Assert.All(result, item =>
         {
             Assert.Single(item.ActionResults);
-            Assert.Equal(ActionExecutionStatus.ExecutedImmediately, item.ActionResults[0].Status);
+            Assert.Equal(ActionExecutionStatus.Executed, item.ActionResults[0].Status);
         });
     }
 
@@ -352,7 +352,7 @@ public class RuleEngineTests
 
         Assert.Single(result);
         Assert.Single(result[0].ActionResults);
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, result[0].ActionResults[0].Status);
+        Assert.Equal(ActionExecutionStatus.Executed, result[0].ActionResults[0].Status);
         Assert.Equal(1, executor.ExecutionCount);
     }
 

@@ -5,11 +5,11 @@ namespace RuleLoom.Tests;
 public class ActionResultTests
 {
     [Fact]
-    public void Success_DefaultFactory_ReturnsExecutedImmediately()
+    public void Success_DefaultFactory_ReturnsExecuted()
     {
         var result = ActionResult.Success();
 
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, result.Status);
+        Assert.Equal(ActionExecutionStatus.Executed, result.Status);
         Assert.Null(result.ScheduledFor);
         Assert.Null(result.Message);
         Assert.Null(result.Error);

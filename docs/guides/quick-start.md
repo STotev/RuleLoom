@@ -63,7 +63,7 @@ The result tells you what happened to every rule for that event:
 
 ```csharp
 foreach (var ruleResult in result.Rules)                       // Matched, NotMatched or Failed (with Error)
-    foreach (var action in ruleResult.ActionResults)           // ExecutedImmediately, Scheduled, Skipped or Failed
+    foreach (var action in ruleResult.ActionResults)           // Executed, Scheduled, Skipped or Failed
         Console.WriteLine($"{ruleResult.RuleName}: {action.ActionName} {action.Status}");
 
 if (result.HasFailures) { /* log or alert */ }

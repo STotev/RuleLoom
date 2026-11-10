@@ -81,7 +81,7 @@ public class RuleEngineResultTests
         var ruleResult = Assert.Single(result.Rules);
         Assert.Equal(RuleExecutionStatus.Matched, ruleResult.Status);
         Assert.Equal(
-            [ActionExecutionStatus.ExecutedImmediately, ActionExecutionStatus.Failed, ActionExecutionStatus.ExecutedImmediately],
+            [ActionExecutionStatus.Executed, ActionExecutionStatus.Failed, ActionExecutionStatus.Executed],
             ruleResult.ActionResults.Select(a => a.Status));
         Assert.IsType<InvalidOperationException>(ruleResult.ActionResults[1].Error);
         Assert.Equal(2, _ok.Calls);
@@ -189,7 +189,7 @@ public class RuleEngineResultTests
     {
         var result = await Execute([Rule("Shouting", Always, actions: [Action("OK")])]);
 
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, Assert.Single(result.Rules[0].ActionResults).Status);
+        Assert.Equal(ActionExecutionStatus.Executed, Assert.Single(result.Rules[0].ActionResults).Status);
         Assert.Equal(1, _ok.Calls);
     }
 
