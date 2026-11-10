@@ -7,7 +7,8 @@ namespace RuleLoom.Samples.AspNetCore;
 /// Hands the engine's scheduled actions to Quartz: one job per action, fired at its <c>ScheduledFor</c>.
 /// </summary>
 /// <remarks>
-/// Job and trigger keys are <c>{tenant}/{entity}/{rule}/{action index}</c>, and an existing job with the same key is
+/// Job and trigger keys are <c>{tenant}/{ScheduledAction.Key}</c> (the key is <c>{rule}:{action index}:{subject}</c>, the
+/// subject being the event's entity id), and an existing job with the same key is
 /// replaced, so the same event sent twice doesn't schedule the action twice. The job data holds the objects themselves,
 /// which only works with Quartz's in-memory store.
 /// </remarks>
@@ -26,8 +27,9 @@ public sealed class ActionScheduler(ISchedulerFactory schedulerFactory)
 
         foreach (var scheduled in scheduledActions)
         {
-            var key = new JobKey($"{request.TenantId}/{request.EntityId}/{scheduled.RuleId}/{scheduled.Result.ActionIndex}");
-            var scheduledFor = scheduled.Result.ScheduledFor!.Value;
+            // The engine's key is {rule}:{action index}:{subject}; rule ids repeat across tenants, so prefix the tenant.
+            var key = new JobKey($"{request.TenantId}/{scheduled.Key}");
+            var scheduledFor = scheduled.ScheduledFor;
 
             var job = JobBuilder.Create<RunScheduledActionJob>()
                 .WithIdentity(key)

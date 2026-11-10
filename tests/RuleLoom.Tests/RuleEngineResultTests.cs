@@ -81,7 +81,7 @@ public class RuleEngineResultTests
         var ruleResult = Assert.Single(result.Rules);
         Assert.Equal(RuleExecutionStatus.Matched, ruleResult.Status);
         Assert.Equal(
-            [ActionExecutionStatus.ExecutedImmediately, ActionExecutionStatus.Failed, ActionExecutionStatus.ExecutedImmediately],
+            [ActionExecutionStatus.Executed, ActionExecutionStatus.Failed, ActionExecutionStatus.Executed],
             ruleResult.ActionResults.Select(a => a.Status));
         Assert.IsType<InvalidOperationException>(ruleResult.ActionResults[1].Error);
         Assert.Equal(2, _ok.Calls);
@@ -148,16 +148,13 @@ public class RuleEngineResultTests
         Assert.Collection(result.ScheduledActions,
             s =>
             {
-                Assert.Equal(("r1", "First"), (s.RuleId, s.RuleName));
-                Assert.Same(delayed, s.Action);
-                Assert.Equal(Now.AddHours(2), s.Result.ScheduledFor);
-                Assert.Equal(1, s.Result.ActionIndex);
+                Assert.Equal(("r1", 1, delayed.Action), (s.RuleId, s.ActionIndex, s.ActionName));
+                Assert.Equal(Now.AddHours(2), s.ScheduledFor);
             },
             s =>
             {
-                Assert.Equal(("r2", "Second"), (s.RuleId, s.RuleName));
-                Assert.Same(advanced, s.Action);
-                Assert.Equal(Now.AddDays(-1), s.Result.ScheduledFor);
+                Assert.Equal(("r2", 0, advanced.Action), (s.RuleId, s.ActionIndex, s.ActionName));
+                Assert.Equal(Now.AddDays(-1), s.ScheduledFor);
             });
         Assert.Equal(1, _ok.Calls);
     }
@@ -189,7 +186,7 @@ public class RuleEngineResultTests
     {
         var result = await Execute([Rule("Shouting", Always, actions: [Action("OK")])]);
 
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, Assert.Single(result.Rules[0].ActionResults).Status);
+        Assert.Equal(ActionExecutionStatus.Executed, Assert.Single(result.Rules[0].ActionResults).Status);
         Assert.Equal(1, _ok.Calls);
     }
 

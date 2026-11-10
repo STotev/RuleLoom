@@ -550,7 +550,12 @@ unambiguous.
 ## Scheduling Actions
 
 An action with a `schedule` isn't run by the engine: it comes back with status `Scheduled` and a `ScheduledFor` time
-(UTC; a `referencePath` without an offset is read in the catalog's [time zone](#time-zones)), and `result.ScheduledActions` lists it with its definition so your scheduler can dispatch it.
+(UTC; a `referencePath` without an offset is read in the catalog's [time zone](#time-zones)), and `result.ScheduledActions` lists it so your scheduler can dispatch it: a `ScheduledAction` is a reference, not a copy
+(`RuleId`, `ActionIndex`, `ActionName`, `ScheduledFor`), so the rule's current version runs when it's due. Its `Key`,
+`{ruleId}:{actionIndex}:{subject}`, identifies the pending action: use it as the job's id so the same event delivered
+again replaces the job instead of adding one (prefix it, e.g. with a tenant, when rule ids repeat). The subject is the
+identity the event's schema declares (`Subject(o => o.Number)`), or else the event's `RuleEvent.Subject`; without one
+the key is `null`. `ToJson()` and `ScheduledAction.Parse(json)` store it, e.g. in a persistent job store.
 
 ```json
 { "action": "send-email", "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "DueAt" } }

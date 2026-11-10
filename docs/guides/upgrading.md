@@ -3,7 +3,7 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.7 → 0.8](#07--08): `ValueComparer` and `ValueConverter` take `TemporalRules`; impossible `Local` times are rejected
+- [0.7 → 0.8](#07--08): `ValueComparer` and `ValueConverter` take `TemporalRules`; impossible `Local` times are rejected; `ExecutedImmediately` is `Executed`; `ScheduledAction` is a keyed reference
 - [0.6 → 0.7](#06--07): a parameter `{ "$path": ... }` is a path; `FieldDefinition` has `IsRequired`; optionally, typed actions, path parameters and `MapRuleLoom`
 - [0.5 → 0.6](#05--06): the engine, validator and DI run on a catalog; paths starting with `@` or `#` are no longer property names
 - [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
@@ -31,6 +31,27 @@ that reads it with an `InvalidTemporalValueException`, instead of being read wit
 values and text this only happens once a time zone is configured; `DateTime` values with `Kind = Local` are checked
 against the machine's time zone, so such values are rejected now. Typed actions also read date-time parameters without
 an offset in the catalog's time zone (they used to be read in the machine's own offset for `DateTimeOffset`).
+
+### `ExecutedImmediately` is `Executed`
+
+`ActionExecutionStatus.ExecutedImmediately` is renamed `Executed`: an action that ran, right away or later when it was
+due. Replace the name; nothing else changes.
+
+### `ScheduledAction` is a keyed reference
+
+`result.ScheduledActions` lists references to the rules' actions instead of copies: `ScheduledAction(RuleId,
+ActionIndex, ActionName, ScheduledFor, Key)`. `RuleName`, `Action` (the definition) and `Result` are gone:
+
+| Before | After |
+|---|---|
+| `scheduled.Result.ScheduledFor` | `scheduled.ScheduledFor` (not nullable) |
+| `scheduled.Result.ActionIndex` | `scheduled.ActionIndex` |
+| `scheduled.Action` | the rule's current action at `ActionIndex` when it's due (checking `ActionName`) |
+| your own job key | `scheduled.Key` (`{ruleId}:{actionIndex}:{subject}`), prefixed with your tenant if rule ids repeat |
+
+Run the rule's current version when the job fires, so edits to a rule apply to its pending actions. `Key` needs a
+subject: declare it in the event's schema (`Subject(o => o.Number)`) or set `RuleEvent.Subject`. Store a scheduled
+action with `ToJson()` and read it back with `ScheduledAction.Parse`.
 
 ## 0.6 → 0.7
 

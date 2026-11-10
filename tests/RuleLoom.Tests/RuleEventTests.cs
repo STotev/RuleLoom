@@ -198,7 +198,7 @@ public class RuleEventTests
 
         var result = await engine.ExecuteAsync(Placed, [rule], TestContext.Current.CancellationToken);
 
-        Assert.Equal(NineInSofia.AddHours(2), Assert.Single(result.ScheduledActions).Result.ScheduledFor);
+        Assert.Equal(NineInSofia.AddHours(2), Assert.Single(result.ScheduledActions).ScheduledFor);
     }
 
     [Fact]

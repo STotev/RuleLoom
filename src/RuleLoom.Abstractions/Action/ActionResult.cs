@@ -5,7 +5,7 @@ namespace RuleLoom.Abstractions.Action;
 /// </summary>
 public sealed record ActionResult
 {
-    private static readonly ActionResult _success = new() { Status = ActionExecutionStatus.ExecutedImmediately };
+    private static readonly ActionResult _success = new() { Status = ActionExecutionStatus.Executed };
     /// <summary>
     /// Execution status.
     /// </summary>
@@ -41,7 +41,7 @@ public sealed record ActionResult
         if (message is null) return _success;
         return new ActionResult
         {
-            Status = ActionExecutionStatus.ExecutedImmediately,
+            Status = ActionExecutionStatus.Executed,
             Message = message
         };
     }

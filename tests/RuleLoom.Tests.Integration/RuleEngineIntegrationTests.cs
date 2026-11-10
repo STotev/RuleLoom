@@ -67,7 +67,7 @@ public class RuleEngineIntegrationTests
         Assert.Single(result);
         Assert.Equal("Price Equals Test", result[0].RuleName);
         Assert.Single(result[0].ActionResults);
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, result[0].ActionResults[0].Status);
+        Assert.Equal(ActionExecutionStatus.Executed, result[0].ActionResults[0].Status);
     }
 
     [Fact]
@@ -676,13 +676,12 @@ public class RuleEngineIntegrationTests
         var rule = Assert.Single(result.Rules);
         Assert.Equal(RuleExecutionStatus.Matched, rule.Status);
         Assert.Equal(
-            [ActionExecutionStatus.ExecutedImmediately, ActionExecutionStatus.Scheduled],
+            [ActionExecutionStatus.Executed, ActionExecutionStatus.Scheduled],
             rule.ActionResults.Select(a => a.Status));
         Assert.Equal(dueAt.AddHours(-2), rule.ActionResults[1].ScheduledFor);
 
         var scheduled = Assert.Single(result.ScheduledActions);
-        Assert.Equal(1, scheduled.Result.ActionIndex);
-        Assert.Equal("Reminder", scheduled.Action.GetParameter<string>("message"));
+        Assert.Equal((1, "test-log"), (scheduled.ActionIndex, scheduled.ActionName));
 
         Assert.Equal(["Thanks for your order!"], _logMessages);
     }
@@ -717,7 +716,7 @@ public class RuleEngineIntegrationTests
         var actions = result.Rules[0].ActionResults;
         Assert.Equal(ActionExecutionStatus.Failed, actions[0].Status);
         Assert.IsType<TimeoutException>(actions[0].Error);
-        Assert.Equal(ActionExecutionStatus.ExecutedImmediately, actions[1].Status);
+        Assert.Equal(ActionExecutionStatus.Executed, actions[1].Status);
         Assert.True(result.HasFailures);
         Assert.Equal(["Audit written"], _logMessages);
     }
@@ -875,7 +874,7 @@ public class RuleEngineIntegrationTests
         var rule = Assert.Single(result.Rules);
         Assert.Equal(RuleExecutionStatus.Matched, rule.Status);
         Assert.Equal(
-            [ActionExecutionStatus.ExecutedImmediately, ActionExecutionStatus.ExecutedImmediately, ActionExecutionStatus.Skipped],
+            [ActionExecutionStatus.Executed, ActionExecutionStatus.Executed, ActionExecutionStatus.Skipped],
             rule.ActionResults.Select(a => a.Status));
         Assert.Equal(["Shipped", "VIP"], _logMessages);
     }
@@ -908,7 +907,7 @@ public class RuleEngineIntegrationTests
 
         // Assert
         var scheduled = Assert.Single(result.ScheduledActions);
-        Assert.Equal(new DateTimeOffset(2026, 10, 22, 9, 0, 0, TimeSpan.Zero), scheduled.Result.ScheduledFor);
+        Assert.Equal(new DateTimeOffset(2026, 10, 22, 9, 0, 0, TimeSpan.Zero), scheduled.ScheduledFor);
         Assert.Empty(_logMessages);
     }
 

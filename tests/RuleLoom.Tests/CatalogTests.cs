@@ -45,6 +45,38 @@ public class CatalogTests
             "- Event 'Shipped': Context '@parcel' is referenced by 'parcelId', which isn't a field of Shipped."), error.Message);
     }
 
+    [Theory]
+    [InlineData("""{ "x-ruleloom-identity": "toAccountId", "x-ruleloom-provider": "transfer" }""",
+        "No context provider is registered under 'transfer' (the subject's loader).")]
+    [InlineData("""{ "x-ruleloom-identity": { "bank": "bankCode", "number": "toAccountId" } }""",
+        "The subject is identified by 'bankCode', which isn't a field of Paid.")]
+    public void Constructor_BrokenSubject_FailsInCode_AndIsAProblemWhenStored(string subject, string message)
+    {
+        var schema = EventSchemaDefinition.Parse($$"""
+            { "x-ruleloom-event": "Paid", "type": "object", "properties": { "toAccountId": { "type": "string" } },
+              "x-ruleloom-subject": {{subject}} }
+            """);
+
+        var error = Assert.Throws<InvalidOperationException>(() => new Catalog([schema], [Account], [], []));
+        var stored = new Catalog([], [Account], [], [], new CatalogDocument([schema]));
+
+        Assert.EndsWith($"- Event 'Paid': {message}", error.Message);
+        Assert.Equal(new CatalogProblem(CatalogEntryKind.Event, "Paid", message), Assert.Single(stored.Problems));
+    }
+
+    [Fact]
+    public void Constructor_SubjectLoadedByARegisteredProvider_IsValid()
+    {
+        var schema = EventSchemaDefinition.Parse("""
+            { "x-ruleloom-event": "Paid", "type": "object", "properties": { "toAccountId": { "type": "string" } },
+              "x-ruleloom-subject": { "x-ruleloom-identity": "toAccountId", "x-ruleloom-provider": "account" } }
+            """);
+
+        var catalog = new Catalog([schema], [Account], [], []);
+
+        Assert.Equal("account", catalog.TryGetEvent("Paid", out var found) ? found.Subject!.Provider : null);
+    }
+
     [Fact]
     public void Constructor_BrokenStoredEntries_BecomeProblems()
     {

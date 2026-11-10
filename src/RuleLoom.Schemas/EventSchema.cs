@@ -26,6 +26,7 @@ public abstract class EventSchema<T> : IEventSchema
     private readonly FieldConfigurations _fields = new();
     private readonly List<ContextBuilder<T>> _contexts = [];
     private EventBuilder? _event;
+    private SubjectBuilder? _subject;
 
     /// <summary>
     /// Names the event (required): the event type rules are written for.
@@ -67,6 +68,24 @@ public abstract class EventSchema<T> : IEventSchema
         return context;
     }
 
+    /// <summary>
+    /// Declares the event's subject, the entity it's about, by its identity: a subject property
+    /// (<c>o =&gt; o.Number</c>) or, for a composite identity, an anonymous object of properties
+    /// (<c>o =&gt; new { o.Country, o.Postcode }</c>). It keys scheduled actions; with <see cref="SubjectBuilder.LoadedBy"/>,
+    /// a scheduled action is checked and run against the subject loaded when it's due.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The subject is already declared.</exception>
+    protected SubjectBuilder Subject<TIdentity>(Expression<Func<T, TIdentity>> identity)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+
+        if (_subject is not null)
+            throw new InvalidOperationException("The event's subject is already declared.");
+
+        PropertyChains.FromReference(identity);
+        return _subject = new SubjectBuilder(identity);
+    }
+
     /// <inheritdoc />
     /// <exception cref="InvalidOperationException">The event wasn't named, or a configured field isn't part of the
     /// serialized form.</exception>
@@ -77,6 +96,7 @@ public abstract class EventSchema<T> : IEventSchema
 
         return SchemaGenerator.Generate(_event, typeof(T), _fields,
             _contexts.Select(c => new ContextDeclaration(c.Name, c.ConfiguredLabel, c.ConfiguredDescription, c.Reference, c.Provider)).ToList(),
+            _subject is null ? null : new SubjectDeclaration(_subject.Identity, _subject.Provider),
             options);
     }
 }

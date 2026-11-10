@@ -109,8 +109,8 @@ environment `nuget`) and attaches the packages to the GitHub release.
     → per action (ActionResult stamped with ActionName and ActionIndex by the engine):
         action condition throws           → Failed (only this action; later actions still run)
         action condition false            → Skipped
-        Schedule with Mode != Immediate   → ScheduleCalculator → Scheduled (executor NOT called;
-                                            also listed in ScheduledActions) / calculation error → Failed
+        Schedule with Mode != Immediate   → ScheduleCalculator → Scheduled (executor NOT called; listed in
+                                            ScheduledActions as a keyed reference) / calculation error → Failed
         action name not in the catalog    → Failed
         otherwise                         → IActionFactory.Create(registration).ExecuteAsync → its ActionResult
                                             (factory or action exception / null result → Failed)
@@ -195,6 +195,11 @@ environment `nuget`) and attaches the packages to the GitHub release.
   `ReferencePath` values are read by the catalog's `TemporalRules` (`DateTime`/`DateTimeOffset`, or strict ISO 8601
   strings); an impossible wall-clock time fails the action, naming the reference path.
   RuleLoom computes `ScheduledFor`; dispatching scheduled work is the consumer's responsibility.
+  `ScheduledAction(RuleId, ActionIndex, ActionName, ScheduledFor, Key)` is a reference (the rule's current action runs
+  when due), with `ToJson`/`Parse`; `Key` = `{ruleId}:{actionIndex}:{subject}` (`CreateKey`; `\`, `:`, `;`, `=`
+  escaped), `null` without a subject. The subject (`SubjectIdentity`) is the identity the event's schema declares
+  (resolved on the current state; composite `a=1;b=2` in declared order, invariant values, `null` if a part is), else
+  `RuleEvent.Subject`; computed only when an action is scheduled. Statuses: `Executed`, `Scheduled`, `Skipped`, `Failed`.
 - **Value comparison**: `ValueComparer` (`AreEqual`, `TryCompare`) and `ValueConverter` (`TryConvert`) in
   `RuleLoom.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
   types, enums by name or number, date-times as moments incl. strict ISO 8601 strings (two ISO strings compare as moments; ISO vs other text is
@@ -212,7 +217,10 @@ environment `nuget`) and attaches the packages to the GitHub release.
   days (#136).
 - **Schemas** (`RuleLoom.Schemas`): `class XSchema : EventSchema<TDto>` configures `Event(name)` (required),
   `Field(o => o.A.B)` (`Label`/`Description`/`Ignore`) and `Context(name)` (a relation: `ReferencedBy(o => o.Id)` or
-  `o => new { o.A, o.B }`; `LoadedBy(provider)`); `Build(options)`
+  `o => new { o.A, o.B }`; `LoadedBy(provider)`), and `Subject(o => o.Id)` (or composite) with optional
+  `.LoadedBy(provider)` (`x-ruleloom-subject` with `x-ruleloom-identity`/`x-ruleloom-provider`;
+  `EventSchemaDefinition.Subject` = `SubjectDefinition(Identity, Provider)`; not a `@context`; the catalog checks the
+  provider is registered and the identity paths are fields, errors in code and problems when stored); `Build(options)`
   generates an `EventSchemaDefinition` from how `TDto` is serialized (Web defaults unless options are given; numbers
   not typed as strings; null-oblivious types non-nullable), adds configured titles and descriptions (no automatic labels) and
   `x-ruleloom-event`/`x-ruleloom-contexts` (with `x-ruleloom-referenced-by`, and `x-ruleloom-provider` always: the

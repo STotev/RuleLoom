@@ -63,7 +63,7 @@ internal static class SchedulingExample
         foreach (var scheduled in result.ScheduledActions)
         {
             System.Console.WriteLine(
-                $"Dispatch '{scheduled.Action.Action}' (\"{scheduled.Action.GetParameter<string>("message")}\") at {scheduled.Result.ScheduledFor:u}");
+                $"Dispatch action {scheduled.ActionIndex} ('{scheduled.ActionName}') of rule '{scheduled.RuleId}' at {scheduled.ScheduledFor:u}");
         }
 
         System.Console.WriteLine();
