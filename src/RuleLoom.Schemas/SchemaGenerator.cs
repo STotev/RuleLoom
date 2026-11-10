@@ -21,6 +21,8 @@ internal static class SchemaGenerator
     public const string ReferencedByKeyword = "x-ruleloom-referenced-by";
     public const string ProviderKeyword = "x-ruleloom-provider";
     public const string ContextKeyword = "x-ruleloom-context";
+    public const string SubjectKeyword = "x-ruleloom-subject";
+    public const string IdentityKeyword = "x-ruleloom-identity";
 
     private static readonly JsonSerializerOptions WebDefaults = Freeze(new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
@@ -47,6 +49,7 @@ internal static class SchemaGenerator
         Type subjectType,
         FieldConfigurations fields,
         IReadOnlyList<ContextDeclaration> contexts,
+        SubjectDeclaration? subject,
         JsonSerializerOptions? options)
     {
         var serializer = Serializer(options);
@@ -62,6 +65,15 @@ internal static class SchemaGenerator
                 contextNodes[context.Name] = DescribeContext(context, subjectType, serializer);
 
             document[ContextsKeyword] = contextNodes;
+        }
+
+        if (subject is not null)
+        {
+            var node = new JsonObject { [IdentityKeyword] = Reference(subject.Identity, subjectType, serializer, "the subject's identity") };
+            if (subject.Provider is { } provider)
+                node[ProviderKeyword] = provider;
+
+            document[SubjectKeyword] = node;
         }
 
         return new EventSchemaDefinition(document);
@@ -135,25 +147,25 @@ internal static class SchemaGenerator
         node[ProviderKeyword] = context.Provider ?? context.Name;
 
         if (context.Reference is { } reference)
-        {
-            var owner = $"the reference of context '{context.Name}'";
-            var parts = PropertyChains.FromReference(reference)
-                .Select(part => (Name: part.Name is null ? null : serializer.PropertyNamingPolicy?.ConvertName(part.Name) ?? part.Name,
-                    Path: string.Join('.', JsonPath(subjectType, part.Properties, serializer, owner))))
-                .ToList();
-
-            if (parts.GroupBy(part => part.Name).FirstOrDefault(group => group.Key is not null && group.Count() > 1) is { } duplicate)
-            {
-                throw new InvalidOperationException(
-                    $"Part '{duplicate.Key}' of {owner} appears more than once (after the naming policy).");
-            }
-
-            node[ReferencedByKeyword] = parts is [(null, var path)]
-                ? path
-                : new JsonObject(parts.Select(part => KeyValuePair.Create(part.Name!, (JsonNode?)part.Path)));
-        }
+            node[ReferencedByKeyword] = Reference(reference, subjectType, serializer, $"the reference of context '{context.Name}'");
 
         return node;
+    }
+
+    // A reference to the subject's fields: one JSON path, or named paths for a composite (anonymous object) reference.
+    private static JsonNode Reference(LambdaExpression reference, Type subjectType, JsonSerializerOptions serializer, string owner)
+    {
+        var parts = PropertyChains.FromReference(reference)
+            .Select(part => (Name: part.Name is null ? null : serializer.PropertyNamingPolicy?.ConvertName(part.Name) ?? part.Name,
+                Path: string.Join('.', JsonPath(subjectType, part.Properties, serializer, owner))))
+            .ToList();
+
+        if (parts.GroupBy(part => part.Name).FirstOrDefault(group => group.Key is not null && group.Count() > 1) is { } duplicate)
+            throw new InvalidOperationException($"Part '{duplicate.Key}' of {owner} appears more than once (after the naming policy).");
+
+        return parts is [(null, var path)]
+            ? JsonValue.Create(path)
+            : new JsonObject(parts.Select(part => KeyValuePair.Create(part.Name!, (JsonNode?)part.Path)));
     }
 
     private static JsonObject GenerateType(Type type, FieldConfigurations fields, JsonSerializerOptions serializer, string owner)
@@ -370,3 +382,5 @@ internal static class SchemaGenerator
 /// A context declared by an event schema: its name, label, description, reference expression and provider name.
 /// </summary>
 internal sealed record ContextDeclaration(string Name, string? Label, string? Description, LambdaExpression? Reference, string? Provider);
+
+internal sealed record SubjectDeclaration(LambdaExpression Identity, string? Provider);

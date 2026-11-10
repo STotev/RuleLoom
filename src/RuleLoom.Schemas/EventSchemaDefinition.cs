@@ -14,6 +14,7 @@ public sealed class EventSchemaDefinition : SchemaDefinition
         EventType = SchemaReader.ReadName(document, SchemaGenerator.EventKeyword, "An event schema");
         Fields = SchemaReader.ReadFields(document, document);
         Contexts = SchemaReader.ReadContexts(document);
+        Subject = SchemaReader.ReadSubject(document);
     }
 
     /// <summary>The event type rules are written for.</summary>
@@ -21,6 +22,9 @@ public sealed class EventSchemaDefinition : SchemaDefinition
 
     /// <summary>The contexts the event's rules can use with <c>@name</c> paths.</summary>
     public IReadOnlyList<ContextDefinition> Contexts { get; }
+
+    /// <summary>The entity the event is about, and how to load it now; <c>null</c> when the schema declares none.</summary>
+    public SubjectDefinition? Subject { get; }
 
     /// <summary>
     /// Reads an event schema written by <see cref="SchemaDefinition.ToJson"/>.

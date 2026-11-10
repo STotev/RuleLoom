@@ -83,6 +83,14 @@ public sealed class Catalog
 
         foreach (var schema in _events.Values)
         {
+            if (schema.Subject is { } subject && FindBrokenLink(schema, subject) is { } subjectProblem)
+            {
+                if (storedEvents.Contains(schema.EventType))
+                    problems.Add(new CatalogProblem(CatalogEntryKind.Event, schema.EventType, subjectProblem));
+                else
+                    errors.Add($"Event '{schema.EventType}': {subjectProblem}");
+            }
+
             foreach (var context in schema.Contexts)
             {
                 if (FindBrokenLink(schema, context) is not { } message)
@@ -204,13 +212,23 @@ public sealed class Catalog
         if (!_providers.ContainsKey(context.Provider))
             return $"No context provider is registered under '{context.Provider}' (context '@{context.Name}').";
 
-        var paths = context.ReferencedBy is not { } reference ? []
-            : reference.IsComposite ? reference.Parts.Values : [reference.Path!];
-
-        return paths.FirstOrDefault(path => !IsField(schema, path)) is { } missing
+        return context.ReferencedBy is { } reference && MissingField(schema, reference) is { } missing
             ? $"Context '@{context.Name}' is referenced by '{missing}', which isn't a field of {schema.EventType}."
             : null;
     }
+
+    private string? FindBrokenLink(EventSchemaDefinition schema, SubjectDefinition subject)
+    {
+        if (subject.Provider is { } provider && !_providers.ContainsKey(provider))
+            return $"No context provider is registered under '{provider}' (the subject's loader).";
+
+        return MissingField(schema, subject.Identity) is { } missing
+            ? $"The subject is identified by '{missing}', which isn't a field of {schema.EventType}."
+            : null;
+    }
+
+    private static string? MissingField(EventSchemaDefinition schema, ContextReference reference) =>
+        (reference.IsComposite ? reference.Parts.Values : [reference.Path!]).FirstOrDefault(path => !IsField(schema, path));
 
     // Whether a reference path names a field of the event (fields without declared nested fields can't be checked).
     private static bool IsField(EventSchemaDefinition schema, string path)

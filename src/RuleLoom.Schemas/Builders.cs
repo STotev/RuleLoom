@@ -119,3 +119,25 @@ public sealed class ContextBuilder<T>
         return this;
     }
 }
+
+/// <summary>
+/// Describes the event's subject, the entity it's about: returned by <see cref="EventSchema{T}"/>'s <c>Subject(...)</c>.
+/// </summary>
+public sealed class SubjectBuilder
+{
+    internal SubjectBuilder(LambdaExpression identity) => Identity = identity;
+
+    internal LambdaExpression Identity { get; }
+    internal string? Provider { get; private set; }
+
+    /// <summary>
+    /// The registered context provider that loads the subject as it is now, given its identity as the request's
+    /// reference, so a scheduled action is checked and run against current data when it's due.
+    /// </summary>
+    public SubjectBuilder LoadedBy(string providerName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
+        Provider = providerName;
+        return this;
+    }
+}

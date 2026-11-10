@@ -35,19 +35,41 @@ internal static class SchemaReader
             ? (true, document["items"] as JsonObject ?? throw new JsonException($"Context schema '{name}' is an array without object 'items'."))
             : (false, document);
 
+    /// <summary>The event's subject (<c>x-ruleloom-subject</c>), or <c>null</c> when it declares none.</summary>
+    public static SubjectDefinition? ReadSubject(JsonObject document)
+    {
+        switch (document[SchemaGenerator.SubjectKeyword])
+        {
+            case null:
+                return null;
+            case JsonObject node:
+                var identity = ReadReference(node[SchemaGenerator.IdentityKeyword], "the subject's identity")
+                    ?? throw new JsonException($"The subject needs an identity ('{SchemaGenerator.IdentityKeyword}').");
+                var provider = node[SchemaGenerator.ProviderKeyword] is null ? null
+                    : String(node, SchemaGenerator.ProviderKeyword) is { } configured && !string.IsNullOrWhiteSpace(configured)
+                        ? configured
+                        : throw new JsonException("The subject's provider must be a non-empty string.");
+                return new SubjectDefinition(identity, provider);
+            default:
+                throw new JsonException($"'{SchemaGenerator.SubjectKeyword}' must be an object.");
+        }
+    }
+
+    private static ContextReference? ReadReference(JsonNode? node, string owner) => node switch
+    {
+        null => null,
+        JsonValue path when path.TryGetValue<string>(out var text) => new ContextReference(text, new Dictionary<string, string>()),
+        JsonObject parts => new ContextReference(null, parts.ToDictionary(
+            part => part.Key,
+            part => part.Value is JsonValue value && value.TryGetValue<string>(out var text)
+                ? text
+                : throw new JsonException($"Part '{part.Key}' of {owner} must be a path."))),
+        _ => throw new JsonException($"{char.ToUpperInvariant(owner[0])}{owner[1..]} must be a path or an object of paths.")
+    };
+
     private static ContextDefinition ReadContext(string name, JsonObject node)
     {
-        var reference = node[SchemaGenerator.ReferencedByKeyword] switch
-        {
-            null => null,
-            JsonValue path when path.TryGetValue<string>(out var text) => new ContextReference(text, new Dictionary<string, string>()),
-            JsonObject parts => new ContextReference(null, parts.ToDictionary(
-                part => part.Key,
-                part => part.Value is JsonValue value && value.TryGetValue<string>(out var text)
-                    ? text
-                    : throw new JsonException($"Part '{part.Key}' of the reference of context '{name}' must be a path."))),
-            _ => throw new JsonException($"The reference of context '{name}' must be a path or an object of paths.")
-        };
+        var reference = ReadReference(node[SchemaGenerator.ReferencedByKeyword], $"the reference of context '{name}'");
 
         // Without a provider (documents written before it was always written), the context's name, written into the
         // document so it names every provider.
