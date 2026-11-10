@@ -97,7 +97,7 @@ var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
 var result = await engine.ExecuteAsync("OrderPlaced", order, previous: null, rules, ct);
 
 foreach (var scheduled in result.ScheduledActions)                        // the reminder, due a day before PaymentDueAt
-    scheduler.Schedule(scheduled.Action, scheduled.Result.ScheduledFor);
+    scheduler.Schedule(scheduled.Key, scheduled.ToJson(), scheduled.ScheduledFor);
 ```
 
 `order` can be a .NET object or JSON received from another service. `result.Rules` reports every rule for the event

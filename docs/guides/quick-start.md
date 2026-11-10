@@ -169,7 +169,8 @@ An action can have its own `condition` (evaluated after the rule's) and a `sched
 ```
 
 Scheduled actions aren't run: they come back as `Scheduled` with `ScheduledFor`, and `result.ScheduledActions` lists
-them with their definitions so your scheduler can dispatch them.
+them so your scheduler can dispatch them: each is a reference to the rule's action (`RuleId`, `ActionIndex`,
+`ActionName`, `ScheduledFor`) with a `Key` to use as the job's id, and `ToJson()` for job stores.
 
 ## Custom operators
 

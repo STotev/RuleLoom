@@ -128,3 +128,18 @@ Recorded for the envelope slice ([#138](https://github.com/STotev/RuleLoom/issue
   time zone.
 - **`$current.$event…`** is rejected like `$previous.$event…`; `$event` alone resolves to the `RuleEvent`; without a
   `RuleEvent` (an `EvaluationContext` from state alone), `$event.` paths resolve to `null`.
+
+Recorded for the subjects and keys slice ([#139](https://github.com/STotev/RuleLoom/issues/139)):
+
+- **The document**: `"x-ruleloom-subject": { "x-ruleloom-identity": "number" | { "country": "address.country", … },
+  "x-ruleloom-provider": "order" }` (the provider only with `LoadedBy`); read as `EventSchemaDefinition.Subject`, a
+  `SubjectDefinition(Identity, Provider)` whose identity has the shape of a context reference.
+- **Keys are built by public helpers**: `ScheduledAction.CreateKey(ruleId, actionIndex, subject)` and `SubjectIdentity`,
+  so apps can build the key of a pending action themselves (e.g. to delete a job). The rule id is escaped like the
+  subject; date-times in an identity are written in round-trip form (`O`); a composite identity with a missing part has
+  no key, like a missing single identity.
+- **A broken stored subject** (an unregistered loader, an identity that isn't a field) is a catalog problem on its
+  event; what it fails is decided with `ExecuteScheduledAsync` (#140).
+- **The ASP.NET Core sample** passes the event's entity id as `RuleEvent.Subject`, keys jobs `{tenant}/{Key}`, and, until
+  `ExecuteScheduledAsync` exists, its job runs the rule's current action itself (skipped when the rule no longer has
+  it).

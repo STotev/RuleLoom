@@ -52,6 +52,18 @@ public OrderPlacedSchema()
 - **`LoadedBy("provider")`** lets one provider load several contexts, e.g. `fromAccount` and `toAccount` both loaded by
   `account`. Without it, the provider registered under the context's own name loads it.
 
+An event can also declare its **subject**, the entity it's about, by its identity:
+
+```csharp
+Subject(o => o.Number).LoadedBy("order");                 // or a composite identity: o => new { o.Country, o.Postcode }
+```
+
+The identity keys scheduled actions (`ScheduledAction.Key`), so the same event delivered again replaces a pending job.
+`LoadedBy` names the provider that loads the subject as it is now (a `ContextProvider<Order>` registered as `order`,
+given the identity as its reference), so a scheduled action can be checked against current data when it's due. The
+subject isn't a `@context`: rule authors see one set of fields. The catalog checks that the provider is registered and
+the identity's fields exist.
+
 ## 3. Load contexts: context providers
 
 A context provider loads a context when a rule or an action needs it. Derive from `ContextProvider<T>` for one entity
