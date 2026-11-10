@@ -3,6 +3,7 @@ using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
+using RuleLoom.Abstractions.Values;
 using RuleLoom.Engine;
 using RuleLoom.Operators;
 using RuleLoom.Schemas;
@@ -20,6 +21,7 @@ internal sealed class TestCatalog : IActionFactory, IContextProviderFactory
     private readonly List<EventSchemaDefinition> _events = [];
     private readonly List<IConditionOperator> _operators = [.. BuiltInOperators.Create()];
     private CatalogDocument? _stored;
+    private TemporalRules? _temporalRules;
 
     public TestCatalog Action(string name, IAction action)
     {
@@ -49,6 +51,13 @@ internal sealed class TestCatalog : IActionFactory, IContextProviderFactory
         return this;
     }
 
+    /// <summary>Reads date-times without an offset in <paramref name="timeZoneId"/>.</summary>
+    public TestCatalog TimeZone(string timeZoneId)
+    {
+        _temporalRules = new TemporalRules(TimeZoneInfo.FindSystemTimeZoneById(timeZoneId));
+        return this;
+    }
+
     public TestCatalog Operators(params IConditionOperator[] operators)
     {
         _operators.Clear();
@@ -61,7 +70,8 @@ internal sealed class TestCatalog : IActionFactory, IContextProviderFactory
         _providers.Select(p => new ContextProviderRegistration(p.Key, p.Value.Provider.GetType(), p.Value.Schema)),
         _operators,
         _actions.Select(a => new ActionRegistration(a.Key, a.Value.GetType())),
-        _stored);
+        _stored,
+        _temporalRules);
 
     public RuleEngine Engine(TimeProvider? timeProvider = null) => new(Build(), this, this, timeProvider);
 

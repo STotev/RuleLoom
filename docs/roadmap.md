@@ -159,7 +159,7 @@ the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings
 
 | Issue | Slice | Type | Blocked by | PR | Spec |
 |---|---|---|---|---|---|
-| [#135](https://github.com/STotev/RuleLoom/issues/135) | `TemporalRules` and the catalog's time zone | AFK | — | — | [time-semantics](specs/2026-10-28-time-semantics-design.md) |
+| [#135](https://github.com/STotev/RuleLoom/issues/135) | `TemporalRules` and the catalog's time zone | AFK | — | [#145](https://github.com/STotev/RuleLoom/pull/145) | [time-semantics](specs/2026-10-28-time-semantics-design.md) |
 | [#136](https://github.com/STotev/RuleLoom/issues/136) | Dates as calendar days | AFK | #135 | — | [time-semantics](specs/2026-10-28-time-semantics-design.md) |
 | [#137](https://github.com/STotev/RuleLoom/issues/137) | Schedules in calendar days and from dates | AFK | #135 | — | [time-semantics](specs/2026-10-28-time-semantics-design.md) |
 | [#138](https://github.com/STotev/RuleLoom/issues/138) | The `RuleEvent` envelope and `$event` paths | AFK | — | — | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |

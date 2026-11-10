@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 namespace RuleLoom.Schemas;
 
 /// <summary>
-/// A catalog written as one document: its event schemas, context schemas, operators, actions and problems. It is what a
+/// A catalog written as one document: its time zone, event schemas, context schemas, operators, actions and problems. It is what a
 /// catalog store keeps and what authoring UIs read. Every section is optional, so a document can hold only some of them
 /// (e.g. the event schemas a producer defines).
 /// </summary>
@@ -18,14 +18,22 @@ public sealed class CatalogDocument
         IEnumerable<ContextSchemaDefinition>? contexts = null,
         IEnumerable<CatalogOperator>? operators = null,
         IEnumerable<CatalogAction>? actions = null,
-        IEnumerable<CatalogProblem>? problems = null)
+        IEnumerable<CatalogProblem>? problems = null,
+        string? timeZone = null)
     {
+        TimeZone = timeZone;
         Events = Distinct(events, e => e.EventType, "Event");
         Contexts = Distinct(contexts, c => c.Name, "Context");
         Operators = Distinct(operators, o => o.Name, "Operator");
         Actions = Distinct(actions, a => a.Name, "Action");
         Problems = problems?.ToList() ?? [];
     }
+
+    /// <summary>
+    /// The id of the time zone date-times without an offset are read in (e.g. <c>Europe/Sofia</c>), so a UI shows them
+    /// as the engine reads them; <c>null</c> when the document doesn't say.
+    /// </summary>
+    public string? TimeZone { get; }
 
     /// <summary>The event schemas.</summary>
     public IReadOnlyList<EventSchemaDefinition> Events { get; }
@@ -43,7 +51,7 @@ public sealed class CatalogDocument
     public IReadOnlyList<CatalogProblem> Problems { get; }
 
     /// <summary>
-    /// Writes the document as JSON: an object with <c>events</c> and <c>contexts</c> (JSON Schema documents),
+    /// Writes the document as JSON: an object with <c>timeZone</c> (when known), <c>events</c> and <c>contexts</c> (JSON Schema documents),
     /// <c>operators</c>, <c>actions</c> and <c>problems</c>.
     /// </summary>
     public string ToJson()
@@ -52,6 +60,9 @@ public sealed class CatalogDocument
         using (var writer = new Utf8JsonWriter(buffer, SchemaJson.WriterOptions))
         {
             writer.WriteStartObject();
+
+            if (TimeZone is not null)
+                writer.WriteString("timeZone", TimeZone);
 
             writer.WriteStartArray("events");
             foreach (var schema in Events)
@@ -137,7 +148,8 @@ public sealed class CatalogDocument
                             "context" => CatalogEntryKind.Context,
                             var kind => throw new JsonException($"A problem's kind must be 'event' or 'context', not '{kind}'.")
                         },
-                        Name(item, "A problem"), SchemaReader.String(item, "message") ?? "")).ToList());
+                        Name(item, "A problem"), SchemaReader.String(item, "message") ?? "")).ToList(),
+                    SchemaReader.String(document, "timeZone"));
             }
             catch (InvalidOperationException ex)
             {

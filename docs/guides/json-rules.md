@@ -448,8 +448,8 @@ so a value matches when it means the same thing:
 | Any number (`decimal`, `int`, `double`, …) | Number | Equal by value: `100` matches `100m`, `5.0` matches `5` |
 | Enum | String | Same name, ignoring case: `"active"` matches `Status.Active`; `[Flags]` combinations like `"Read, Write"` work |
 | Enum | Number | Same underlying value: `1` matches `Status.Active` (= 1) |
-| `DateTime` / `DateTimeOffset` | String | Same instant, given as **ISO 8601**: `"2026-05-01T12:00:00Z"`, `"2026-05-01T14:00:00+02:00"`; no offset means UTC; `"2026-05-01"` means UTC midnight |
-| `string` (ISO 8601 date) | ISO 8601 string | Same instant: `"2026-05-01T14:00:00+02:00"` matches `"2026-05-01T12:00:00Z"`; `"2026-05-01"` matches `"2026-05-01T00:00:00Z"`. Typical for JSON state |
+| `DateTime` / `DateTimeOffset` | String | Same moment, given as **ISO 8601**: `"2026-05-01T12:00:00Z"`, `"2026-05-01T14:00:00+02:00"`; no offset means wall-clock time in the catalog's [time zone](#time-zones); `"2026-05-01"` means the start of that day there |
+| `string` (ISO 8601 date) | ISO 8601 string | Same moment: `"2026-05-01T14:00:00+02:00"` matches `"2026-05-01T12:00:00Z"`; with a UTC catalog, `"2026-05-01"` matches `"2026-05-01T00:00:00Z"`. Typical for JSON state |
 | `string` (ISO 8601 date) | Other string | Never matches, and can't be ordered |
 | `string` | String | Exactly equal (case-sensitive) |
 | JSON object or array | JSON object or array | Same content, ignoring property order (`changed` on an object path compares content) |
@@ -457,6 +457,27 @@ so a value matches when it means the same thing:
 Values that don't fit these rules never match: e.g. a non-ISO date string (`"05/01/2026"`), a number as text
 (`"100"` vs `100`), or `NaN`. `changed` uses the same equality, so `100` → `100.0` or the same instant in another
 offset isn't a change.
+
+### Time zones
+
+A date-time that states its offset (`Z`, `+02:00`, a `DateTimeOffset`, a `DateTime` with `Kind = Utc`) is that moment.
+One that doesn't, such as a `DateTime` from a database (`Kind = Unspecified`) or ISO text without an offset, is
+wall-clock time in the catalog's time zone, which is UTC unless the app sets one:
+
+```csharp
+var catalog = new CatalogBuilder().UseTimeZone("Europe/Sofia")   // an IANA id; unknown ids fail Build()
+    .AddEvent<OrderPlacedSchema>()
+    .Build();
+```
+
+- A wall-clock time the clocks skip (`02:30` on the night daylight saving starts) can't exist, so it's wrong data: the
+  rule (or the action, for a schedule or a parameter) fails with an `InvalidTemporalValueException` naming the path
+  or parameter, the value and the zone.
+- A wall-clock time that occurs twice (when the clocks go back) is the earlier occurrence.
+- A `DateTime` with `Kind = Local` is wall-clock time on the machine running the rules: avoid it when rules run on
+  several machines.
+- Actions read date-time parameters the same way with `GetParameterAsync`/`GetParametersAsync` (and typed actions);
+  `GetParameter<T>(name)` has no catalog and reads them as UTC.
 
 `gt`, `gte`, `lt` and `lte` order values with the same rules: numbers by value, enums by underlying number (so
 `"Active"` is compared as `Status.Active`'s value), dates as instants, and strings ordinally (`"B"` < `"a"`). When two
@@ -500,7 +521,7 @@ unambiguous.
 ## Scheduling Actions
 
 An action with a `schedule` isn't run by the engine: it comes back with status `Scheduled` and a `ScheduledFor` time
-(UTC), and `result.ScheduledActions` lists it with its definition so your scheduler can dispatch it.
+(UTC; a `referencePath` without an offset is read in the catalog's [time zone](#time-zones)), and `result.ScheduledActions` lists it with its definition so your scheduler can dispatch it.
 
 ```json
 { "action": "send-email", "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "DueAt" } }

@@ -10,27 +10,26 @@ namespace RuleLoom.Abstractions.Values;
 /// <remarks>
 /// Supported conversions: between numeric types when no value is lost; enum names (case-insensitive)
 /// and integral numbers to enums; between <see cref="DateTime"/> and <see cref="DateTimeOffset"/>,
-/// and strict ISO 8601 strings to either (no offset means UTC, date-only means UTC midnight).
+/// and strict ISO 8601 strings to either, read by the given <see cref="TemporalRules"/> (a <see cref="DateTime"/>
+/// result is in UTC).
 /// <c>null</c> converts to reference and <see cref="Nullable{T}"/> types; values already assignable
 /// to the target are returned unchanged.
 /// </remarks>
 public static class ValueConverter
 {
-    private static readonly string[] IsoFormats =
-    [
-        "yyyy-MM-dd",
-        "yyyy-MM-dd'T'HH:mmK",
-        "yyyy-MM-dd'T'HH:mm:ssK",
-        "yyyy-MM-dd'T'HH:mm:ss.FFFFFFFK"
-    ];
-
     /// <summary>
     /// Tries to convert <paramref name="value"/> to <paramref name="targetType"/>.
     /// </summary>
+    /// <param name="value">The value.</param>
+    /// <param name="targetType">The type to convert to.</param>
+    /// <param name="temporalRules">How date-times are read (the catalog's, or <see cref="TemporalRules.Utc"/>).</param>
+    /// <param name="result">The converted value.</param>
     /// <returns><c>true</c> if the value was converted; otherwise <c>false</c>.</returns>
-    public static bool TryConvert(object? value, Type targetType, out object? result)
+    /// <exception cref="InvalidTemporalValueException">The value is a wall-clock time that doesn't exist in its zone.</exception>
+    public static bool TryConvert(object? value, Type targetType, TemporalRules temporalRules, out object? result)
     {
         ArgumentNullException.ThrowIfNull(targetType);
+        ArgumentNullException.ThrowIfNull(temporalRules);
 
         result = null;
         var underlying = Nullable.GetUnderlyingType(targetType);
@@ -51,7 +50,7 @@ public static class ValueConverter
 
         if (target == typeof(DateTimeOffset) || target == typeof(DateTime))
         {
-            if (!TryConvertToDateTimeOffset(value, out var instant))
+            if (!temporalRules.TryGetInstant(value, out var instant))
                 return false;
 
             result = target == typeof(DateTime) ? (object)instant.UtcDateTime : instant;
@@ -68,9 +67,10 @@ public static class ValueConverter
     /// Tries to convert <paramref name="value"/> to <typeparamref name="T"/>.
     /// </summary>
     /// <returns><c>true</c> if the value was converted; otherwise <c>false</c>.</returns>
-    public static bool TryConvert<T>(object? value, [MaybeNullWhen(false)] out T result)
+    /// <exception cref="InvalidTemporalValueException">The value is a wall-clock time that doesn't exist in its zone.</exception>
+    public static bool TryConvert<T>(object? value, TemporalRules temporalRules, [MaybeNullWhen(false)] out T result)
     {
-        if (TryConvert(value, typeof(T), out var converted))
+        if (TryConvert(value, typeof(T), temporalRules, out var converted))
         {
             result = (T)converted!;
             return true;
@@ -82,31 +82,6 @@ public static class ValueConverter
 
     internal static bool IsNumber(object value) =>
         value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal;
-
-    internal static bool TryConvertToDateTimeOffset(object value, out DateTimeOffset result)
-    {
-        switch (value)
-        {
-            case DateTimeOffset dateTimeOffset:
-                result = dateTimeOffset.ToUniversalTime();
-                return true;
-            case DateTime dateTime:
-                result = dateTime.Kind == DateTimeKind.Local
-                    ? new DateTimeOffset(dateTime.ToUniversalTime())
-                    : new DateTimeOffset(DateTime.SpecifyKind(dateTime, DateTimeKind.Utc));
-                return true;
-            case string text:
-                return DateTimeOffset.TryParseExact(
-                    text,
-                    IsoFormats,
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                    out result);
-            default:
-                result = default;
-                return false;
-        }
-    }
 
     private static bool IsNumericType(Type type) =>
         type == typeof(sbyte) || type == typeof(byte) || type == typeof(short) || type == typeof(ushort) ||

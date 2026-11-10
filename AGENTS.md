@@ -180,14 +180,25 @@ environment `nuget`) and attaches the packages to the GitHub release.
   the wrong type → `Errors`; a `$path` whose field can't be read as the parameter → `Warnings`; untyped actions aren't
   checked. Every problem comes with a JSONPath location.
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
-  in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now. UTC only.
-  `ReferencePath` values convert via `ValueConverter` (`DateTime`/`DateTimeOffset`, or strict ISO 8601 strings).
+  in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now; `ScheduledFor` is UTC.
+  `ReferencePath` values are read by the catalog's `TemporalRules` (`DateTime`/`DateTimeOffset`, or strict ISO 8601
+  strings); an impossible wall-clock time fails the action, naming the reference path.
   RuleLoom computes `ScheduledFor`; dispatching scheduled work is the consumer's responsibility.
 - **Value comparison**: `ValueComparer` (`AreEqual`, `TryCompare`) and `ValueConverter` (`TryConvert`) in
   `RuleLoom.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
-  types, enums by name or number, dates as UTC instants incl. strict ISO 8601 strings (two ISO strings compare as instants; ISO vs other text is
+  types, enums by name or number, date-times as moments incl. strict ISO 8601 strings (two ISO strings compare as moments; ISO vs other text is
   incomparable), other strings ordinal, JSON objects/arrays by content via `DeepEquals`; `changed` uses `AreEqual` too). Operators
-  and other features must use them rather than `object.Equals` or ad-hoc parsing.
+  and other features must use them rather than `object.Equals` or ad-hoc parsing. Both take a `TemporalRules`.
+- **Time** (ADR 0004, spec `2026-10-28-time-semantics-design.md`): `TemporalRules` (public, sealed, immutable) is the only
+  place that decides time-zone questions; never add UTC assumptions elsewhere. A catalog has one
+  (`CatalogBuilder.UseTimeZone("Europe/Sofia")`, IANA id, UTC by default, unknown id fails the build; `Catalog.TemporalRules`,
+  `"timeZone"` in the document; a stored document's zone is ignored); `EvaluationContext.TemporalRules` is the catalog's
+  (UTC without one), and `OperatorContext.AreEqual`/`TryCompare`, `GetParameterAsync`/`GetParametersAsync` (JSON binding
+  with temporal converters) and schedules use it; `GetParameter<T>` without a context reads UTC. An offset wins; no offset
+  (`Unspecified`, ISO text) is wall-clock time in the zone: skipped → `InvalidTemporalValueException` (named path or
+  parameter; fails only that rule/action), repeated → the earlier occurrence; `Local` is the machine zone (skipped
+  rejected, repeated as .NET converts). Date-only text is the start of its day in the zone until dates become calendar
+  days (#136).
 - **Schemas** (`RuleLoom.Schemas`): `class XSchema : EventSchema<TDto>` configures `Event(name)` (required),
   `Field(o => o.A.B)` (`Label`/`Description`/`Ignore`) and `Context(name)` (a relation: `ReferencedBy(o => o.Id)` or
   `o => new { o.A, o.B }`; `LoadedBy(provider)`); `Build(options)`

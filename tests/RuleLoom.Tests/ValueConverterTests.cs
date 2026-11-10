@@ -32,7 +32,7 @@ public class ValueConverterTests
     [MemberData(nameof(Convertible))]
     public void TryConvert_ConvertibleValue_ReturnsConvertedValue(object? value, Type target, object? expected)
     {
-        Assert.True(ValueConverter.TryConvert(value, target, out var result));
+        Assert.True(ValueConverter.TryConvert(value, target, TemporalRules.Utc, out var result));
         Assert.Equal(expected, result);
     }
 
@@ -61,7 +61,7 @@ public class ValueConverterTests
     [MemberData(nameof(NotConvertible))]
     public void TryConvert_UnsupportedValue_ReturnsFalse(object? value, Type target)
     {
-        Assert.False(ValueConverter.TryConvert(value, target, out _));
+        Assert.False(ValueConverter.TryConvert(value, target, TemporalRules.Utc, out _));
     }
 
     [Theory]
@@ -72,7 +72,7 @@ public class ValueConverterTests
     [InlineData("2026-05-01", 0, 0)]
     public void TryConvert_IsoString_ReturnsUtcDateTimeOffset(string text, int hour, int minute)
     {
-        Assert.True(ValueConverter.TryConvert<DateTimeOffset>(text, out var result));
+        Assert.True(ValueConverter.TryConvert<DateTimeOffset>(text, TemporalRules.Utc, out var result));
 
         Assert.Equal(TimeSpan.Zero, result.Offset);
         Assert.Equal(new DateTime(2026, 5, 1), result.UtcDateTime.Date);
@@ -83,7 +83,7 @@ public class ValueConverterTests
     [Fact]
     public void TryConvert_IsoStringToDateTime_ReturnsUtcKind()
     {
-        Assert.True(ValueConverter.TryConvert<DateTime>("2026-05-01T14:00:00+02:00", out var result));
+        Assert.True(ValueConverter.TryConvert<DateTime>("2026-05-01T14:00:00+02:00", TemporalRules.Utc, out var result));
 
         Assert.Equal(DateTimeKind.Utc, result.Kind);
         Assert.Equal(new DateTime(2026, 5, 1, 12, 0, 0, DateTimeKind.Utc), result);
@@ -94,7 +94,7 @@ public class ValueConverterTests
     {
         var source = new DateTimeOffset(2026, 5, 1, 14, 0, 0, TimeSpan.FromHours(2));
 
-        Assert.True(ValueConverter.TryConvert<DateTime>(source, out var result));
+        Assert.True(ValueConverter.TryConvert<DateTime>(source, TemporalRules.Utc, out var result));
 
         Assert.Equal(source.UtcDateTime, result);
         Assert.Equal(DateTimeKind.Utc, result.Kind);
@@ -103,6 +103,6 @@ public class ValueConverterTests
     [Fact]
     public void TryConvert_NullTargetType_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => ValueConverter.TryConvert(1, null!, out _));
+        Assert.Throws<ArgumentNullException>(() => ValueConverter.TryConvert(1, null!, TemporalRules.Utc, out _));
     }
 }
