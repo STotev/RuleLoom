@@ -15,14 +15,18 @@ public enum PathRoot
     Previous,
 
     /// <summary>A context: <c>@customer.Tier</c>.</summary>
-    Context
+    Context,
+
+    /// <summary>The event's envelope (<see cref="RuleEvent"/>): <c>$event.OccurredAt</c>, <c>$event.Metadata.region</c>.</summary>
+    Event
 }
 
 /// <summary>
 /// A parsed rule path: where it starts (<see cref="Root"/>, and <see cref="Context"/> for context paths) and the property
 /// it reads from there. The grammar: <c>Address.City</c> reads the current state; <c>$current.</c> and
 /// <c>$previous.</c> (ignoring case) pick a state, alone they mean the whole state; <c>@name.</c> reads a context
-/// (contexts have no state, so not after <c>$current</c>/<c>$previous</c>); other <c>$</c> names are reserved, and
+/// (contexts have no state, so not after <c>$current</c>/<c>$previous</c>); <c>$event.</c> reads the event's envelope
+/// (no state either); other <c>$</c> names are reserved, and
 /// <c>#</c> is reserved for functions. Parse a <see cref="Condition.PathOperand"/>'s path with <see cref="Parse"/>.
 /// </summary>
 public sealed class RulePath : IEquatable<RulePath>
@@ -56,7 +60,7 @@ public sealed class RulePath : IEquatable<RulePath>
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="state"/> isn't <see cref="PathRoot.Current"/> or
     /// <see cref="PathRoot.Previous"/>.</exception>
-    /// <exception cref="InvalidOperationException">This is a context path: contexts have no state.</exception>
+    /// <exception cref="InvalidOperationException">This is a context or envelope path: they have no state.</exception>
     public RulePath InState(PathRoot state)
     {
         if (state is not (PathRoot.Current or PathRoot.Previous))
@@ -64,6 +68,9 @@ public sealed class RulePath : IEquatable<RulePath>
 
         if (Root == PathRoot.Context)
             throw new InvalidOperationException($"Context '@{Context}' has no current or previous state.");
+
+        if (Root == PathRoot.Event)
+            throw new InvalidOperationException("The event's envelope ($event) has no current or previous state.");
 
         return Root == state ? this : _otherState ??= new RulePath(state, null, Property);
     }
@@ -117,6 +124,7 @@ public sealed class RulePath : IEquatable<RulePath>
         {
             PathRoot.Context => $"@{Context}",
             PathRoot.Previous => "$previous",
+            PathRoot.Event => "$event",
             _ => Property.Length == 0 ? "$current" : null
         };
 
@@ -143,13 +151,21 @@ public sealed class RulePath : IEquatable<RulePath>
 
         PathRoot? root = first.Equals("$current", StringComparison.OrdinalIgnoreCase) ? PathRoot.Current
             : first.Equals("$previous", StringComparison.OrdinalIgnoreCase) ? PathRoot.Previous
+            : first.Equals("$event", StringComparison.OrdinalIgnoreCase) ? PathRoot.Event
             : null;
 
         if (root is null)
-            return (null, $"Unknown variable '{first}' in path '{path}'. Use $current or $previous.");
+            return (null, $"Unknown variable '{first}' in path '{path}'. Use $current, $previous or $event.");
 
-        return rest.StartsWith('@')
-            ? (null, $"Contexts have no current or previous state; use '{rest}' instead of '{path}'.")
+        if (root == PathRoot.Event)
+            return (new RulePath(PathRoot.Event, null, rest), null);
+
+        if (rest.StartsWith('@'))
+            return (null, $"Contexts have no current or previous state; use '{rest}' instead of '{path}'.");
+
+        var next = rest.Split('.')[0];
+        return next.Equals("$event", StringComparison.OrdinalIgnoreCase)
+            ? (null, $"The event's envelope has no current or previous state; use '{rest}' instead of '{path}'.")
             : (new RulePath(root.Value, null, rest), null);
     }
 }

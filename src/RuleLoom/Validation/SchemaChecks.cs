@@ -11,6 +11,10 @@ namespace RuleLoom.Validation;
 /// <param name="event">The schema of the rule's event.</param>
 internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
 {
+    // The envelope's fields ($event.), described from RuleEvent like any data type, so they follow its properties. The
+    // state has its own roots ($current, $previous). Metadata is a dictionary: its app-defined keys aren't checked.
+    private static readonly IReadOnlyList<FieldDefinition> EnvelopeFields = DescribeEnvelope();
+
     private readonly Dictionary<PathNode, FieldDefinition?> _resolved = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>The field a path points at, or <c>null</c> when it's wrong, invalid or can't be checked.</summary>
@@ -48,6 +52,13 @@ internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
 
             (fields, owner) = (context.Fields, $"'{name}'");
         }
+        else if (parsed.Root == PathRoot.Event)
+        {
+            if (parsed.Property.Length == 0)
+                return null;
+
+            (fields, owner) = (EnvelopeFields, "the event's envelope ($event)");
+        }
         else
         {
             if (parsed.Property.Length == 0)
@@ -79,6 +90,14 @@ internal sealed class SchemaPaths(Catalog catalog, EventSchemaDefinition @event)
                     return Report(problems, path, $"{prefix} is {FieldTypes.Describe(field.Type)} and has no fields ('{path.Text}').");
             }
         }
+    }
+
+    private static IReadOnlyList<FieldDefinition> DescribeEnvelope()
+    {
+        var envelope = new ParametersSchema<RuleEvent>();
+        envelope.Parameter(e => e.Current).Ignore();
+        envelope.Parameter(e => e.Previous).Ignore();
+        return envelope.Build().Fields;
     }
 
     private static FieldDefinition? Report(ValidationProblems problems, PathNode path, string message)

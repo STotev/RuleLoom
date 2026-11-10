@@ -109,14 +109,13 @@ public class EvaluationContextTests
 
     [Theory]
     [InlineData("$now")]
-    [InlineData("$event.Type")]
     [InlineData("$cur.Name")]
     public void Resolve_UnknownVariable_Throws(string path)
     {
         var context = new EvaluationContext(CurrentPerson, PreviousPerson);
 
         var ex = Assert.Throws<InvalidOperationException>(() => context.Resolve(path));
-        Assert.Contains("Use $current or $previous", ex.Message);
+        Assert.Contains("Use $current, $previous or $event", ex.Message);
     }
 
     [Theory]

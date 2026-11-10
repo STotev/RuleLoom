@@ -118,4 +118,13 @@ What conditions mean when a scheduled action is due (with a loader):
 
 ## Deviations
 
-None yet.
+Recorded for the envelope slice ([#138](https://github.com/STotev/RuleLoom/issues/138)):
+
+- **`ContextRequest.Event`** was added, so context providers can read the envelope (e.g. a tenant id in its metadata),
+  like actions and operators do through `EvaluationContext.Event`.
+- **`$event.EventType`** is readable too (the spec listed the other fields); an event run through the state overloads
+  has only its type.
+- **`occurredAt` must state its offset** in `RuleEvent.Parse`: an event's time is a moment, so it never depends on a
+  time zone.
+- **`$current.$event…`** is rejected like `$previous.$event…`; `$event` alone resolves to the `RuleEvent`; without a
+  `RuleEvent` (an `EvaluationContext` from state alone), `$event.` paths resolve to `null`.

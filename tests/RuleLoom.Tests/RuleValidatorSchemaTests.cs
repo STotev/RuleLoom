@@ -58,7 +58,7 @@ public class RuleValidatorSchemaTests
     [InlineData("@customer.missing", "'missing' is not a field of '@customer'.")]
     [InlineData("@watchers.tier", "'@watchers' is a collection; paths can't go into its items ('@watchers.tier').")]
     [InlineData("$previous.@customer.tier", "Contexts have no current or previous state; use '@customer.tier' instead of '$previous.@customer.tier'.")]
-    [InlineData("$state.Total", "Unknown variable '$state' in path '$state.Total'. Use $current or $previous.")]
+    [InlineData("$state.Total", "Unknown variable '$state' in path '$state.Total'. Use $current, $previous or $event.")]
     [InlineData("#now", "Paths starting with '#' are reserved for functions: '#now'.")]
     public void Validate_WrongPaths_AreErrorsAtTheirLocation(string path, string message)
     {

@@ -279,6 +279,7 @@ A `path` names a property, with `.` for nested properties (`"Address.City"`). Na
 | `"$current.Price"` | the current state (explicit) |
 | `"$previous.Price"` | the previous state (`null` if there is none) |
 | `"@customer.Tier"` | a [context](#contexts): related data loaded by a provider you register |
+| `"$event.OccurredAt"`, `"$event.Metadata.region"` | the event's [envelope](#the-event-envelope) |
 
 Other names starting with `$` are reserved and rejected, and so are paths starting with `#` (reserved for functions). Without the `$`, `current` and `previous` are ordinary
 property names, so a property called `Previous` is simply `"Previous.X"`. `changed` compares current with previous
@@ -288,7 +289,7 @@ Paths follow the **runtime** value: a property declared as `object`, an interfac
 whatever it holds, including JSON.
 
 Custom operators read paths with `RulePath` rather than taking the string apart:
-`RulePath.Parse(ctx.GetPath(0))` gives its `Root` (`Current`, `Previous` or `Context`), the `Context` name and the
+`RulePath.Parse(ctx.GetPath(0))` gives its `Root` (`Current`, `Previous`, `Context` or `Event`), the `Context` name and the
 `Property`; `path.InState(PathRoot.Previous)` is the same property in the previous state, and `ctx.Resolve(path)` reads
 it. Invalid paths (`#…`, a bare `@`, unknown `$` variables, `$previous.@x`) are rejected by the parser, by
 `RuleValidator` and, in rules built in code, by the engine, which fails the rule.
@@ -305,6 +306,34 @@ public void ValidateOperands(OperandValidationContext context)
         context.Warning("'between' compares numbers.");
 }
 ```
+
+## The Event Envelope
+
+Besides its state, an event can carry what the app knows about it: an id, its subject, its source, when it happened
+and app-defined metadata (e.g. a tenant id). Run rules on a `RuleEvent` to pass them:
+
+```csharp
+var placed = new RuleEvent("OrderPlaced", order)
+{
+    EventId = message.Id,
+    Subject = "order-1001",
+    OccurredAt = message.Timestamp,
+    Metadata = new Dictionary<string, object?> { ["tenantId"] = "acme-shop", ["region"] = "EU" }
+};
+
+var result = await engine.ExecuteAsync(placed, rules);
+```
+
+Rules read the envelope with `$event.` paths: `$event.EventType`, `$event.EventId`, `$event.Subject`, `$event.Source`,
+`$event.OccurredAt` (e.g. as a schedule's `referencePath`) and `$event.Metadata.<key>` (keys ignore case). Actions and
+operators get it from `context.Event`, and context providers from `request.Event`. The envelope has no previous state,
+so `$previous.$event…` is invalid and `changed` can't be used on it. `RuleValidator` checks the envelope's fields; it
+can't check metadata keys, which the app defines.
+
+`ExecuteAsync(eventType, current, previous, rules)` is the same as an event without envelope data. `ToJson()` and
+`RuleEvent.Parse(json)` write and read an event (for a queue or a job store), with the previous state as `previous` or,
+when it was built from changes, as `changes`; `occurredAt` must state its offset. Deduplicating by `EventId` is up to
+your app or transport.
 
 ## Contexts
 

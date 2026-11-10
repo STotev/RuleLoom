@@ -24,6 +24,9 @@ public sealed record ContextRequest(string Name, string EventType, object? Curre
     /// </summary>
     public object? Reference { get; init; }
 
+    /// <summary>The event being processed, with its envelope (e.g. a tenant id in its metadata); <c>null</c> without one.</summary>
+    public RuleEvent? Event { get; init; }
+
     /// <summary>How date-times are read: the catalog's time zone (<see cref="GetReference{T}"/> converts with it).</summary>
     public TemporalRules TemporalRules { get; init; } = TemporalRules.Utc;
 
