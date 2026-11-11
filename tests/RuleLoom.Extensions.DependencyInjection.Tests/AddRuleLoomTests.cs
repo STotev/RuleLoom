@@ -2,8 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
+using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
+using RuleLoom.Abstractions.Scheduling;
 using RuleLoom.Engine;
 using RuleLoom.Schemas;
 using RuleLoom.Validation;
@@ -50,6 +52,30 @@ public class AddRuleLoomTests
         using var scope = provider.CreateScope();
 
         Assert.Equal(["send-email", "audit"], scope.ServiceProvider.GetRequiredService<Catalog>().Actions.Select(a => a.Name));
+    }
+
+    [Fact]
+    public async Task Configure_SetsTheEnginesOptions()
+    {
+        var now = new DateTimeOffset(2026, 10, 6, 12, 0, 0, TimeSpan.Zero);
+        var services = new ServiceCollection()
+            .AddSingleton<TimeProvider>(new FixedTimeProvider(now))
+            .AddRuleLoom(rules => rules.AddCatalog(c => c.AddAction<AuditAction>()))
+            .AddRuleLoom(rules => rules.Configure(o => o.SkipOverdueActions = true));
+        var rule = new RuleDefinition
+        {
+            Id = "audit-later", Name = "Audit later", EventType = "UserCreated",
+            Condition = new OperatorCondition { Operator = "eq", Operands = [new ValueOperand { Value = 1 }, new ValueOperand { Value = 1 }] },
+            Actions = [new ActionDefinition { Action = "audit", Schedule = new ScheduleMetadata { Mode = ScheduleMode.Delay, Amount = 1, Unit = ScheduleUnit.Hours } }]
+        };
+
+        await using var provider = await StartAsync(services);
+        using var scope = provider.CreateScope();
+        var result = await scope.ServiceProvider.GetRequiredService<RuleEngine>().ExecuteScheduledAsync(
+            new ScheduledAction("audit-later", 0, "audit", now.AddHours(-1), null), new RuleEvent("UserCreated", new { }), [rule],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("Action 'audit' skipped: overdue by 1 hour (grace period 0 seconds).", result.Message);
     }
 
     [Fact]

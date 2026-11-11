@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using RuleLoom.Engine;
 using RuleLoom.Schemas;
 
 namespace RuleLoom.Extensions.DependencyInjection;
@@ -11,11 +12,13 @@ namespace RuleLoom.Extensions.DependencyInjection;
 public sealed class RuleLoomBuilder
 {
     private readonly CatalogBuilder _catalog;
+    private readonly RuleEngineOptions _engineOptions;
 
-    internal RuleLoomBuilder(IServiceCollection services, CatalogBuilder catalog)
+    internal RuleLoomBuilder(IServiceCollection services, CatalogBuilder catalog, RuleEngineOptions engineOptions)
     {
         Services = services;
         _catalog = catalog;
+        _engineOptions = engineOptions;
     }
 
     /// <summary>
@@ -31,6 +34,17 @@ public sealed class RuleLoomBuilder
     {
         ArgumentNullException.ThrowIfNull(configure);
         configure(_catalog);
+        return this;
+    }
+
+    /// <summary>
+    /// Configures how the engine runs rules, e.g. skipping overdue actions. Every call (also from other
+    /// <c>AddRuleLoom</c> calls) configures the same options; engines read them when they're created.
+    /// </summary>
+    public RuleLoomBuilder Configure(Action<RuleEngineOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(_engineOptions);
         return this;
     }
 

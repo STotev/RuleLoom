@@ -185,7 +185,7 @@ public class RuleEventTests
     [Fact]
     public async Task ExecuteAsync_ScheduleFromTheEventsTime()
     {
-        var engine = new TestCatalog().Action("record", new RecordingAction()).Engine();
+        var engine = new TestCatalog().Action("record", new RecordingAction()).Engine(new FixedTimeProvider(NineInSofia));
         var rule = new RuleDefinition
         {
             Id = "r", Name = "R", EventType = "OrderPlaced", Condition = Op("eq", Value(1), Value(1)),

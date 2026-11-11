@@ -22,9 +22,11 @@ public class RuleEngineIntegrationTests
     {
         _logMessages = [];
 
+        // Before the due times the tests schedule for (October 2026).
         _engine = new RuleEngine(
             new CatalogBuilder().AddAction<TestLogAction>().Build(),
-            new DirectActionFactory([new TestLogAction(_logMessages)]));
+            new DirectActionFactory([new TestLogAction(_logMessages)]),
+            timeProvider: new FixedTimeProvider(new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero)));
     }
 
     [Fact]
@@ -1126,6 +1128,11 @@ public class RuleEngineIntegrationTests
     {
         Draft,
         Active
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }
 
