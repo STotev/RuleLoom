@@ -72,6 +72,14 @@ public sealed class TemporalRules
         }
     }
 
+    /// <summary>
+    /// <paramref name="instant"/> moved by <paramref name="days"/> calendar days in <see cref="TimeZone"/>, keeping its
+    /// wall-clock time across daylight-saving changes (one day before 09:00 is 09:00). A time the clocks skip that day
+    /// moves forward by the gap; one that occurs twice is the earlier occurrence.
+    /// </summary>
+    public DateTimeOffset AddDays(DateTimeOffset instant, int days) =>
+        Lenient(TimeZoneInfo.ConvertTime(instant, TimeZone).DateTime.AddDays(days));
+
     private bool TryParse(string text, out DateTimeOffset instant)
     {
         instant = default;
