@@ -565,10 +565,16 @@ the key is `null`. `ToJson()` and `ScheduledAction.Parse(json)` store it, e.g. i
 |---|---|
 | `mode` | `Immediate` (default, runs now), `Delay` (reference + amount), `Advance` (reference − amount) |
 | `amount` | Whole number; required for `Delay` / `Advance` |
-| `unit` | `Seconds`, `Minutes`, `Hours`, `Days`; required for `Delay` / `Advance` |
-| `referencePath` | Optional path to a `DateTime`, `DateTimeOffset` or ISO 8601 string on the object; without it, the reference is "now" |
+| `unit` | `Seconds`, `Minutes`, `Hours` (elapsed time), `Days` (calendar days); required for `Delay` / `Advance` |
+| `referencePath` | Optional path to a `DateTime`, `DateTimeOffset`, `DateOnly` or ISO 8601 string on the object; without it, the reference is "now" |
 
 Mode and unit names ignore case. A reference that's missing, `null` or not a date makes the action `Failed`.
+
+`Days` are calendar days in the catalog's [time zone](#time-zones): a reminder one day before 09:00 is at 09:00, even
+across a daylight-saving change (24 `Hours` would be 08:00 or 10:00 there). If the clocks skip that time on the day, the
+action moves forward by the gap; if the time occurs twice, it's the earlier one. A date as the reference
+(`"2026-05-01"`, a `DateOnly`) starts at midnight in the time zone, so `Advance 1 Days` from a due date is midnight the
+day before.
 
 ## Integration with RuleEngine
 
