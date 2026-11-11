@@ -477,8 +477,10 @@ so a value matches when it means the same thing:
 | Any number (`decimal`, `int`, `double`, …) | Number | Equal by value: `100` matches `100m`, `5.0` matches `5` |
 | Enum | String | Same name, ignoring case: `"active"` matches `Status.Active`; `[Flags]` combinations like `"Read, Write"` work |
 | Enum | Number | Same underlying value: `1` matches `Status.Active` (= 1) |
-| `DateTime` / `DateTimeOffset` | String | Same moment, given as **ISO 8601**: `"2026-05-01T12:00:00Z"`, `"2026-05-01T14:00:00+02:00"`; no offset means wall-clock time in the catalog's [time zone](#time-zones); `"2026-05-01"` means the start of that day there |
-| `string` (ISO 8601 date) | ISO 8601 string | Same moment: `"2026-05-01T14:00:00+02:00"` matches `"2026-05-01T12:00:00Z"`; with a UTC catalog, `"2026-05-01"` matches `"2026-05-01T00:00:00Z"`. Typical for JSON state |
+| `DateTime` / `DateTimeOffset` | String | Same moment, given as **ISO 8601**: `"2026-05-01T12:00:00Z"`, `"2026-05-01T14:00:00+02:00"`; no offset means wall-clock time in the catalog's [time zone](#time-zones) |
+| `DateTime` / `DateTimeOffset` | Date (`"2026-05-01"`) | Same **calendar day** in the catalog's time zone: placed at 18:00 on 1 May matches `"2026-05-01"`; `gt "2026-05-01"` means from 2 May |
+| `DateOnly`, `string` (`"2026-05-01"`) | Date | Same day; ordered by day |
+| `string` (ISO 8601 date-time) | ISO 8601 string | Same moment: `"2026-05-01T14:00:00+02:00"` matches `"2026-05-01T12:00:00Z"`; with a date, by calendar day as above. Typical for JSON state |
 | `string` (ISO 8601 date) | Other string | Never matches, and can't be ordered |
 | `string` | String | Exactly equal (case-sensitive) |
 | JSON object or array | JSON object or array | Same content, ignoring property order (`changed` on an object path compares content) |

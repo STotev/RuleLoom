@@ -202,7 +202,8 @@ environment `nuget`) and attaches the packages to the GitHub release.
   `RuleEvent.Subject`; computed only when an action is scheduled. Statuses: `Executed`, `Scheduled`, `Skipped`, `Failed`.
 - **Value comparison**: `ValueComparer` (`AreEqual`, `TryCompare`) and `ValueConverter` (`TryConvert`) in
   `RuleLoom.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
-  types, enums by name or number, date-times as moments incl. strict ISO 8601 strings (two ISO strings compare as moments; ISO vs other text is
+  types, enums by name or number, dates (`DateOnly`, `yyyy-MM-dd` text) by day, date-times as moments incl. strict ISO
+  8601 strings, a date with a date-time by the date-time's calendar date in the time zone (ISO vs other text is
   incomparable), other strings ordinal, JSON objects/arrays by content via `DeepEquals`; `changed` uses `AreEqual` too). Operators
   and other features must use them rather than `object.Equals` or ad-hoc parsing. Both take a `TemporalRules`.
 - **Time** (ADR 0004, spec `2026-10-28-time-semantics-design.md`): `TemporalRules` (public, sealed, immutable) is the only
@@ -213,8 +214,11 @@ environment `nuget`) and attaches the packages to the GitHub release.
   with temporal converters) and schedules use it; `GetParameter<T>` without a context reads UTC. An offset wins; no offset
   (`Unspecified`, ISO text) is wall-clock time in the zone: skipped → `InvalidTemporalValueException` (named path or
   parameter; fails only that rule/action), repeated → the earlier occurrence; `Local` is the machine zone (skipped
-  rejected, repeated as .NET converts). Date-only text is the start of its day in the zone until dates become calendar
-  days (#136).
+  rejected, repeated as .NET converts). Dates are calendar days (`TryGetDate`: `DateOnly` and date-only text only;
+  `GetDate(instant)`: its day in the zone; `GetStartOfDay(date)`: lenient past a skipped midnight, and what
+  `TryGetInstant`/`TryConvert<DateTimeOffset>` give for a date when a moment is asked for). The validator reports
+  date-time literals compared with date/date-time fields and `DateTime` parameter values that the clocks skip in the
+  catalog's zone (`OperandValidationContext.TemporalRules`).
 - **Schemas** (`RuleLoom.Schemas`): `class XSchema : EventSchema<TDto>` configures `Event(name)` (required),
   `Field(o => o.A.B)` (`Label`/`Description`/`Ignore`) and `Context(name)` (a relation: `ReferencedBy(o => o.Id)` or
   `o => new { o.A, o.B }`; `LoadedBy(provider)`), and `Subject(o => o.Id)` (or composite) with optional
