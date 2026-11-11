@@ -109,8 +109,9 @@ environment `nuget`) and attaches the packages to the GitHub release.
     → per action (ActionResult stamped with ActionName and ActionIndex by the engine):
         action condition throws           → Failed (only this action; later actions still run)
         action condition false            → Skipped
-        Schedule with Mode != Immediate   → ScheduleCalculator → Scheduled (executor NOT called; listed in
-                                            ScheduledActions as a keyed reference) / calculation error → Failed
+        Schedule with Mode != Immediate   → ScheduleCalculator → due ≥ now: Scheduled (executor NOT called; listed in
+                                            ScheduledActions as a keyed reference) / due < now: runs now, or
+                                            Skipped when overdue (RuleEngineOptions) / calculation error → Failed
         action name not in the catalog    → Failed
         otherwise                         → IActionFactory.Create(registration).ExecuteAsync → its ActionResult
                                             (factory or action exception / null result → Failed)
@@ -118,6 +119,7 @@ environment `nuget`) and attaches the packages to the GitHub release.
 
 ExecuteScheduledAsync(ScheduledAction, storedEvent, rules) → ActionResult (stamped with ActionName/ActionIndex)
   → rule by RuleId (and event type) missing → Skipped     action at ActionIndex renamed or unscheduled → Skipped
+  → overdue (now − ScheduledFor > OverdueGracePeriod, with SkipOverdueActions) → Skipped
   → the due context: with Subject(...).LoadedBy(p) the provider loads the subject (reference = identity resolved on the
     stored event; null → Skipped; load error or unregistered loader → Failed): $current = subject now, $previous =
     the stored event's previous, $event = the stored envelope; without a loader, the stored event
@@ -210,6 +212,11 @@ ExecuteScheduledAsync(ScheduledAction, storedEvent, rules) → ActionResult (sta
   escaped), `null` without a subject. The subject (`SubjectIdentity`) is the identity the event's schema declares
   (resolved on the current state; composite `a=1;b=2` in declared order, invariant values, `null` if a part is), else
   `RuleEvent.Subject`; computed only when an action is scheduled. Statuses: `Executed`, `Scheduled`, `Skipped`, `Failed`.
+  A due time already in the past runs the action immediately. `RuleEngineOptions` (engine constructor, or
+  `AddRuleLoom(r => r.Configure(o => ...))`, one shared instance kept with the catalog builder; read when an engine is
+  created): `SkipOverdueActions` (off) skips actions later than `OverdueGracePeriod` (0, not negative), both at
+  processing and in `ExecuteScheduledAsync` ("overdue by 3 hours (grace period 30 minutes)"). The validator warns about
+  `Advance` without a `ReferencePath` and rejects `amount` ≤ 0.
 - **Value comparison**: `ValueComparer` (`AreEqual`, `TryCompare`) and `ValueConverter` (`TryConvert`) in
   `RuleLoom.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
   types, enums by name or number, date-times as moments incl. strict ISO 8601 strings (two ISO strings compare as moments; ISO vs other text is
