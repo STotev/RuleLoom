@@ -139,3 +139,11 @@ Recorded for slice 1 ([#135](https://github.com/STotev/RuleLoom/issues/135)):
 - **Naming the source**: `InvalidTemporalValueException.Path` is set for values read from a rule path (operands, `changed`,
   schedule reference paths, `$path` parameters); a literal parameter is named in the message ("Parameter 'sendAt' of
   action 'remind' is …").
+
+Recorded for slice 3 ([#137](https://github.com/STotev/RuleLoom/issues/137)):
+
+- **`TemporalRules.AddDays(instant, days)`** is public, like the other policy methods: the wall-clock time in the time
+  zone moved by calendar days, resolved leniently.
+- **`DateOnly` references** start their day through `TryGetInstant`, which handles `DateOnly` from slice 2 (#136);
+  date-only text already did.
+- **A UTC catalog is unchanged**: UTC has no daylight saving, so `Days` stay 24 hours there.

@@ -15,13 +15,23 @@ internal static class ScheduleCalculator
         ArgumentNullException.ThrowIfNull(context);
 
         var referenceTime = ResolveReferenceTime(schedule, context, utcNow.ToUniversalTime());
-        var offset = ComputeOffset(schedule);
+        var (amount, unit) = Offset(schedule);
 
-        return schedule.Mode switch
+        var signed = schedule.Mode switch
         {
-            ScheduleMode.Delay => referenceTime + offset,
-            ScheduleMode.Advance => referenceTime - offset,
+            ScheduleMode.Delay => amount,
+            ScheduleMode.Advance => -amount,
             _ => throw new ArgumentException($"Cannot calculate schedule for mode '{schedule.Mode}'.", nameof(schedule))
+        };
+
+        // Days are calendar days in the catalog's time zone (the wall-clock time is kept); other units are elapsed time.
+        return unit switch
+        {
+            ScheduleUnit.Seconds => referenceTime.AddSeconds(signed),
+            ScheduleUnit.Minutes => referenceTime.AddMinutes(signed),
+            ScheduleUnit.Hours => referenceTime.AddHours(signed),
+            ScheduleUnit.Days => context.TemporalRules.AddDays(referenceTime, signed),
+            _ => throw new ArgumentException($"Unknown schedule unit '{unit}'.", nameof(schedule))
         };
     }
 
@@ -63,21 +73,13 @@ internal static class ScheduleCalculator
               "DateTimeOffset or ISO 8601 string is required.");
     }
 
-    private static TimeSpan ComputeOffset(ScheduleMetadata schedule)
+    private static (int Amount, ScheduleUnit Unit) Offset(ScheduleMetadata schedule)
     {
         var amount = schedule.Amount ?? throw new InvalidOperationException(
             $"Schedule.Amount is required for '{schedule.Mode}' mode.");
 
-        if (schedule.Unit is null)
-            throw new InvalidOperationException($"Schedule.Unit is required for '{schedule.Mode}' mode.");
+        var unit = schedule.Unit ?? throw new InvalidOperationException($"Schedule.Unit is required for '{schedule.Mode}' mode.");
 
-        return schedule.Unit.Value switch
-        {
-            ScheduleUnit.Seconds => TimeSpan.FromSeconds(amount),
-            ScheduleUnit.Minutes => TimeSpan.FromMinutes(amount),
-            ScheduleUnit.Hours => TimeSpan.FromHours(amount),
-            ScheduleUnit.Days => TimeSpan.FromDays(amount),
-            _ => throw new ArgumentException($"Unknown schedule unit '{schedule.Unit}'.", nameof(schedule))
-        };
+        return (amount, unit);
     }
 }
