@@ -43,7 +43,7 @@ public sealed class RuleValidator(Catalog catalog)
         checks.Add(new ParameterCheck(_catalog, schemaPaths));
 
         // Last: operators validate their operands after the generic checks have reported the operands' paths.
-        checks.Add(new OperatorCheck(schemaPaths));
+        checks.Add(new OperatorCheck(schemaPaths, _catalog.TemporalRules));
 
         return new RuleWalker(_catalog, checks).Walk(rule);
     }
