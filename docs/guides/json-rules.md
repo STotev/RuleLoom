@@ -577,6 +577,27 @@ the checks and the action read the subject **as it is now**, compared with the e
 Without a loader, the checks see the stored event as it was. `RuleValidator` checks that the paths a scheduled action
 reads are fields of the loaded subject too.
 
+### Due times in the past
+
+A due time that has already passed (an event that arrives late, a reminder one hour before a payment due in thirty
+minutes) runs the action immediately: its status is `Executed`, not `Scheduled`. `Advance` without a `referencePath` is
+always in the past, so the validator warns about it.
+
+Schedulers don't fire exactly on time, and some can be down for a while. To skip actions that are too late to be
+useful, turn on `SkipOverdueActions` with a grace period that fits your scheduler (e.g. how often a polling job runs):
+
+```csharp
+var engine = new RuleEngine(catalog, actions, contexts, options: new RuleEngineOptions
+{
+    SkipOverdueActions = true,
+    OverdueGracePeriod = TimeSpan.FromMinutes(30)
+});
+// with DI: services.AddRuleLoom(r => r.Configure(o => { o.SkipOverdueActions = true; o.OverdueGracePeriod = TimeSpan.FromMinutes(30); }));
+```
+
+An action later than the grace period is then `Skipped` ("overdue by 3 hours (grace period 30 minutes)"), both when the
+event is processed and when `ExecuteScheduledAsync` runs it late.
+
 ```json
 { "action": "send-email", "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "DueAt" } }
 ```

@@ -20,17 +20,22 @@ namespace RuleLoom.Engine;
 /// <param name="contextProviders">Creates context providers; by default a <see cref="DirectContextProviderFactory"/>
 /// without instances.</param>
 /// <param name="timeProvider">The clock schedules are computed with; the system clock by default.</param>
+/// <param name="options">How rules are run (e.g. skipping overdue actions); the defaults when not given. Read when the
+/// engine is created.</param>
 public sealed class RuleEngine(
     Catalog catalog,
     IActionFactory? actions = null,
     IContextProviderFactory? contextProviders = null,
-    TimeProvider? timeProvider = null)
+    TimeProvider? timeProvider = null,
+    RuleEngineOptions? options = null)
 {
     private readonly Catalog _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
     private readonly ConditionEvaluator _conditionEvaluator = new(catalog);
     private readonly IActionFactory _actionFactory = actions ?? new DirectActionFactory();
     private readonly IContextProviderFactory _contextProviders = contextProviders ?? new DirectContextProviderFactory();
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly bool _skipOverdueActions = options?.SkipOverdueActions ?? false;
+    private readonly TimeSpan _overdueGracePeriod = options?.OverdueGracePeriod ?? TimeSpan.Zero;
 
     /// <summary>
     /// Evaluates every rule for <paramref name="eventType"/> against the current and previous state and processes
@@ -148,7 +153,8 @@ public sealed class RuleEngine(
     /// <param name="rules">The app's current rules, as for <see cref="ExecuteAsync(RuleEvent, IEnumerable{RuleDefinition}, CancellationToken)"/>.</param>
     /// <param name="cancellationToken">Cancels loading and running.</param>
     /// <returns><see cref="ActionExecutionStatus.Executed"/>; <see cref="ActionExecutionStatus.Skipped"/> with the reason
-    /// (the rule is gone or changed, a condition no longer holds, the subject no longer exists); or
+    /// (the rule is gone or changed, it's overdue and <see cref="RuleEngineOptions.SkipOverdueActions"/> is on, a
+    /// condition no longer holds, the subject no longer exists); or
     /// <see cref="ActionExecutionStatus.Failed"/>. Failures are reported in the result, not thrown.</returns>
     /// <exception cref="OperationCanceledException">Cancellation was requested.</exception>
     public async Task<ActionResult> ExecuteScheduledAsync(
@@ -184,6 +190,9 @@ public sealed class RuleEngine(
                 $"Rule '{rule.Id}' no longer schedules action {scheduled.ActionIndex} ('{scheduled.ActionName}'): its actions changed.");
         }
 
+        if (Overdue(action.Action, scheduled.ScheduledFor, _timeProvider.GetUtcNow()) is { } overdue)
+            return overdue;
+
         EvaluationContext? context;
         try
         {
@@ -210,6 +219,29 @@ public sealed class RuleEngine(
         }
 
         return CheckCondition(action, context) ?? await RunAsync(action, context, cancellationToken);
+    }
+
+    // Skipped when the app skips overdue actions and this one is later than the grace period allows; otherwise null.
+    private ActionResult? Overdue(string action, DateTimeOffset due, DateTimeOffset now)
+    {
+        var lateness = now - due;
+
+        return _skipOverdueActions && lateness > _overdueGracePeriod
+            ? ActionResult.Skipped($"Action '{action}' skipped: overdue by {Describe(lateness)} (grace period {Describe(_overdueGracePeriod)}).")
+            : null;
+    }
+
+    // A duration in its two largest units, e.g. "3 hours 5 minutes" or "0 seconds".
+    private static string Describe(TimeSpan span)
+    {
+        List<string> parts = [];
+        foreach (var (amount, unit) in new[] { (span.Days, "day"), (span.Hours, "hour"), (span.Minutes, "minute"), (span.Seconds, "second") })
+        {
+            if (amount > 0)
+                parts.Add($"{amount} {unit}{(amount == 1 ? "" : "s")}");
+        }
+
+        return parts.Count == 0 ? "0 seconds" : string.Join(' ', parts.Take(2));
     }
 
     /// <summary>
@@ -296,16 +328,23 @@ public sealed class RuleEngine(
 
         if (action.Schedule is { Mode: not ScheduleMode.Immediate } schedule)
         {
+            var now = _timeProvider.GetUtcNow();
+            DateTimeOffset scheduledFor;
             try
             {
-                var scheduledFor = ScheduleCalculator.Calculate(schedule, context, _timeProvider.GetUtcNow());
-
-                return ActionResult.Scheduled(scheduledFor, $"Action '{action.Action}' scheduled for {scheduledFor:O}.");
+                scheduledFor = ScheduleCalculator.Calculate(schedule, context, now);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return ActionResult.Failed(ex, $"Action '{action.Action}' scheduling failed. Reason: {ex.Message}");
             }
+
+            if (scheduledFor >= now)
+                return ActionResult.Scheduled(scheduledFor, $"Action '{action.Action}' scheduled for {scheduledFor:O}.");
+
+            // Its due time already passed: it runs now, unless it's overdue and the app skips those.
+            if (Overdue(action.Action, scheduledFor, now) is { } skipped)
+                return skipped;
         }
 
         return await RunAsync(action, context, cancellationToken);

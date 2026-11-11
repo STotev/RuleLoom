@@ -157,3 +157,14 @@ Recorded for `ExecuteScheduledAsync` ([#140](https://github.com/STotev/RuleLoom/
 - **The validator** checks a path against the loaded subject only when the event has the field, so a typo is reported
   once; paths read only when the action is scheduled (`schedule.referencePath`) aren't checked against the subject.
 - **The ASP.NET Core sample**'s job is one `ExecuteScheduledAsync` call with the stored event and the tenant's rules.
+
+Recorded for due times in the past ([#141](https://github.com/STotev/RuleLoom/issues/141)):
+
+- **"In the past" means before now**: a due time equal to now is still `Scheduled`.
+- **The overdue check in `ExecuteScheduledAsync`** comes right after the rule and action checks, before the subject is
+  loaded, so an overdue action costs no load.
+- **Options through DI** are one shared `RuleEngineOptions` instance kept with the catalog builder (`Configure` can be
+  called from several `AddRuleLoom` calls), not `Microsoft.Extensions.Options`, which would be a new dependency;
+  engines read them when they're created. A negative grace period throws.
+- **Messages** give lateness and grace period in their two largest units ("overdue by 3 hours (grace period 30
+  minutes)").
