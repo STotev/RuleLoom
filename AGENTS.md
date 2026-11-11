@@ -76,7 +76,7 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 | Project | Path | Role |
 |---|---|---|
 | `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models: what the engine runs (operators, actions, context providers), the `Catalog` and its registrations, action descriptors, the factory contracts. **No dependencies outside `RuleLoom.Schemas` and .NET** |
-| `RuleLoom` | `src/RuleLoom` | Default implementation: `CatalogBuilder`, engine, evaluator, operators, actions, direct factories, scheduling, validation |
+| `RuleLoom` | `src/RuleLoom` | Default implementation: `CatalogBuilder`, engine, evaluator, operators, actions, direct factories, scheduling, validation, telemetry and logging (depends on `Microsoft.Extensions.Logging.Abstractions`) |
 | `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Descriptions: event schemas (`EventSchema<T>` classes), context schemas (`ContextSchema<T>`) and action parameters (`ParametersSchema<T>`), generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`); the catalog document and store (`CatalogDocument`, `ICatalogStore` + `InMemoryCatalogStore`). **No dependencies at all** (not even Abstractions); producers and store packages use it without the engine; `RuleLoom.Abstractions` and `RuleLoom` reference it |
 | `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(r => r.AddCatalog(...).UseStore<T>())`: the catalog (built at startup), engine, validator and factories |
 | `RuleLoom.AspNetCore` | `src/RuleLoom.AspNetCore` | `app.MapRuleLoom(prefix)`: `GET {prefix}/catalog` and `POST {prefix}/validate` for authoring UIs; returns the route group; no storage |
@@ -186,6 +186,15 @@ ExecuteScheduledAsync(ScheduledAction, storedEvent, rules) → ActionResult (sta
   `IContextProviderFactory` (`ActivatorUtilities.GetServiceOrCreateInstance`: registered services as registered, others
   created with scope dependencies and not disposed by the scope), `RuleEngine` and `RuleValidator` are Scoped;
   resolving them before startup throws.
+- **Observability** (spec `2026-10-29-observability-design.md`, guide `docs/guides/observability.md`): `ActivitySource` and
+  `Meter` named `RuleLoomDiagnostics.Name` ("RuleLoom") in both `RuleLoom` (`EngineTelemetry`: `ruleloom.execute`,
+  `ruleloom.execute_scheduled`, `ruleloom.action` spans, subject-load `ruleloom.context` spans; `ruleloom.rules`/
+  `ruleloom.actions` counters; duration histograms) and `RuleLoom.Abstractions` (`ContextTelemetry`: context-load spans
+  and `ruleloom.context.duration`); rules are counts, not spans. `ILogger` (`Microsoft.Extensions.Logging.Abstractions`,
+  only in `RuleLoom`): the engine's optional `ILoggerFactory` (passed by `AddRuleLoom`), `[LoggerMessage]`; Warning for
+  failures, context load failures and overdue skips, Debug for outcomes (with subject and event id); `StartRuleLoomAsync`
+  logs the built catalog (Information) and its problems (Warning). Never write event state, context data or parameter
+  values; the subject and event id only on spans and at Debug.
 - **Authoring endpoints** (`RuleLoom.AspNetCore`, `MapRuleLoom(prefix)` in `Microsoft.AspNetCore.Builder`): `GET
   {prefix}/catalog` (`catalog.ToJson()`); `POST {prefix}/validate` takes one rule or an array (`ParseEach`, then
   `RuleValidator`) and returns a `RuleValidationResponse` per rule (`index` for arrays, `id`, `parsed`, `isValid`,
