@@ -174,26 +174,29 @@ public class EvaluationContext
         };
     }
 
-    private async Task<object?> LoadAsync(CatalogContext context, CancellationToken cancellationToken)
+    private Task<object?> LoadAsync(CatalogContext context, CancellationToken cancellationToken)
     {
         var name = context.Declaration.Name;
 
-        try
+        return ContextTelemetry.LoadAsync(name, context.Provider.Name, async () =>
         {
-            var provider = _contextProviders!.Create(context.Provider);
-            var request = new ContextRequest(name, _eventType!, Current, Previous)
+            try
             {
-                Reference = ResolveReference(context.Declaration),
-                Event = Event,
-                TemporalRules = TemporalRules
-            };
+                var provider = _contextProviders!.Create(context.Provider);
+                var request = new ContextRequest(name, _eventType!, Current, Previous)
+                {
+                    Reference = ResolveReference(context.Declaration),
+                    Event = Event,
+                    TemporalRules = TemporalRules
+                };
 
-            return await provider.GetAsync(request, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            throw new ContextLoadException(name, ex);
-        }
+                return await provider.GetAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw new ContextLoadException(name, ex);
+            }
+        });
     }
 
     // The event's declared reference to the context, resolved on the subject: one value, or the parts by name.
