@@ -167,7 +167,7 @@ public class RuleValidatorSchemaTests
         var list = Validate(Rule(Op("eq", Path("Total"), Value(new List<object?> { 1, 2 }))));
 
         Assert.Single(guid.Warnings);
-        Assert.Single(dateOnly.Warnings);
+        Assert.Empty(dateOnly.Warnings);   // a date compares with a date-time by its calendar day
         Assert.Empty(dateAsText.Warnings);
         Assert.Equal("'eq' compares a number with a list; the condition is never true.", Assert.Single(list.Warnings).Message);
     }

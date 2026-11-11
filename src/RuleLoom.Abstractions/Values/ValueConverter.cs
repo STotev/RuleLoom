@@ -11,7 +11,8 @@ namespace RuleLoom.Abstractions.Values;
 /// Supported conversions: between numeric types when no value is lost; enum names (case-insensitive)
 /// and integral numbers to enums; between <see cref="DateTime"/> and <see cref="DateTimeOffset"/>,
 /// and strict ISO 8601 strings to either, read by the given <see cref="TemporalRules"/> (a <see cref="DateTime"/>
-/// result is in UTC).
+/// result is in UTC; a date is the start of its day); to <see cref="DateOnly"/> from a date, date-only text or a
+/// date-time (its calendar date in the time zone).
 /// <c>null</c> converts to reference and <see cref="Nullable{T}"/> types; values already assignable
 /// to the target are returned unchanged.
 /// </remarks>
@@ -47,6 +48,22 @@ public static class ValueConverter
 
         if (target.IsEnum)
             return TryConvertToEnum(value, target, out result);
+
+        if (target == typeof(DateOnly))
+        {
+            if (temporalRules.TryGetDate(value, out var date))
+            {
+                result = date;
+                return true;
+            }
+
+            // A date-time's calendar date in the time zone.
+            if (!temporalRules.TryGetInstant(value, out var moment))
+                return false;
+
+            result = temporalRules.GetDate(moment);
+            return true;
+        }
 
         if (target == typeof(DateTimeOffset) || target == typeof(DateTime))
         {

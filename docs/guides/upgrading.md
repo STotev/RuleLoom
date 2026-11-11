@@ -3,7 +3,7 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.7 → 0.8](#07--08): `ValueComparer` and `ValueConverter` take `TemporalRules`; impossible `Local` times are rejected; `ExecutedImmediately` is `Executed`; `ScheduledAction` is a keyed reference
+- [0.7 → 0.8](#07--08): `ValueComparer` and `ValueConverter` take `TemporalRules`; impossible `Local` times are rejected; `ExecutedImmediately` is `Executed`; `ScheduledAction` is a keyed reference; dates are calendar days
 - [0.6 → 0.7](#06--07): a parameter `{ "$path": ... }` is a path; `FieldDefinition` has `IsRequired`; optionally, typed actions, path parameters and `MapRuleLoom`
 - [0.5 → 0.6](#05--06): the engine, validator and DI run on a catalog; paths starting with `@` or `#` are no longer property names
 - [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
@@ -31,6 +31,16 @@ that reads it with an `InvalidTemporalValueException`, instead of being read wit
 values and text this only happens once a time zone is configured; `DateTime` values with `Kind = Local` are checked
 against the machine's time zone, so such values are rejected now. Typed actions also read date-time parameters without
 an offset in the catalog's time zone (they used to be read in the machine's own offset for `DateTimeOffset`).
+
+### Dates are calendar days
+
+A date (a `DateOnly`, or text like `"2026-05-01"`) used to mean midnight UTC. It's now a day: two dates compare by day,
+and a date with a date-time compares by the date-time's calendar date in the catalog's time zone. So
+`"2026-05-01T10:00:00Z" eq "2026-05-01"` is now true (it was false), and `gt "2026-05-01"` now means "from 2 May" (10:00
+on 1 May used to be greater). `DateOnly` values compare as dates, also with date-times. Converting a date to a
+`DateTime`/`DateTimeOffset` (a parameter, a schedule's reference) still gives the start of its day, now in the
+catalog's time zone. `RuleValidator` also reports date-time literals and parameter values that can't exist in the
+catalog's time zone.
 
 ### `ExecutedImmediately` is `Executed`
 

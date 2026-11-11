@@ -46,7 +46,8 @@ public class ValueComparerTests
         { NoonUtc, "2026-01-01T12:00", true },
         { "2026-01-01T12:00:00.0000000Z", NoonUtc, true },
         { new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), "2026-01-01", true },
-        { NoonUtc, "2026-01-01", false },
+        { NoonUtc, "2026-01-01", true },                                           // a date-time on that calendar day
+        { NoonUtc, "2026-01-02", false },
         { NoonUtc, "01/01/2026 12:00", false },
         { NoonUtc, "1 January 2026", false },
         { NoonUtc, 1, false },

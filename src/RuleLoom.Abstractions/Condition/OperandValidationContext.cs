@@ -1,3 +1,4 @@
+using RuleLoom.Abstractions.Values;
 using RuleLoom.Schemas;
 
 namespace RuleLoom.Abstractions.Condition;
@@ -23,6 +24,12 @@ public sealed class OperandValidationContext
         ArgumentNullException.ThrowIfNull(condition);
         (_condition, _fields) = (condition, fields);
     }
+
+    /// <summary>
+    /// How the catalog reads date-times (its time zone), to check date-time values the way rules will be run;
+    /// <see cref="TemporalRules.Utc"/> when not given.
+    /// </summary>
+    public TemporalRules TemporalRules { get; init; } = TemporalRules.Utc;
 
     /// <summary>The operator's name as written in the rule.</summary>
     public string OperatorName => _condition.Operator;

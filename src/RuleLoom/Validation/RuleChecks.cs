@@ -3,6 +3,7 @@ using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
+using RuleLoom.Abstractions.Values;
 
 namespace RuleLoom.Validation;
 
@@ -47,7 +48,7 @@ internal sealed class RootConditionCheck : RuleCheck
 /// operands (<see cref="IConditionOperator.ValidateOperands"/>), with the schema fields of path operands when there are
 /// schemas.
 /// </summary>
-internal sealed class OperatorCheck(SchemaPaths? schemaPaths) : RuleCheck
+internal sealed class OperatorCheck(SchemaPaths? schemaPaths, TemporalRules temporalRules) : RuleCheck
 {
     public override void Operator(OperatorCondition condition, IConditionOperator? @operator, string location, ValidationProblems problems)
     {
@@ -75,7 +76,10 @@ internal sealed class OperatorCheck(SchemaPaths? schemaPaths) : RuleCheck
             return;
 
         var context = new OperandValidationContext(condition,
-            schemaPaths is null ? null : index => paths[index] is { } path ? schemaPaths.Resolve(path, problems) : null);
+            schemaPaths is null ? null : index => paths[index] is { } path ? schemaPaths.Resolve(path, problems) : null)
+        {
+            TemporalRules = temporalRules
+        };
 
         // The validator never throws for a rule: an operator whose validation fails is reported at the operator.
         try

@@ -46,9 +46,39 @@ public sealed class TemporalRules
     public TimeZoneInfo TimeZone { get; }
 
     /// <summary>
+    /// Tries to read <paramref name="value"/> as a calendar date: a <see cref="DateOnly"/>, or strict ISO 8601 date-only
+    /// text (<c>2026-05-01</c>). A date is a day, never a moment; date-times aren't dates (see <see cref="GetDate"/>).
+    /// </summary>
+    public bool TryGetDate(object? value, out DateOnly date)
+    {
+        switch (value)
+        {
+            case DateOnly day:
+                date = day;
+                return true;
+            case string text when text.Length == 10 && DateOnly.TryParseExact(text, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed):
+                date = parsed;
+                return true;
+            default:
+                date = default;
+                return false;
+        }
+    }
+
+    /// <summary>The calendar date of <paramref name="instant"/> in <see cref="TimeZone"/>.</summary>
+    public DateOnly GetDate(DateTimeOffset instant) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, TimeZone).DateTime);
+
+    /// <summary>
+    /// The moment <paramref name="date"/> starts in <see cref="TimeZone"/>; when the clocks skip midnight that day, the
+    /// first moment after the gap.
+    /// </summary>
+    public DateTimeOffset GetStartOfDay(DateOnly date) => Lenient(date.ToDateTime(TimeOnly.MinValue));
+
+    /// <summary>
     /// Tries to read <paramref name="value"/> as a moment: a <see cref="DateTimeOffset"/>, a <see cref="DateTime"/>, or
-    /// strict ISO 8601 text (<c>2026-05-01</c>, <c>2026-05-01T09:00</c>, with seconds, fractions and an offset or
-    /// <c>Z</c> optional). A date without a time is the start of that day in <see cref="TimeZone"/>.
+    /// strict ISO 8601 text (<c>2026-05-01T09:00</c>, with seconds, fractions and an offset or <c>Z</c> optional). Asked
+    /// for a moment, a date (a <see cref="DateOnly"/> or <c>2026-05-01</c>) is the start of its day
+    /// (<see cref="GetStartOfDay"/>); comparisons keep dates as days.
     /// </summary>
     /// <param name="value">The value.</param>
     /// <param name="instant">The moment, in UTC.</param>
@@ -63,6 +93,9 @@ public sealed class TemporalRules
                 return true;
             case DateTime dateTime:
                 instant = Resolve(dateTime, value);
+                return true;
+            case DateOnly date:
+                instant = GetStartOfDay(date);
                 return true;
             case string text:
                 return TryParse(text, out instant);
@@ -80,10 +113,9 @@ public sealed class TemporalRules
         if (text.Length < 10 || !char.IsAsciiDigit(text[0]) || text[4] != '-')
             return false;
 
-        if (DateTime.TryParseExact(text, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        if (TryGetDate(text, out var date))
         {
-            // Until dates are calendar days (#136): the start of the day, moved past a skipped midnight.
-            instant = Lenient(date);
+            instant = GetStartOfDay(date);
             return true;
         }
 
