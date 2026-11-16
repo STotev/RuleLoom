@@ -557,6 +557,26 @@ again replaces the job instead of adding one (prefix it, e.g. with a tenant, whe
 identity the event's schema declares (`Subject(o => o.Number)`), or else the event's `RuleEvent.Subject`; without one
 the key is `null`. `ToJson()` and `ScheduledAction.Parse(json)` store it, e.g. in a persistent job store.
 
+When the job fires, run the action with one call, passing the event that scheduled it and your current rules:
+
+```csharp
+var result = await engine.ExecuteScheduledAsync(scheduled, storedEvent, rules, ct);   // Executed, Skipped or Failed
+```
+
+Anything that runs later must pass its checks then. The action is skipped when its rule is gone or no longer
+schedules it, and the rule's condition and the action's condition are evaluated again; then the rule's current version
+of the action runs. When the event's schema declares how to load its subject (`Subject(o => o.Number).LoadedBy("order")`),
+the checks and the action read the subject **as it is now**, compared with the event's previous state:
+
+| Condition | When the action is due |
+|---|---|
+| `Status eq AwaitingPayment` | the order is still unpaid |
+| `changed Status` | the status still differs from before the event (a change that was undone skips the action) |
+| `Price lt $previous.Price` | the price is still below what it was before the event |
+
+Without a loader, the checks see the stored event as it was. `RuleValidator` checks that the paths a scheduled action
+reads are fields of the loaded subject too.
+
 ```json
 { "action": "send-email", "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "DueAt" } }
 ```

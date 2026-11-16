@@ -115,6 +115,14 @@ environment `nuget`) and attaches the packages to the GitHub release.
         otherwise                         → IActionFactory.Create(registration).ExecuteAsync → its ActionResult
                                             (factory or action exception / null result → Failed)
   → event types not in the catalog still run (the catalog describes; it doesn't gate execution)
+
+ExecuteScheduledAsync(ScheduledAction, storedEvent, rules) → ActionResult (stamped with ActionName/ActionIndex)
+  → rule by RuleId (and event type) missing → Skipped     action at ActionIndex renamed or unscheduled → Skipped
+  → the due context: with Subject(...).LoadedBy(p) the provider loads the subject (reference = identity resolved on the
+    stored event; null → Skipped; load error or unregistered loader → Failed): $current = subject now, $previous =
+    the stored event's previous, $event = the stored envelope; without a loader, the stored event
+  → contexts prefetched fresh; rule condition false → Skipped / throws → Failed; action condition likewise
+  → the rule's current action runs (same failure rules as above) → Executed
   → failures are reported in the result, never written to the console;
     OperationCanceledException always propagates (partial results are discarded)
 ```
@@ -189,7 +197,9 @@ environment `nuget`) and attaches the packages to the GitHub release.
   a schema → `Warnings` (`IsValid` ignores warnings). Typed actions' parameters are checked against their parameters
   schema (`ParameterCheck`, values as the JSON they're bound from): unknown or missing required parameters, values of
   the wrong type → `Errors`; a `$path` whose field can't be read as the parameter → `Warnings`; untyped actions aren't
-  checked. Every problem comes with a JSONPath location.
+  checked. When the event's subject has a loader with a schema, current-state paths read when a scheduled action is due
+  (the rule's condition if it schedules anything, the scheduled action's condition and parameters; not reference
+  paths) must be fields of the loaded subject too (`SubjectPathCheck`; reported only when the event has the field). Every problem comes with a JSONPath location.
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
   in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now; `ScheduledFor` is UTC.
   `ReferencePath` values are read by the catalog's `TemporalRules` (`DateTime`/`DateTimeOffset`, or strict ISO 8601

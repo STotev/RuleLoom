@@ -143,3 +143,17 @@ Recorded for the subjects and keys slice ([#139](https://github.com/STotev/RuleL
 - **The ASP.NET Core sample** passes the event's entity id as `RuleEvent.Subject`, keys jobs `{tenant}/{Key}`, and, until
   `ExecuteScheduledAsync` exists, its job runs the rule's current action itself (skipped when the rule no longer has
   it).
+
+Recorded for `ExecuteScheduledAsync` ([#140](https://github.com/STotev/RuleLoom/issues/140)):
+
+- **Overdue actions** (step 3) come with [#141](https://github.com/STotev/RuleLoom/issues/141).
+- **The rule is found by id and event type**, so a rule with the same id on another event type doesn't count.
+- **The subject's request** has the provider's name as its `Name`, the identity resolved on the stored event as its
+  `Reference` (a dictionary of parts when composite), and the stored event as its `Event`. An identity missing from the
+  stored event, a loader that throws, and a loader that isn't registered (possible only for a stored schema, the
+  catalog problem from #139) fail the action; a loader that returns `null` skips it.
+- **`$event` paths** read the stored envelope, with the subject loaded now as its `Current`.
+- **Contexts** the rule uses are prefetched for the run, as `ExecuteAsync` does.
+- **The validator** checks a path against the loaded subject only when the event has the field, so a typo is reported
+  once; paths read only when the action is scheduled (`schedule.referencePath`) aren't checked against the subject.
+- **The ASP.NET Core sample**'s job is one `ExecuteScheduledAsync` call with the stored event and the tenant's rules.
