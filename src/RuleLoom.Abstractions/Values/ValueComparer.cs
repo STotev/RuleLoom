@@ -12,11 +12,12 @@ namespace RuleLoom.Abstractions.Values;
 /// <item>Numbers compare by value across numeric types (as <see cref="double"/> if either side is
 /// <see cref="float"/>/<see cref="double"/>, otherwise as <see cref="decimal"/>). <c>NaN</c> never matches.</item>
 /// <item>Enums match by name (case-insensitive) or underlying number; different enum types never match.</item>
-/// <item><see cref="DateTime"/>/<see cref="DateTimeOffset"/> compare as moments, read by the given
-/// <see cref="TemporalRules"/> (a date-time without an offset is wall-clock time in its time zone); a string on the
-/// other side must be strict ISO 8601.</item>
-/// <item>Two strict ISO 8601 strings compare as moments; an ISO date string against any other string can't be
-/// compared (not equal, not ordered). Other strings compare ordinally (case-sensitive).</item>
+/// <item>Dates (<see cref="DateOnly"/>, ISO 8601 date-only text) compare by day. Date-times (<see cref="DateTime"/>,
+/// <see cref="DateTimeOffset"/>, ISO 8601 text with a time) compare as moments, read by the given
+/// <see cref="TemporalRules"/> (one without an offset is wall-clock time in its time zone). A date with a date-time
+/// compares by the date-time's calendar date in that time zone. Text against a date or date-time must be strict ISO
+/// 8601; ISO text against other text can't be compared (not equal, not ordered). Other strings compare ordinally
+/// (case-sensitive).</item>
 /// <item>JSON objects and arrays (<see cref="JsonElement"/>, <see cref="JsonNode"/>) are equal when their content is
 /// (same JSON model on both sides) and are never ordered.</item>
 /// <item><c>null</c> equals only <c>null</c> and is never ordered.</item>
@@ -89,8 +90,8 @@ public static class ValueComparer
         if (left is Enum || right is Enum)
             return CompareEnums(left, right, temporalRules);
 
-        if (left is DateTime or DateTimeOffset || right is DateTime or DateTimeOffset)
-            return CompareDates(left, right, temporalRules);
+        if (left is DateTime or DateTimeOffset or DateOnly || right is DateTime or DateTimeOffset or DateOnly)
+            return CompareTemporal(left, right, temporalRules);
 
         if (left is string leftText && right is string rightText)
             return CompareStrings(leftText, rightText, temporalRules);
@@ -100,15 +101,18 @@ public static class ValueComparer
 
     private static int? CompareStrings(string left, string right, TemporalRules temporalRules)
     {
-        var leftIsDate = temporalRules.TryGetInstant(left, out var leftInstant);
-        var rightIsDate = temporalRules.TryGetInstant(right, out var rightInstant);
+        var leftIsTemporal = IsTemporalText(left, temporalRules);
+        var rightIsTemporal = IsTemporalText(right, temporalRules);
 
-        if (leftIsDate && rightIsDate)
-            return leftInstant.UtcTicks.CompareTo(rightInstant.UtcTicks);
+        if (leftIsTemporal && rightIsTemporal)
+            return CompareTemporal(left, right, temporalRules);
 
         // A date against arbitrary text can't be compared; two ordinary strings compare ordinally.
-        return leftIsDate || rightIsDate ? null : Math.Sign(string.CompareOrdinal(left, right));
+        return leftIsTemporal || rightIsTemporal ? null : Math.Sign(string.CompareOrdinal(left, right));
     }
+
+    private static bool IsTemporalText(string text, TemporalRules temporalRules) =>
+        temporalRules.TryGetDate(text, out _) || temporalRules.TryGetInstant(text, out _);
 
     private static bool JsonEquals(object left, object right) => (left, right) switch
     {
@@ -153,11 +157,23 @@ public static class ValueComparer
             : CompareNumbers(UnderlyingValue(converted!), UnderlyingValue(right));
     }
 
-    private static int? CompareDates(object left, object right, TemporalRules temporalRules)
+    // Two dates by day; a date with a date-time by the date-time's calendar date; two date-times as moments.
+    private static int? CompareTemporal(object left, object right, TemporalRules temporalRules)
     {
-        if (!temporalRules.TryGetInstant(left, out var leftInstant) || !temporalRules.TryGetInstant(right, out var rightInstant))
-        {
+        DateTimeOffset leftInstant = default, rightInstant = default;
+        var leftIsDate = temporalRules.TryGetDate(left, out var leftDate);
+        var rightIsDate = temporalRules.TryGetDate(right, out var rightDate);
+
+        if (!leftIsDate && !temporalRules.TryGetInstant(left, out leftInstant))
             return null;
+        if (!rightIsDate && !temporalRules.TryGetInstant(right, out rightInstant))
+            return null;
+
+        if (leftIsDate || rightIsDate)
+        {
+            var leftDay = leftIsDate ? leftDate : temporalRules.GetDate(leftInstant);
+            var rightDay = rightIsDate ? rightDate : temporalRules.GetDate(rightInstant);
+            return leftDay.CompareTo(rightDay);
         }
 
         return leftInstant.UtcTicks.CompareTo(rightInstant.UtcTicks);

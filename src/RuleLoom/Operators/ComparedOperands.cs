@@ -8,7 +8,8 @@ namespace RuleLoom.Operators;
 
 /// <summary>
 /// Operand validation shared by the comparison operators: with schemas, warns when the two operands' types can never
-/// match under <see cref="ValueComparer"/>, or when an ordering operator gets a list or an object (at most one warning).
+/// match under <see cref="ValueComparer"/>, or when an ordering operator gets a list or an object (at most one warning);
+/// a date-time value compared with a date or date-time field that can't exist in the catalog's time zone is an error.
 /// </summary>
 internal static class ComparedOperands
 {
@@ -29,6 +30,23 @@ internal static class ComparedOperands
 
         if (problem is not null)
             context.Warning($"'{context.OperatorName}' {problem}; the condition is never true.");
+
+        // A wall-clock time the clocks skip in the time zone the rule runs in is wrong data, whichever side it's on.
+        for (var index = 0; index < 2; index++)
+        {
+            if (context.GetField(1 - index) is { Type: FieldType.DateTime or FieldType.Date } &&
+                context.GetOperand(index) is ValueOperand { Value: string text } && FieldTypes.IsDateTimeText(text))
+            {
+                try
+                {
+                    context.TemporalRules.TryGetInstant(text, out _);
+                }
+                catch (InvalidTemporalValueException ex)
+                {
+                    context.Error(index, ex.Message);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -40,7 +58,7 @@ internal static class ComparedOperands
         FieldType.Integer or FieldType.Number => IsNumber(value) || value is Enum,
         FieldType.Boolean => value is bool,
         FieldType.String => value is string or DateTime or DateTimeOffset or Enum,
-        FieldType.DateTime or FieldType.Date => value is DateTime or DateTimeOffset ||
+        FieldType.DateTime or FieldType.Date => value is DateTime or DateTimeOffset or DateOnly ||
                                                 value is string text && FieldTypes.IsDateTimeText(text),
         _ => true
     };

@@ -28,7 +28,7 @@ internal sealed class ParameterCheck(Catalog catalog, SchemaPaths? schemaPaths) 
             if (paths.TryGetValue(name, out var path))
                 Path(path, name, field, problems);
             else
-                Value(action.Parameters[name], field, name, $"{location}.parameters.{name}", problems);
+                Value(action.Parameters[name], field, name, $"{location}.parameters.{name}", catalog.TemporalRules, problems);
         }
     }
 
@@ -79,7 +79,8 @@ internal sealed class ParameterCheck(Catalog catalog, SchemaPaths? schemaPaths) 
     };
 
     /// <summary>Checks a value as the JSON it is bound from.</summary>
-    private static void Value(object? value, FieldDefinition field, string name, string location, ValidationProblems problems)
+    private static void Value(object? value, FieldDefinition field, string name, string location, TemporalRules temporalRules,
+        ValidationProblems problems)
     {
         JsonElement json;
         try
@@ -92,10 +93,11 @@ internal sealed class ParameterCheck(Catalog catalog, SchemaPaths? schemaPaths) 
             return;
         }
 
-        Value(json, field, name, location, problems);
+        Value(json, field, name, location, temporalRules, problems);
     }
 
-    private static void Value(JsonElement value, FieldDefinition field, string name, string location, ValidationProblems problems)
+    private static void Value(JsonElement value, FieldDefinition field, string name, string location, TemporalRules temporalRules,
+        ValidationProblems problems)
     {
         if (value.ValueKind == JsonValueKind.Null)
         {
@@ -110,18 +112,32 @@ internal sealed class ParameterCheck(Catalog catalog, SchemaPaths? schemaPaths) 
             return;
         }
 
+        // A wall-clock time the clocks skip in the catalog's time zone can't be bound when the action runs.
+        if (field.Type == FieldType.DateTime)
+        {
+            try
+            {
+                temporalRules.TryGetInstant(value.GetString(), out _);
+            }
+            catch (InvalidTemporalValueException ex)
+            {
+                problems.Error(location, $"'{name}': {ex.Message}");
+                return;
+            }
+        }
+
         if (field is { Type: FieldType.Object, Fields.Count: > 0 })
         {
             var properties = value.EnumerateObject().ToDictionary(p => p.Name, p => p.Value);
             foreach (var (member, nested) in Match(properties.Keys, field.Fields, "field", $"'{name}'", location, problems))
-                Value(properties[member], nested, $"{name}.{member}", $"{location}.{member}", problems);
+                Value(properties[member], nested, $"{name}.{member}", $"{location}.{member}", temporalRules, problems);
         }
         else if (field is { Type: FieldType.Array, Items: { } items })
         {
             var index = 0;
             foreach (var item in value.EnumerateArray())
             {
-                Value(item, items, $"{name}[{index}]", $"{location}[{index}]", problems);
+                Value(item, items, $"{name}[{index}]", $"{location}[{index}]", temporalRules, problems);
                 index++;
             }
         }

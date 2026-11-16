@@ -139,3 +139,15 @@ Recorded for slice 1 ([#135](https://github.com/STotev/RuleLoom/issues/135)):
 - **Naming the source**: `InvalidTemporalValueException.Path` is set for values read from a rule path (operands, `changed`,
   schedule reference paths, `$path` parameters); a literal parameter is named in the message ("Parameter 'sendAt' of
   action 'remind' is …").
+
+Recorded for slice 2 ([#136](https://github.com/STotev/RuleLoom/issues/136)):
+
+- **`TemporalRules`' date API**: `TryGetDate` (a `DateOnly` or date-only text; a `DateTime` is never a date, even at
+  midnight), `GetDate(instant)` and `GetStartOfDay(date)`.
+- **Asked for a moment, a date is the start of its day**: `TryGetInstant` and `TryConvert<DateTime/DateTimeOffset>` turn
+  a date into the start of its day in the time zone (lenient past a skipped midnight). That's an explicit conversion
+  (a parameter or a schedule reference typed as a date-time); comparisons never do it. `TryConvert<DateOnly>` gives a
+  date-time's calendar date.
+- **The validator's temporal checks** apply to date-time literals compared with a date or date-time field (in the
+  comparison operators, through `OperandValidationContext.TemporalRules`) and to parameter values bound as date-times;
+  date-only literals can't be invalid. A comparison of a `DateOnly` value with a date-time field is no longer a warning.
