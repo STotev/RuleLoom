@@ -39,7 +39,7 @@ public sealed class RuleLoomBuilder
 
     /// <summary>
     /// Configures how the engine runs rules, e.g. skipping overdue actions. Every call (also from other
-    /// <c>AddRuleLoom</c> calls) configures the same options; engines read them when they're created.
+    /// <c>AddRuleLoom</c> calls) configures the same options, which every engine uses; configure them at startup.
     /// </summary>
     public RuleLoomBuilder Configure(Action<RuleEngineOptions> configure)
     {

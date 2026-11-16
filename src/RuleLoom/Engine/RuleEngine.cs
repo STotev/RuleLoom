@@ -23,8 +23,8 @@ namespace RuleLoom.Engine;
 /// <param name="contextProviders">Creates context providers; by default a <see cref="DirectContextProviderFactory"/>
 /// without instances.</param>
 /// <param name="timeProvider">The clock schedules are computed with; the system clock by default.</param>
-/// <param name="options">How rules are run (e.g. skipping overdue actions); the defaults when not given. Read when the
-/// engine is created.</param>
+/// <param name="options">How rules are run (e.g. skipping overdue actions); a default <see cref="RuleEngineOptions"/>
+/// when not given.</param>
 /// <param name="loggerFactory">Where the engine logs (failures as warnings, every outcome at Debug); nowhere when not
 /// given. Traces and metrics go to OpenTelemetry under <see cref="RuleLoomDiagnostics.Name"/> either way.</param>
 public sealed class RuleEngine(
@@ -40,8 +40,7 @@ public sealed class RuleEngine(
     private readonly IActionFactory _actionFactory = actions ?? new DirectActionFactory();
     private readonly IContextProviderFactory _contextProviders = contextProviders ?? new DirectContextProviderFactory();
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
-    private readonly bool _skipOverdueActions = options?.SkipOverdueActions ?? false;
-    private readonly TimeSpan _overdueGracePeriod = options?.OverdueGracePeriod ?? TimeSpan.Zero;
+    private readonly RuleEngineOptions _options = options ?? new RuleEngineOptions();
     private readonly EngineTelemetry _telemetry = new((loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RuleEngine>());
 
     /// <summary>
@@ -251,10 +250,10 @@ public sealed class RuleEngine(
     private ActionResult? Overdue(string action, DateTimeOffset due, DateTimeOffset now, string ruleId, string eventType)
     {
         var lateness = now - due;
-        if (!_skipOverdueActions || lateness <= _overdueGracePeriod)
+        if (!_options.SkipOverdueActions || lateness <= _options.OverdueGracePeriod)
             return null;
 
-        var reason = $"Action '{action}' skipped: overdue by {Describe(lateness)} (grace period {Describe(_overdueGracePeriod)}).";
+        var reason = $"Action '{action}' skipped: overdue by {Describe(lateness)} (grace period {Describe(_options.OverdueGracePeriod)}).";
         _telemetry.OverdueSkipped(eventType, ruleId, action, reason);
         return ActionResult.Skipped(reason);
     }
