@@ -2,8 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
+using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
+using RuleLoom.Abstractions.Scheduling;
 using RuleLoom.Engine;
 using RuleLoom.Schemas;
 using RuleLoom.Validation;
@@ -13,14 +15,14 @@ namespace RuleLoom.Extensions.DependencyInjection.Tests;
 public class AddRuleLoomTests
 {
     private const string Json = """
-    {
-      "id": "welcome",
-      "name": "Welcome",
-      "eventType": "UserCreated",
-      "condition": { "operator": "eq", "operands": [{ "path": "Tier" }, { "value": "vip" }] },
-      "actions": [{ "action": "send-email", "parameters": { "template": "vip-welcome" } }]
-    }
-    """;
+                                {
+                                  "id": "welcome",
+                                  "name": "Welcome",
+                                  "eventType": "UserCreated",
+                                  "condition": { "operator": "eq", "operands": [{ "path": "Tier" }, { "value": "vip" }] },
+                                  "actions": [{ "action": "send-email", "parameters": { "template": "vip-welcome" } }]
+                                }
+                                """;
 
     [Fact]
     public void AddRuleLoom_RegistersServicesWithExpectedLifetimes()
@@ -41,7 +43,8 @@ public class AddRuleLoomTests
     {
         var services = new ServiceCollection()
             .AddRuleLoom(rules => rules.AddCatalog(c => c.AddAction<SendEmailAction>()))
-            .AddRuleLoom(rules => rules.AddCatalog(c => c.AddAction<AuditAction>()).AddCatalog(c => c.AddAction<SendEmailAction>()));
+            .AddRuleLoom(rules =>
+                rules.AddCatalog(c => c.AddAction<AuditAction>()).AddCatalog(c => c.AddAction<SendEmailAction>()));
 
         Assert.Single(services, d => d.ServiceType == typeof(RuleEngine));
         Assert.Single(services, d => d.ServiceType == typeof(IHostedService));
@@ -49,7 +52,52 @@ public class AddRuleLoomTests
         await using var provider = await StartAsync(services);
         using var scope = provider.CreateScope();
 
-        Assert.Equal(["send-email", "audit"], scope.ServiceProvider.GetRequiredService<Catalog>().Actions.Select(a => a.Name));
+        Assert.Equal(["send-email", "audit"],
+            scope.ServiceProvider.GetRequiredService<Catalog>().Actions.Select(a => a.Name));
+    }
+
+    [Fact]
+    public async Task Configure_SetsTheEnginesOptions()
+    {
+        var now = new DateTimeOffset(2026, 10, 6, 12, 0, 0, TimeSpan.Zero);
+        var services = new ServiceCollection()
+            .AddSingleton<TimeProvider>(new FixedTimeProvider(now))
+            .AddRuleLoom(rules => rules.AddCatalog(c => c.AddAction<AuditAction>()))
+            .AddRuleLoom(rules => rules.Configure(o => o.SkipOverdueActions = true));
+
+        var rule = new RuleDefinition
+        {
+            Id = "audit-later",
+            Name = "Audit later",
+            EventType = "UserCreated",
+            Condition = new OperatorCondition
+            {
+                Operator = "eq",
+                Operands = [new ValueOperand { Value = 1 }, new ValueOperand { Value = 1 }]
+            },
+            Actions =
+            [
+                new ActionDefinition
+                {
+                    Action = "audit",
+                    Schedule = new ScheduleMetadata
+                    {
+                        Mode = ScheduleMode.Delay,
+                        Amount = 1,
+                        Unit = ScheduleUnit.Hours
+                    }
+                }
+            ]
+        };
+
+        await using var provider = await StartAsync(services);
+        using var scope = provider.CreateScope();
+        var result = await scope.ServiceProvider.GetRequiredService<RuleEngine>().ExecuteScheduledAsync(
+            new ScheduledAction("audit-later", 0, "audit", now.AddHours(-1), null),
+            new RuleEvent("UserCreated", new { }), [rule],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("Action 'audit' skipped: overdue by 1 hour (grace period 0 seconds).", result.Message);
     }
 
     [Fact]
@@ -69,7 +117,8 @@ public class AddRuleLoomTests
         using var provider = Build(new ServiceCollection().AddRuleLoom());
         using var scope = provider.CreateScope();
 
-        var error = Assert.Throws<InvalidOperationException>(() => scope.ServiceProvider.GetRequiredService<RuleEngine>());
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            scope.ServiceProvider.GetRequiredService<RuleEngine>());
 
         Assert.StartsWith("RuleLoom hasn't started", error.Message);
     }
@@ -77,7 +126,8 @@ public class AddRuleLoomTests
     [Fact]
     public async Task HostStart_BuildsTheCatalog_AndEveryScopeSharesIt()
     {
-        await using var provider = Build(new ServiceCollection().AddRuleLoom(rules => rules.AddCatalog(c => c.AddEvent<UserCreatedSchema>()
+        await using var provider = Build(new ServiceCollection().AddRuleLoom(rules => rules.AddCatalog(c => c
+            .AddEvent<UserCreatedSchema>()
             .AddContextProvider<CustomerProvider>("customer"))));
 
         foreach (var hostedService in provider.GetServices<IHostedService>())
@@ -86,17 +136,21 @@ public class AddRuleLoomTests
 
         using var first = provider.CreateScope();
         using var second = provider.CreateScope();
-        Assert.Same(first.ServiceProvider.GetRequiredService<Catalog>(), second.ServiceProvider.GetRequiredService<Catalog>());
-        Assert.Equal(["UserCreated"], first.ServiceProvider.GetRequiredService<Catalog>().Events.Select(e => e.EventType));
+        Assert.Same(first.ServiceProvider.GetRequiredService<Catalog>(),
+            second.ServiceProvider.GetRequiredService<Catalog>());
+        Assert.Equal(["UserCreated"],
+            first.ServiceProvider.GetRequiredService<Catalog>().Events.Select(e => e.EventType));
     }
 
     [Fact]
     public async Task HostStart_BrokenCatalog_Throws()
     {
-        await using var provider = Build(new ServiceCollection().AddRuleLoom(rules => rules.AddCatalog(c => c.AddEvent<UserCreatedSchema>())));
+        await using var provider =
+            Build(new ServiceCollection().AddRuleLoom(rules => rules.AddCatalog(c => c.AddEvent<UserCreatedSchema>())));
         var startup = Assert.Single(provider.GetServices<IHostedService>());
 
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => startup.StartAsync(TestContext.Current.CancellationToken));
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            startup.StartAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("No context provider is registered under 'customer'", error.Message);
     }
@@ -106,7 +160,8 @@ public class AddRuleLoomTests
     {
         await using var provider = new ServiceCollection().BuildServiceProvider();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.StartRuleLoomAsync(TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            provider.StartRuleLoomAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -125,7 +180,8 @@ public class AddRuleLoomTests
         var engine = scope.ServiceProvider.GetRequiredService<RuleEngine>();
         var rule = RuleJsonParser.Parse(Json.Replace("\"path\": \"Tier\"", "\"path\": \"@customer.Tier\""));
 
-        var result = await engine.ExecuteAsync("UserCreated", new UserDto("u-1", "c-1", "basic"), [rule], TestContext.Current.CancellationToken);
+        var result = await engine.ExecuteAsync("UserCreated", new UserDto("u-1", "c-1", "basic"), [rule],
+            TestContext.Current.CancellationToken);
 
         Assert.False(result.HasFailures);
         Assert.Equal(["vip-welcome"], outbox.Sent);
@@ -166,8 +222,10 @@ public class AddRuleLoomTests
 
         Assert.True(validator.Validate(RuleJsonParser.Parse(Json)).IsValid);
 
-        var unknown = RuleJsonParser.Parse(Json.Replace("\"send-email\"", "\"send-sms\"").Replace("\"eq\"", "\"contains\""));
-        Assert.Equal(["$.condition.operator", "$.actions[0].action"], validator.Validate(unknown).Errors.Select(e => e.Path));
+        var unknown =
+            RuleJsonParser.Parse(Json.Replace("\"send-email\"", "\"send-sms\"").Replace("\"eq\"", "\"contains\""));
+        Assert.Equal(["$.condition.operator", "$.actions[0].action"],
+            validator.Validate(unknown).Errors.Select(e => e.Path));
     }
 
     internal static async Task<ServiceProvider> StartAsync(IServiceCollection services)
@@ -197,7 +255,8 @@ public sealed class Outbox : IEmailSender
 
 public sealed class SendEmailAction(IEmailSender sender) : IAction
 {
-    public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
+    public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
+        CancellationToken cancellationToken = default)
     {
         sender.Send(action.GetParameter<string>("template"));
         return Task.FromResult(ActionResult.Success());
@@ -218,12 +277,14 @@ public sealed class UserCreatedSchema : EventSchema<UserDto>
 public sealed class CustomerProvider(TimeProvider clock) : IContextProvider
 {
     public ValueTask<object?> GetAsync(ContextRequest request, CancellationToken cancellationToken) =>
-        ValueTask.FromResult<object?>(new { Id = request.GetReference<string>(), Tier = "vip", LoadedAt = clock.GetUtcNow() });
+        ValueTask.FromResult<object?>(new
+            { Id = request.GetReference<string>(), Tier = "vip", LoadedAt = clock.GetUtcNow() });
 }
 
 public sealed class AuditAction : IAction
 {
-    public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default) =>
+    public Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(ActionResult.Success());
 }
 

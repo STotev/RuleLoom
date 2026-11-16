@@ -133,10 +133,10 @@ public class RuleEngineResultTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ScheduledActions_ListsEveryScheduledActionWithItsRuleAndDefinition()
+    public async Task ExecuteAsync_ScheduledActions_ListsEveryScheduledActionAsAReference()
     {
         var delayed = Action("ok", schedule: new ScheduleMetadata { Mode = ScheduleMode.Delay, Amount = 2, Unit = ScheduleUnit.Hours });
-        var advanced = Action("ok", schedule: new ScheduleMetadata { Mode = ScheduleMode.Advance, Amount = 1, Unit = ScheduleUnit.Days });
+        var advanced = Action("ok", schedule: new ScheduleMetadata { Mode = ScheduleMode.Delay, Amount = 1, Unit = ScheduleUnit.Days });
         RuleDefinition[] rules =
         [
             Rule("First", Always, priority: 2, id: "r1", actions: [Action("ok"), delayed]),
@@ -154,7 +154,7 @@ public class RuleEngineResultTests
             s =>
             {
                 Assert.Equal(("r2", 0, advanced.Action), (s.RuleId, s.ActionIndex, s.ActionName));
-                Assert.Equal(Now.AddDays(-1), s.ScheduledFor);
+                Assert.Equal(Now.AddDays(1), s.ScheduledFor);
             });
         Assert.Equal(1, _ok.Calls);
     }

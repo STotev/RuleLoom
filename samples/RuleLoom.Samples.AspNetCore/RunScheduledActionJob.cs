@@ -1,66 +1,33 @@
 using Quartz;
 using RuleLoom.Abstractions;
-using RuleLoom.Abstractions.Action;
-using RuleLoom.Abstractions.Context;
 using RuleLoom.Abstractions.Rule;
+using RuleLoom.Engine;
 
 namespace RuleLoom.Samples.AspNetCore;
 
 /// <summary>
-/// Runs a scheduled action when it's due, with the state of the event that scheduled it and its contexts as they are
-/// now (loaded when the action reads them, e.g. a <c>$path</c> parameter into <c>@customer</c>). Rule and action
-/// conditions aren't checked again.
+/// Runs a scheduled action when it's due: one call to <see cref="RuleEngine.ExecuteScheduledAsync"/> with the event
+/// that scheduled it and the tenant's current rules. RuleLoom checks the rule and the action again (and skips them if
+/// the rule is gone, was edited, or no longer matches) and runs the rule's current version of the action.
 /// </summary>
-/// <remarks>
-/// RuleLoom has no entry point for running one action later, so this repeats what the engine does for an immediate
-/// action: build the evaluation context, find the action in the catalog by name, create it, run it, and turn exceptions
-/// into a failed result.
-/// </remarks>
-public sealed class RunScheduledActionJob(
-    Catalog catalog,
-    IActionFactory actionFactory,
-    IContextProviderFactory contextProviders,
-    TenantRuleStore ruleStore,
-    ILogger<RunScheduledActionJob> logger) : IJob
+public sealed class RunScheduledActionJob(RuleEngine engine, TenantRuleStore ruleStore, ILogger<RunScheduledActionJob> logger) : IJob
 {
     public const string TenantIdKey = "tenantId";
-    public const string EventTypeKey = "eventType";
     public const string ScheduledActionKey = "scheduledAction";
-    public const string CurrentKey = "current";
-    public const string PreviousKey = "previous";
+    public const string EventKey = "event";
 
     public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken)
     {
         var data = context.MergedJobDataMap;
         var tenantId = (string)data[TenantIdKey]!;
         var scheduled = (ScheduledAction)data[ScheduledActionKey]!;
-        var state = new EvaluationContext(data[CurrentKey], data[PreviousKey], (string)data[EventTypeKey]!, catalog, contextProviders);
+        var @event = (RuleEvent)data[EventKey]!;
 
-        // A scheduled action is a reference: run the rule's current version of it, if it still has one.
         var rules = await ruleStore.LoadAsync(tenantId, cancellationToken);
-        var action = rules?.Valid.FirstOrDefault(r => r.Id == scheduled.RuleId)?.Actions.ElementAtOrDefault(scheduled.ActionIndex);
-
-        var result = action is not null && string.Equals(action.Action, scheduled.ActionName, StringComparison.OrdinalIgnoreCase)
-            ? await RunAsync(action, state, cancellationToken)
-            : ActionResult.Skipped($"Rule '{scheduled.RuleId}' no longer has action {scheduled.ActionIndex} ('{scheduled.ActionName}').");
+        var result = await engine.ExecuteScheduledAsync(scheduled, @event, rules?.Valid ?? [], cancellationToken);
 
         logger.LogInformation(
             "Scheduled action '{Action}' of rule '{Rule}' for tenant '{Tenant}' ran: {Status} {Message}",
             scheduled.ActionName, scheduled.RuleId, tenantId, result.Status, result.Message ?? result.Error?.Message);
-    }
-
-    private async Task<ActionResult> RunAsync(ActionDefinition action, EvaluationContext state, CancellationToken cancellationToken)
-    {
-        if (!catalog.TryGetAction(action.Action, out var registration))
-            return ActionResult.Failed(new InvalidOperationException($"No action named '{action.Action}' is registered."));
-
-        try
-        {
-            return await actionFactory.Create(registration).ExecuteAsync(action, state, cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            return ActionResult.Failed(ex);
-        }
     }
 }

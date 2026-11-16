@@ -73,4 +73,16 @@ log categories and levels, and what's never written.
 
 ## Deviations
 
-None yet.
+Recorded for [#142](https://github.com/STotev/RuleLoom/issues/142):
+
+- **Two assemblies, one name**: context loads happen in `RuleLoom.Abstractions` (`EvaluationContext`), so it has its own
+  `ActivitySource` and `Meter` named `RuleLoom` (from `System.Diagnostics`, no dependency); OpenTelemetry subscribes by
+  name, so apps add `RuleLoomDiagnostics.Name` once. To keep each instrument in one meter, a scheduled action's subject
+  load (in the engine) has its own histogram, `ruleloom.subject.duration`, and its `ruleloom.context` span is tagged
+  `ruleloom.subject_load`.
+- **The built catalog is logged by `StartRuleLoomAsync`** (DI), category `RuleLoom.Catalog`: building a catalog
+  without DI takes no logger, and its problems are in `Catalog.Problems`.
+- **Context load failures** are logged by the engine when it prefetches contexts; a context an action loads itself
+  fails the action, which is logged as a failed action.
+- **Span attribute and metric tag names** are prefixed `ruleloom.` (`ruleloom.event_type`, `ruleloom.status`, …);
+  failures use the standard `exception.message` and `AddException`.

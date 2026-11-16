@@ -75,7 +75,8 @@ public class TimeZoneTests
     [Fact]
     public async Task ExecuteAsync_ScheduleFromAReferenceWithoutAnOffset_IsInTheTimeZone()
     {
-        var engine = new TestCatalog().TimeZone("Europe/Sofia").Action("log", new LogAction()).Engine();
+        var engine = new TestCatalog().TimeZone("Europe/Sofia").Action("log", new LogAction())
+            .Engine(new FixedTimeProvider(new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero)));
         var action = new ActionDefinition
         {
             Action = "log",
