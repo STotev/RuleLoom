@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging;
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
@@ -73,7 +74,8 @@ internal sealed class TestCatalog : IActionFactory, IContextProviderFactory
         _stored,
         _temporalRules);
 
-    public RuleEngine Engine(TimeProvider? timeProvider = null) => new(Build(), this, this, timeProvider);
+    public RuleEngine Engine(TimeProvider? timeProvider = null, ILoggerFactory? loggerFactory = null) =>
+        new(Build(), this, this, timeProvider, loggerFactory: loggerFactory);
 
     public EvaluationContext Context(object? current, object? previous, string eventType) =>
         new(current, previous, eventType, Build(), this);
