@@ -102,7 +102,10 @@ internal sealed class OperatorCheck(SchemaPaths? schemaPaths) : RuleCheck
     }
 }
 
-/// <summary>Actions must be registered, and delayed or advanced schedules need an amount and a unit.</summary>
+/// <summary>
+/// Actions must be registered, and delayed or advanced schedules need a positive amount and a unit; advancing from now
+/// (no reference path) is a warning.
+/// </summary>
 internal sealed class ActionCheck(Catalog catalog) : RuleCheck
 {
     public override void Action(ActionDefinition action, string location, ValidationProblems problems)
@@ -120,9 +123,17 @@ internal sealed class ActionCheck(Catalog catalog) : RuleCheck
 
         if (schedule.Amount is null)
             problems.Error($"{location}.schedule.amount", $"'amount' is required for '{schedule.Mode}' schedules.");
+        else if (schedule.Amount <= 0)
+            problems.Error($"{location}.schedule.amount", $"'amount' must be greater than zero, not {schedule.Amount}.");
 
         if (schedule.Unit is null)
             problems.Error($"{location}.schedule.unit", $"'unit' is required for '{schedule.Mode}' schedules.");
+
+        if (schedule is { Mode: ScheduleMode.Advance, ReferencePath: null })
+        {
+            problems.Warning($"{location}.schedule",
+                "'Advance' from now is always in the past, so the action runs immediately; did you mean to set a 'referencePath'?");
+        }
     }
 }
 

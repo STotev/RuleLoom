@@ -3,7 +3,7 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.7 → 0.8](#07--08): `ValueComparer` and `ValueConverter` take `TemporalRules`; impossible `Local` times are rejected; `ExecutedImmediately` is `Executed`; `ScheduledAction` is a keyed reference
+- [0.7 → 0.8](#07--08): `ValueComparer` and `ValueConverter` take `TemporalRules`; impossible `Local` times are rejected; `ExecutedImmediately` is `Executed`; `ScheduledAction` is a keyed reference; past due times run immediately
 - [0.6 → 0.7](#06--07): a parameter `{ "$path": ... }` is a path; `FieldDefinition` has `IsRequired`; optionally, typed actions, path parameters and `MapRuleLoom`
 - [0.5 → 0.6](#05--06): the engine, validator and DI run on a catalog; paths starting with `@` or `#` are no longer property names
 - [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
@@ -53,6 +53,14 @@ Run it with `ExecuteScheduledAsync` when the job fires, which replaces a job tha
 edits to a rule apply to its pending actions, and its conditions are checked again. `Key` needs a
 subject: declare it in the event's schema (`Subject(o => o.Number)`) or set `RuleEvent.Subject`. Store a scheduled
 action with `ToJson()` and read it back with `ScheduledAction.Parse`.
+
+### Due times in the past run immediately
+
+An action whose calculated due time has already passed used to come back as `Scheduled` with that time, leaving it to
+your scheduler (which usually fired it at once). `ExecuteAsync` now runs it immediately (`Executed`), and it isn't in
+`ScheduledActions`. To skip actions that are too late instead, set `RuleEngineOptions.SkipOverdueActions` and an
+`OverdueGracePeriod`. `RuleValidator` now rejects a zero or negative schedule `amount`, and warns about `Advance`
+without a `referencePath`.
 
 ## 0.6 → 0.7
 
