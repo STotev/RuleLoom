@@ -213,8 +213,8 @@ ExecuteScheduledAsync(ScheduledAction, storedEvent, rules) → ActionResult (sta
   (resolved on the current state; composite `a=1;b=2` in declared order, invariant values, `null` if a part is), else
   `RuleEvent.Subject`; computed only when an action is scheduled. Statuses: `Executed`, `Scheduled`, `Skipped`, `Failed`.
   A due time already in the past runs the action immediately. `RuleEngineOptions` (engine constructor, or
-  `AddRuleLoom(r => r.Configure(o => ...))`, one shared instance kept with the catalog builder; read when an engine is
-  created): `SkipOverdueActions` (off) skips actions later than `OverdueGracePeriod` (0, not negative), both at
+  `AddRuleLoom(r => r.Configure(o => ...))`, one shared instance kept with the catalog builder; the engine keeps the
+  instance, `options ?? new RuleEngineOptions()`, so defaults live only in the options): `SkipOverdueActions` (off) skips actions later than `OverdueGracePeriod` (0, not negative), both at
   processing and in `ExecuteScheduledAsync` ("overdue by 3 hours (grace period 30 minutes)"). The validator warns about
   `Advance` without a `ReferencePath` and rejects `amount` ≤ 0.
 - **Value comparison**: `ValueComparer` (`AreEqual`, `TryCompare`) and `ValueConverter` (`TryConvert`) in

@@ -20,8 +20,8 @@ namespace RuleLoom.Engine;
 /// <param name="contextProviders">Creates context providers; by default a <see cref="DirectContextProviderFactory"/>
 /// without instances.</param>
 /// <param name="timeProvider">The clock schedules are computed with; the system clock by default.</param>
-/// <param name="options">How rules are run (e.g. skipping overdue actions); the defaults when not given. Read when the
-/// engine is created.</param>
+/// <param name="options">How rules are run (e.g. skipping overdue actions); a default <see cref="RuleEngineOptions"/>
+/// when not given.</param>
 public sealed class RuleEngine(
     Catalog catalog,
     IActionFactory? actions = null,
@@ -34,8 +34,7 @@ public sealed class RuleEngine(
     private readonly IActionFactory _actionFactory = actions ?? new DirectActionFactory();
     private readonly IContextProviderFactory _contextProviders = contextProviders ?? new DirectContextProviderFactory();
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
-    private readonly bool _skipOverdueActions = options?.SkipOverdueActions ?? false;
-    private readonly TimeSpan _overdueGracePeriod = options?.OverdueGracePeriod ?? TimeSpan.Zero;
+    private readonly RuleEngineOptions _options = options ?? new RuleEngineOptions();
 
     /// <summary>
     /// Evaluates every rule for <paramref name="eventType"/> against the current and previous state and processes
@@ -226,8 +225,8 @@ public sealed class RuleEngine(
     {
         var lateness = now - due;
 
-        return _skipOverdueActions && lateness > _overdueGracePeriod
-            ? ActionResult.Skipped($"Action '{action}' skipped: overdue by {Describe(lateness)} (grace period {Describe(_overdueGracePeriod)}).")
+        return _options.SkipOverdueActions && lateness > _options.OverdueGracePeriod
+            ? ActionResult.Skipped($"Action '{action}' skipped: overdue by {Describe(lateness)} (grace period {Describe(_options.OverdueGracePeriod)}).")
             : null;
     }
 

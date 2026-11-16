@@ -165,6 +165,7 @@ Recorded for due times in the past ([#141](https://github.com/STotev/RuleLoom/is
   loaded, so an overdue action costs no load.
 - **Options through DI** are one shared `RuleEngineOptions` instance kept with the catalog builder (`Configure` can be
   called from several `AddRuleLoom` calls), not `Microsoft.Extensions.Options`, which would be a new dependency;
-  engines read them when they're created. A negative grace period throws.
+  configure them at startup. The engine keeps the options it's given (a default `RuleEngineOptions` when none is), so
+  the defaults live only in the options. A negative grace period throws.
 - **Messages** give lateness and grace period in their two largest units ("overdue by 3 hours (grace period 30
   minutes)").
