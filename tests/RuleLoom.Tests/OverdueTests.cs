@@ -17,7 +17,7 @@ public class OverdueTests
     [Fact]
     public async Task ExecuteAsync_DueTimeAlreadyPassed_RunsTheActionNow()
     {
-        var result = await Engine().ExecuteAsync("OrderPlaced", new { DueAt = Now.AddHours(1) }, [Rule(advanceHours: 3)], TestContext.Current.CancellationToken);
+        var result = await Engine().ExecuteAsync("OrderPlaced", new { DueAt = Now.AddHours(1) }, [RemindBeforeDue(3, ScheduleUnit.Hours)], TestContext.Current.CancellationToken);
 
         Assert.Equal(ActionExecutionStatus.Executed, Single(result).Status);
         Assert.Empty(result.ScheduledActions);
@@ -27,20 +27,20 @@ public class OverdueTests
     [Fact]
     public async Task ExecuteAsync_DueNowOrLater_IsScheduled()
     {
-        var result = await Engine().ExecuteAsync("OrderPlaced", new { DueAt = Now.AddHours(3) }, [Rule(advanceHours: 3)], TestContext.Current.CancellationToken);
+        var result = await Engine().ExecuteAsync("OrderPlaced", new { DueAt = Now.AddHours(3) }, [RemindBeforeDue(3, ScheduleUnit.Hours)], TestContext.Current.CancellationToken);
 
         Assert.Equal((ActionExecutionStatus.Scheduled, Now), (Single(result).Status, Single(result).ScheduledFor));
         Assert.Equal(0, _remind.Calls);
     }
 
     [Theory]
-    [InlineData(3, ActionExecutionStatus.Skipped)]       // due 3 hours ago
-    [InlineData(0.4, ActionExecutionStatus.Executed)]    // due 24 minutes ago: within the grace period
-    public async Task ExecuteAsync_SkippingOverdueActions_SkipsThoseLaterThanTheGracePeriod(double advanceHours, ActionExecutionStatus expected)
+    [InlineData(3, ScheduleUnit.Hours, ActionExecutionStatus.Skipped)]
+    [InlineData(24, ScheduleUnit.Minutes, ActionExecutionStatus.Executed)]
+    public async Task ExecuteAsync_SkippingOverdueActions_SkipsThoseLaterThanTheGracePeriod(int amount, ScheduleUnit unit, ActionExecutionStatus expected)
     {
         var engine = Engine(new RuleEngineOptions { SkipOverdueActions = true, OverdueGracePeriod = TimeSpan.FromMinutes(30) });
 
-        var result = await engine.ExecuteAsync("OrderPlaced", new { DueAt = Now }, [Rule(advanceHours)], TestContext.Current.CancellationToken);
+        var result = await engine.ExecuteAsync("OrderPlaced", new { DueAt = Now }, [RemindBeforeDue(amount, unit)], TestContext.Current.CancellationToken);
 
         Assert.Equal(expected, Single(result).Status);
     }
@@ -50,23 +50,24 @@ public class OverdueTests
     {
         var engine = Engine(new RuleEngineOptions { SkipOverdueActions = true, OverdueGracePeriod = TimeSpan.FromMinutes(30) });
 
-        var result = await engine.ExecuteAsync("OrderPlaced", new { DueAt = Now }, [Rule(advanceHours: 3)], TestContext.Current.CancellationToken);
+        var result = await engine.ExecuteAsync("OrderPlaced", new { DueAt = Now }, [RemindBeforeDue(3, ScheduleUnit.Hours)], TestContext.Current.CancellationToken);
 
         Assert.Equal("Action 'remind' skipped: overdue by 3 hours (grace period 30 minutes).", Single(result).Message);
         Assert.Equal(0, _remind.Calls);
     }
 
     [Theory]
-    [InlineData(false, 0, ActionExecutionStatus.Executed)]   // not skipping: runs, however late
-    [InlineData(true, 30, ActionExecutionStatus.Skipped)]    // 3 hours late
-    [InlineData(true, 240, ActionExecutionStatus.Executed)]  // within a 4-hour grace period
-    public async Task ExecuteScheduledAsync_RunLate_IsSkippedOnlyWhenOverdue(bool skip, int graceMinutes, ActionExecutionStatus expected)
+    [InlineData(false, 0, ActionExecutionStatus.Executed)]
+    [InlineData(true, 30, ActionExecutionStatus.Skipped)]
+    [InlineData(true, 240, ActionExecutionStatus.Executed)]
+    public async Task ExecuteScheduledAsync_ThreeHoursLate_IsSkippedOnlyWhenLaterThanTheGracePeriod(bool skipOverdueActions, int graceMinutes,
+        ActionExecutionStatus expected)
     {
-        var engine = Engine(new RuleEngineOptions { SkipOverdueActions = skip, OverdueGracePeriod = TimeSpan.FromMinutes(graceMinutes) });
+        var engine = Engine(new RuleEngineOptions { SkipOverdueActions = skipOverdueActions, OverdueGracePeriod = TimeSpan.FromMinutes(graceMinutes) });
         var scheduled = new ScheduledAction("reminder", 0, "remind", Now.AddHours(-3), null);
 
-        var result = await engine.ExecuteScheduledAsync(scheduled, new RuleEvent("OrderPlaced", new { DueAt = Now }), [Rule(advanceHours: 1)],
-            TestContext.Current.CancellationToken);
+        var result = await engine.ExecuteScheduledAsync(scheduled, new RuleEvent("OrderPlaced", new { DueAt = Now }),
+            [RemindBeforeDue(1, ScheduleUnit.Hours)], TestContext.Current.CancellationToken);
 
         Assert.Equal(expected, result.Status);
     }
@@ -101,8 +102,7 @@ public class OverdueTests
     private RuleEngine Engine(RuleEngineOptions? options = null) =>
         new(new TestCatalog().Action("remind", _remind).Build(), new TestCatalog().Action("remind", _remind), timeProvider: new FixedTimeProvider(Now), options: options);
 
-    // Remind advanceHours before DueAt.
-    private static RuleDefinition Rule(double advanceHours) => new()
+    private static RuleDefinition RemindBeforeDue(int amount, ScheduleUnit unit) => new()
     {
         Id = "reminder", Name = "Reminder", EventType = "OrderPlaced", Condition = Op("eq", Value(1), Value(1)),
         Actions =
@@ -112,7 +112,7 @@ public class OverdueTests
                 Action = "remind",
                 Schedule = new ScheduleMetadata
                 {
-                    Mode = ScheduleMode.Advance, Amount = (int)Math.Round(advanceHours * 60), Unit = ScheduleUnit.Minutes, ReferencePath = "DueAt"
+                    Mode = ScheduleMode.Advance, Amount = amount, Unit = unit, ReferencePath = "DueAt"
                 }
             }
         ]
