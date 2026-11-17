@@ -130,7 +130,7 @@ From 0.5.0: NuGet packages published by the release workflow with trusted publis
 ## 🎯 Milestones
 
 Agreed 2026-10-07 after settling the deployment and ownership questions in [`vision.md`](vision.md). Each milestone
-becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66), **0.6** is done (PRD #87), see *Done*, **0.7** is done (PRD #113, below), and **0.8** is planned (PRD #134, below);
+becomes a PRD (or a few issues) when it starts. **0.5** shipped (PRD #66), **0.6** is done (PRD #87), see *Done*, **0.7** is done (PRD #113, below), and **0.8** is done (PRD #134, below);
 the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings) shaped 0.7–0.8 below.
 
 | Milestone | Contents | Notes |
@@ -155,7 +155,7 @@ the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings
 | [#119](https://github.com/STotev/RuleLoom/issues/119) | Sample and guide for typed actions and `MapRuleLoom` | HITL | #81, #114–#118 | [#128](https://github.com/STotev/RuleLoom/pull/128) | [sample-typed-actions](specs/2026-10-26-sample-typed-actions-design.md) |
 
 
-### 0.8 — PRD [#134](https://github.com/STotev/RuleLoom/issues/134)
+### 0.8 — PRD [#134](https://github.com/STotev/RuleLoom/issues/134) ✅
 
 | Issue | Slice | Type | Blocked by | PR | Spec |
 |---|---|---|---|---|---|
@@ -168,6 +168,11 @@ the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings
 | [#141](https://github.com/STotev/RuleLoom/issues/141) | Due times in the past and overdue actions | AFK | #140 | [#151](https://github.com/STotev/RuleLoom/pull/151) | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
 | [#142](https://github.com/STotev/RuleLoom/issues/142) | OpenTelemetry traces and metrics, and logging | AFK | #140 | [#152](https://github.com/STotev/RuleLoom/pull/152) | [observability](specs/2026-10-29-observability-design.md) |
 | [#143](https://github.com/STotev/RuleLoom/issues/143) | Sample and guides: dispatching scheduled actions | HITL | #135–#142 | [#156](https://github.com/STotev/RuleLoom/pull/156) | [sample-scheduling](specs/2026-11-17-sample-scheduling-design.md) |
+
+Also [#157](https://github.com/STotev/RuleLoom/pull/157): telemetry fixes found while building the sample (findings 2
+and 7). Follow-ups: [#155](https://github.com/STotev/RuleLoom/issues/155) (shared test helpers),
+[#158](https://github.com/STotev/RuleLoom/issues/158) (samples by concern, with tests).
+
 ---
 
 ## 📋 Backlog — not yet scheduled
