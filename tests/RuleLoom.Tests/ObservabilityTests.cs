@@ -130,6 +130,19 @@ public sealed class ObservabilityTests : IDisposable
     }
 
     [Fact]
+    public async Task Logs_NameTheEventsIdAsRuleEventId_AndOmitAMissingMessage()
+    {
+        var engine = Catalog().Engine(loggerFactory: _logs);
+        var placed = new RuleEvent(_eventType, new { Total = 10 }) { Subject = "order-1", EventId = "msg-1" };
+
+        await engine.ExecuteAsync(placed, [Rule("big", Op("eq", Value(1), Value(1)))], TestContext.Current.CancellationToken);
+
+        Assert.Contains(_logs.Values, v => Equals(v.GetValueOrDefault("RuleEventId"), "msg-1") && Equals(v.GetValueOrDefault("RuleId"), "big"));
+        Assert.Contains(_logs.Entries, e => e.Message == $"Action 'notify' (0) of rule 'big' for {_eventType}: Executed (subject order-1, event msg-1)");
+        Assert.DoesNotContain(_logs.Entries, e => e.Message.Contains("null"));
+    }
+
+    [Fact]
     public async Task Logs_SubjectOnlyAtDebug()
     {
         _logs.MinimumLevel = LogLevel.Information;
@@ -165,6 +178,7 @@ public sealed class ObservabilityTests : IDisposable
     private sealed class TestLoggerFactory : ILoggerFactory, ILogger
     {
         public ConcurrentQueue<(LogLevel Level, string Message)> Entries { get; } = new();
+        public ConcurrentQueue<IReadOnlyDictionary<string, object?>> Values { get; } = new();
         public LogLevel MinimumLevel { get; set; } = LogLevel.Debug;
 
         public ILogger CreateLogger(string categoryName) => this;
@@ -176,8 +190,12 @@ public sealed class ObservabilityTests : IDisposable
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            if (IsEnabled(logLevel))
-                Entries.Enqueue((logLevel, formatter(state, exception)));
+            if (!IsEnabled(logLevel))
+                return;
+
+            Entries.Enqueue((logLevel, formatter(state, exception)));
+            if (state is IEnumerable<KeyValuePair<string, object?>> values)
+                Values.Enqueue(values.ToDictionary(v => v.Key, v => v.Value));
         }
     }
 }
