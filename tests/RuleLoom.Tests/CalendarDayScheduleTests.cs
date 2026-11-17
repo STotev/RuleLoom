@@ -25,6 +25,14 @@ public class CalendarDayScheduleTests
     }
 
     [Fact]
+    public async Task Schedule_FromADateOnly_StartsAtItsMidnightInTheTimeZone()
+    {
+        var schedule = new ScheduleMetadata { Mode = ScheduleMode.Advance, Amount = 1, Unit = ScheduleUnit.Days, ReferencePath = "DueOn" };
+
+        Assert.Equal(new DateTimeOffset(2026, 3, 27, 22, 0, 0, TimeSpan.Zero), await ScheduleAsync(schedule, new { DueOn = new DateOnly(2026, 3, 29) }));
+    }
+
+    [Fact]
     public async Task Schedule_FromNow_InCalendarDays()
     {
         var schedule = new ScheduleMetadata { Mode = ScheduleMode.Delay, Amount = 1, Unit = ScheduleUnit.Days };
