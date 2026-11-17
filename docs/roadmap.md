@@ -167,7 +167,7 @@ the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings
 | [#140](https://github.com/STotev/RuleLoom/issues/140) | `ExecuteScheduledAsync` | AFK | #139 | [#150](https://github.com/STotev/RuleLoom/pull/150) | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
 | [#141](https://github.com/STotev/RuleLoom/issues/141) | Due times in the past and overdue actions | AFK | #140 | [#151](https://github.com/STotev/RuleLoom/pull/151) | [rule-event-and-scheduled-actions](specs/2026-10-29-rule-event-and-scheduled-actions-design.md) |
 | [#142](https://github.com/STotev/RuleLoom/issues/142) | OpenTelemetry traces and metrics, and logging | AFK | #140 | [#152](https://github.com/STotev/RuleLoom/pull/152) | [observability](specs/2026-10-29-observability-design.md) |
-| [#143](https://github.com/STotev/RuleLoom/issues/143) | Sample and guides: dispatching scheduled actions | HITL | #135–#142 | — | — |
+| [#143](https://github.com/STotev/RuleLoom/issues/143) | Sample and guides: dispatching scheduled actions | HITL | #135–#142 | [#156](https://github.com/STotev/RuleLoom/pull/156) | [sample-scheduling](specs/2026-11-17-sample-scheduling-design.md) |
 ---
 
 ## 📋 Backlog — not yet scheduled
