@@ -97,23 +97,23 @@ internal sealed partial class EngineTelemetry(ILogger logger)
     public void OverdueSkipped(string eventType, string ruleId, string action, string reason) =>
         LogOverdueSkipped(logger, eventType, ruleId, action, reason);
 
-    /// <summary>Counts and logs a rule's outcome; a failure is a span event too.</summary>
-    public void RuleOutcome(Activity? activity, RuleEvent @event, RuleExecutionResult rule, string? subject)
+    /// <summary>Counts and logs a rule's outcome once its condition is decided; a failure is a span event too.</summary>
+    public void RuleOutcome(Activity? activity, RuleEvent @event, string ruleId, RuleExecutionStatus status, Exception? error, string? subject)
     {
         Rules.Add(1, new KeyValuePair<string, object?>("ruleloom.event_type", @event.EventType),
-            new KeyValuePair<string, object?>("ruleloom.outcome", Outcome(rule.Status)));
+            new KeyValuePair<string, object?>("ruleloom.outcome", Outcome(status)));
 
-        if (rule.Status == RuleExecutionStatus.Failed)
+        if (status == RuleExecutionStatus.Failed)
         {
             activity?.AddEvent(new ActivityEvent("ruleloom.rule_failed", tags: new ActivityTagsCollection
             {
-                ["ruleloom.rule_id"] = rule.RuleId,
-                ["exception.message"] = rule.Error?.Message
+                ["ruleloom.rule_id"] = ruleId,
+                ["exception.message"] = error?.Message
             }));
-            LogRuleFailed(logger, @event.EventType, rule.RuleId, rule.Error?.Message);
+            LogRuleFailed(logger, @event.EventType, ruleId, error?.Message);
         }
 
-        LogRuleOutcome(logger, @event.EventType, rule.RuleId, rule.Status, subject, @event.EventId);
+        LogRuleOutcome(logger, @event.EventType, ruleId, status, subject, @event.EventId);
     }
 
     /// <summary>Counts and logs an action's outcome.</summary>

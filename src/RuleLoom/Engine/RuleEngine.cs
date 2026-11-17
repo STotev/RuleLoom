@@ -94,20 +94,23 @@ public sealed class RuleEngine(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            bool matched;
+            RuleExecutionStatus status;
+            Exception? error = null;
             try
             {
-                matched = _conditionEvaluator.Evaluate(context, rule.Condition);
+                status = _conditionEvaluator.Evaluate(context, rule.Condition) ? RuleExecutionStatus.Matched : RuleExecutionStatus.NotMatched;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                Add(CreateRuleResult(rule, RuleExecutionStatus.Failed, error: ex));
-                continue;
+                (status, error) = (RuleExecutionStatus.Failed, ex);
             }
 
-            if (!matched)
+            // Reported when decided, so a rule's log line comes before its actions'.
+            _telemetry.RuleOutcome(activity, @event, rule.Id, status, error, subjectText);
+
+            if (status != RuleExecutionStatus.Matched)
             {
-                Add(CreateRuleResult(rule, RuleExecutionStatus.NotMatched));
+                ruleResults.Add(CreateRuleResult(rule, status, error: error));
                 continue;
             }
 
@@ -131,18 +134,12 @@ public sealed class RuleEngine(
                 }
             }
 
-            Add(CreateRuleResult(rule, RuleExecutionStatus.Matched, actionResults));
+            ruleResults.Add(CreateRuleResult(rule, RuleExecutionStatus.Matched, actionResults));
         }
 
         var engineResult = new RuleEngineResult { Rules = ruleResults, ScheduledActions = scheduledActions };
         EngineTelemetry.EndExecute(activity, @event, engineResult, started);
         return engineResult;
-
-        void Add(RuleExecutionResult ruleResult)
-        {
-            ruleResults.Add(ruleResult);
-            _telemetry.RuleOutcome(activity, @event, ruleResult, subjectText);
-        }
     }
 
     /// <summary>

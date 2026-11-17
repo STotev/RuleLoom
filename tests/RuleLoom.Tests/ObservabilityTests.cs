@@ -143,6 +143,20 @@ public sealed class ObservabilityTests : IDisposable
     }
 
     [Fact]
+    public async Task Logs_ARulesOutcome_BeforeItsActions()
+    {
+        var engine = Catalog().Engine(loggerFactory: _logs);
+
+        await engine.ExecuteAsync(new RuleEvent(_eventType, new { Total = 10 }), [Rule("big", Op("eq", Value(1), Value(1)))],
+            TestContext.Current.CancellationToken);
+
+        var messages = _logs.Entries.Select(e => e.Message).ToList();
+        var rule = messages.FindIndex(m => m.StartsWith($"Rule 'big' for {_eventType}: Matched", StringComparison.Ordinal));
+        var action = messages.FindIndex(m => m.StartsWith("Action 'notify' (0) of rule 'big'", StringComparison.Ordinal));
+        Assert.InRange(rule, 0, action - 1);
+    }
+
+    [Fact]
     public async Task Logs_SubjectOnlyAtDebug()
     {
         _logs.MinimumLevel = LogLevel.Information;
