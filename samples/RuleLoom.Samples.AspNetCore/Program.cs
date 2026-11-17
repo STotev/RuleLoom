@@ -1,3 +1,4 @@
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Quartz;
 using RuleLoom.Abstractions;
@@ -28,14 +29,15 @@ builder.Services
     .AddQuartz()
     .AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
-// RuleLoom's spans (ruleloom.execute, ruleloom.execute_scheduled, ruleloom.action, ruleloom.context) on the console;
-// a real app adds an exporter such as OTLP, and the meter with WithMetrics(m => m.AddMeter(RuleLoomDiagnostics.Name)).
-// The sampler follows the parent span by default, and requests have an unrecorded one unless the app adds ASP.NET Core
-// instrumentation (OpenTelemetry.Instrumentation.AspNetCore): without either, spans started in a request are dropped.
-builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing
-    .SetSampler(new AlwaysOnSampler())
-    .AddSource(RuleLoomDiagnostics.Name)
-    .AddConsoleExporter());
+// RuleLoom's spans, nested under each request's, and its metrics on the console; a real app uses an exporter such as OTLP.
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddSource(RuleLoomDiagnostics.Name)
+        .AddConsoleExporter())
+    .WithMetrics(metrics => metrics
+        .AddMeter(RuleLoomDiagnostics.Name)
+        .AddConsoleExporter());
 
 var app = builder.Build();
 

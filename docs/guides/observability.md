@@ -17,10 +17,8 @@ builder.Services.AddOpenTelemetry()
 
 When nothing listens, they cost close to nothing.
 
-OpenTelemetry's default sampler follows the parent span. In ASP.NET Core every request has an activity, which isn't
-recorded unless you add ASP.NET Core instrumentation (`OpenTelemetry.Instrumentation.AspNetCore`), so RuleLoom's spans
-started in a request would be dropped. Add that instrumentation (recommended: the request becomes their parent), or set
-a sampler that doesn't follow the parent.
+In ASP.NET Core, also add `AddAspNetCoreInstrumentation()` (`OpenTelemetry.Instrumentation.AspNetCore`) to tracing, so
+RuleLoom's spans are recorded under the request's span.
 
 | Span | When | Attributes |
 |---|---|---|

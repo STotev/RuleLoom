@@ -21,7 +21,7 @@ against them. It shows:
   their subject (`Subject(o => o.Number).LoadedBy("order")`), so a reminder for an order paid meanwhile is skipped.
   Reminders more than a minute late are skipped too (`SkipOverdueActions`). See the
   [dispatching guide](../../docs/guides/dispatching-scheduled-actions.md).
-- **Observability**: RuleLoom's spans go to the OpenTelemetry console exporter, and every rule's and action's outcome
+- **Observability**: RuleLoom's spans (under each request's span) and metrics go to the OpenTelemetry console exporter, and every rule's and action's outcome
   to the Debug log (`"RuleLoom": "Debug"` in `appsettings.json`).
 
 It's also a spike: what was awkward while building it is recorded in the

@@ -27,7 +27,7 @@ Reviewed with the maintainer before building (HITL).
 | Envelope | The wire format gains optional `eventId` and `occurredAt`; the sample builds a `RuleEvent` with them, `Subject` = the entity id and `Metadata` = `{ tenantId }` |
 | Job data | Text only: `ScheduledAction.ToJson()` and `RuleEvent.ToJson()`, as a persistent job store needs; job and trigger both keyed `{tenant}/{Key}` |
 | Overdue actions | `r.Configure(o => { o.SkipOverdueActions = true; o.OverdueGracePeriod = TimeSpan.FromMinutes(1); })` |
-| Observability | Debug logs for the `RuleLoom` categories in development; OpenTelemetry tracing with the `RuleLoom` source and meter and the console exporter (`OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Exporter.Console`, Apache-2.0, sample only) |
+| Observability | Debug logs for the `RuleLoom` categories in development; OpenTelemetry tracing (with ASP.NET Core instrumentation) and metrics with the `RuleLoom` source and meter and the console exporter (`OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Instrumentation.AspNetCore`, `OpenTelemetry.Exporter.Console`, Apache-2.0, sample only) |
 | Hangfire | A snippet in the guide; Quartz stays the runnable sample |
 | Guide | `docs/guides/dispatching-scheduled-actions.md`: the job as one call, keys on job and trigger, tenant prefixes, stored JSON, subject loaders, overdue actions |
 
@@ -37,8 +37,8 @@ Recorded while building.
 
 1. **Spans under ASP.NET Core requests were dropped.** OpenTelemetry's default sampler follows the parent span, and a
    request's activity isn't recorded unless the app adds ASP.NET Core instrumentation, so `ruleloom.execute` never
-   reached the exporter; scheduled runs (started by Quartz, without a parent) did. The sample sets an always-on sampler
-   with a comment; the observability guide now explains it. Apps usually add the instrumentation anyway.
+   reached the exporter; scheduled runs (started by Quartz, without a parent) did. The sample adds ASP.NET Core
+   instrumentation (as apps usually do), so RuleLoom's spans nest under the request's; the observability guide says to.
 2. **A scheduled run's span named a different subject than its key.** `ruleloom.execute_scheduled` and its Debug log
    use `RuleEvent.Subject` (`order-1001`), while the key and `ExecuteAsync`'s logs use the identity the schema
    declares (`SO-1001`). A library fix, in its own PR (see the issue's comments).
