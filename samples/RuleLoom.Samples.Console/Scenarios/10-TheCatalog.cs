@@ -26,10 +26,10 @@ public static class TheCatalog
         var events = tree.AddNode("Events");
         foreach (var @event in document.Events)
         {
-            var node = events.AddNode($"[bold]{@event.EventType}[/] [grey]{Markup.Escape(@event.Label ?? "")}[/]");
+            var node = events.AddNode($"[bold]{@event.EventType}[/] [purple]{Markup.Escape(@event.Label ?? "")}[/]");
             AddFields(node, @event.Fields, prefix: "");
             foreach (var context in @event.Contexts)
-                node.AddNode($"[aqua]@{context.Name}[/] [grey]{Markup.Escape(context.Label ?? "")}, loaded by \"{context.Provider}\"[/]");
+                node.AddNode($"[aqua]@{context.Name}[/] [purple]{Markup.Escape(context.Label ?? "")}, loaded by \"{context.Provider}\"[/]");
         }
 
         var contexts = tree.AddNode("Contexts");
@@ -39,12 +39,12 @@ public static class TheCatalog
         var actions = tree.AddNode("Actions");
         foreach (var action in document.Actions)
         {
-            var node = actions.AddNode($"[bold]{action.Name}[/] [grey]{Markup.Escape(action.Label ?? "")}: {Markup.Escape(action.Description ?? "")}[/]");
+            var node = actions.AddNode($"[bold]{action.Name}[/] [purple]{Markup.Escape(action.Label ?? "")}: {Markup.Escape(action.Description ?? "")}[/]");
             if (action.Parameters is { } parameters)
                 AddFields(node, parameters.Fields, prefix: "");
         }
 
-        tree.AddNode($"Operators [grey]{string.Join(", ", document.Operators.Select(o => o.Name))}[/]");
+        tree.AddNode($"Operators [purple]{string.Join(", ", document.Operators.Select(o => o.Name))}[/]");
 
         AnsiConsole.Write(tree);
         Show.Note($"As JSON, this is {catalog.ToJson().Length:N0} characters: catalog.ToJson().");
@@ -56,8 +56,8 @@ public static class TheCatalog
     {
         foreach (var field in fields)
         {
-            var label = field.Label is null ? "" : $" [grey]{Markup.Escape(field.Label)}[/]";
-            var values = field.EnumValues.Count == 0 ? "" : $" [grey]({string.Join(", ", field.EnumValues)})[/]";
+            var label = field.Label is null ? "" : $" [purple]{Markup.Escape(field.Label)}[/]";
+            var values = field.EnumValues.Count == 0 ? "" : $" [purple]({string.Join(", ", field.EnumValues)})[/]";
             node.AddNode($"{prefix}{field.Name}: [blue]{field.Type}[/]{values}{label}");
             AddFields(node, field.Fields, $"{prefix}{field.Name}.");
         }
