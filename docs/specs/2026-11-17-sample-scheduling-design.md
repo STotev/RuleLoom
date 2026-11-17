@@ -28,6 +28,7 @@ Reviewed with the maintainer before building (HITL).
 | Job data | Text only: `ScheduledAction.ToJson()` and `RuleEvent.ToJson()`, as a persistent job store needs; job and trigger both keyed `{tenant}/{Key}` |
 | Overdue actions | `r.Configure(o => { o.SkipOverdueActions = true; o.OverdueGracePeriod = TimeSpan.FromMinutes(1); })` |
 | Observability | Debug logs for the `RuleLoom` categories in development; OpenTelemetry tracing (with ASP.NET Core instrumentation) and metrics with the `RuleLoom` source and meter and the console exporter (`OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Instrumentation.AspNetCore`, `OpenTelemetry.Exporter.Console`, Apache-2.0, sample only) |
+| Logging | Serilog (`Serilog.AspNetCore`, Apache-2.0, sample only), configured in `appsettings.json`: timestamps, levels and each log's source on the console (asked for by the maintainer after review) |
 | Hangfire | A snippet in the guide; Quartz stays the runnable sample |
 | Guide | `docs/guides/dispatching-scheduled-actions.md`: the job as one call, keys on job and trigger, tenant prefixes, stored JSON, subject loaders, overdue actions |
 

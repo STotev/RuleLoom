@@ -10,6 +10,7 @@
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <PackageReference Include="Quartz" />
+    <PackageReference Include="Serilog.AspNetCore" />
   </ItemGroup>
 
 </Project>
