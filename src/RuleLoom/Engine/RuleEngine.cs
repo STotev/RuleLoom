@@ -186,13 +186,16 @@ public sealed class RuleEngine(
         ArgumentNullException.ThrowIfNull(storedEvent);
         ArgumentNullException.ThrowIfNull(rules);
 
+        // The same subject as the key and ExecuteAsync's telemetry: the declared identity, else RuleEvent.Subject.
+        var subject = new Lazy<string?>(() => SubjectOf(storedEvent, new EvaluationContext(storedEvent, _catalog, _contextProviders))?.Text);
+
         var started = Stopwatch.GetTimestamp();
-        using var activity = EngineTelemetry.StartScheduled(storedEvent, scheduled);
+        using var activity = EngineTelemetry.StartScheduled(storedEvent, scheduled, () => subject.Value);
 
         var result = await RunScheduledAsync(scheduled, storedEvent, rules, cancellationToken)
             with { ActionName = scheduled.ActionName, ActionIndex = scheduled.ActionIndex };
 
-        _telemetry.EndScheduled(activity, storedEvent, scheduled, result, started);
+        _telemetry.EndScheduled(activity, storedEvent, scheduled, result, started, () => subject.Value);
         return result;
     }
 

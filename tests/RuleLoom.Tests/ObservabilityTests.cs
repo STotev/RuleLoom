@@ -97,6 +97,23 @@ public sealed class ObservabilityTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteScheduledAsync_NamesTheSubjectTheSchemaDeclares_LikeTheKey()
+    {
+        var schema = Schemas.EventSchemaDefinition.Parse($$"""
+            { "x-ruleloom-event": "{{_eventType}}", "type": "object", "properties": { "number": { "type": "string" } },
+              "x-ruleloom-subject": { "x-ruleloom-identity": "number" } }
+            """);
+        var engine = new TestCatalog().Action("notify", new NotifyAction()).Event(schema).Engine(loggerFactory: _logs);
+        var placed = new RuleEvent(_eventType, new { Number = "SO-1" }) { Subject = "order-1" };
+
+        await engine.ExecuteScheduledAsync(new ScheduledAction("gone", 0, "notify", DateTimeOffset.UnixEpoch, "gone:0:SO-1"), placed, [],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("SO-1", Mine("ruleloom.execute_scheduled").Single().GetTagItem("ruleloom.subject"));
+        Assert.Contains(_logs.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("(subject SO-1, "));
+    }
+
+    [Fact]
     public async Task Logs_FailuresAsWarnings_OutcomesAtDebug_NeverStateValues()
     {
         var engine = Catalog().Engine(loggerFactory: _logs);

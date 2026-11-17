@@ -35,9 +35,9 @@ internal sealed partial class EngineTelemetry(ILogger logger)
         Start("ruleloom.execute", @event, subject);
 
     /// <summary>A <c>ruleloom.execute_scheduled</c> span for a scheduled action.</summary>
-    public static Activity? StartScheduled(RuleEvent @event, ScheduledAction scheduled)
+    public static Activity? StartScheduled(RuleEvent @event, ScheduledAction scheduled, Func<string?> subject)
     {
-        var activity = Start("ruleloom.execute_scheduled", @event, () => @event.Subject);
+        var activity = Start("ruleloom.execute_scheduled", @event, subject);
         activity?.SetTag("ruleloom.rule_id", scheduled.RuleId);
         activity?.SetTag("ruleloom.action", scheduled.ActionName);
         activity?.SetTag("ruleloom.action_index", scheduled.ActionIndex);
@@ -148,7 +148,8 @@ internal sealed partial class EngineTelemetry(ILogger logger)
     }
 
     /// <summary>Ends a scheduled action's span with its status, and records its duration.</summary>
-    public void EndScheduled(Activity? activity, RuleEvent @event, ScheduledAction scheduled, ActionResult result, long started)
+    public void EndScheduled(Activity? activity, RuleEvent @event, ScheduledAction scheduled, ActionResult result, long started,
+        Func<string?> subject)
     {
         ScheduledDuration.Record(Stopwatch.GetElapsedTime(started).TotalSeconds, new KeyValuePair<string, object?>("ruleloom.event_type", @event.EventType));
 
@@ -158,7 +159,7 @@ internal sealed partial class EngineTelemetry(ILogger logger)
         if (result is { Status: ActionExecutionStatus.Failed, Error: { } error })
             Fail(activity, error);
 
-        ActionOutcome(@event, scheduled.RuleId, result, Detailed ? @event.Subject : null);
+        ActionOutcome(@event, scheduled.RuleId, result, Detailed ? subject() : null);
     }
 
     private static Activity? Start(string name, RuleEvent @event, Func<string?> subject)
