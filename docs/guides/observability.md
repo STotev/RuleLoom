@@ -17,6 +17,11 @@ builder.Services.AddOpenTelemetry()
 
 When nothing listens, they cost close to nothing.
 
+OpenTelemetry's default sampler follows the parent span. In ASP.NET Core every request has an activity, which isn't
+recorded unless you add ASP.NET Core instrumentation (`OpenTelemetry.Instrumentation.AspNetCore`), so RuleLoom's spans
+started in a request would be dropped. Add that instrumentation (recommended: the request becomes their parent), or set
+a sampler that doesn't follow the parent.
+
 | Span | When | Attributes |
 |---|---|---|
 | `ruleloom.execute` | each `ExecuteAsync` | `ruleloom.event_type`, `ruleloom.subject`, `ruleloom.event_id`; counts `ruleloom.rules.matched`/`not_matched`/`failed` and `ruleloom.actions.executed`/`scheduled`/`skipped`/`failed`; a `ruleloom.rule_failed` event per failed rule (its id and error) |

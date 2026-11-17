@@ -3,7 +3,7 @@
 RuleLoom is pre-1.0, so minor versions can contain breaking changes. This page lists every breaking change, newest
 first, with what to change. Each version's GitHub release notes link the pull requests with the full details.
 
-- [0.7 → 0.8](#07--08): `ValueComparer` and `ValueConverter` take `TemporalRules`; impossible `Local` times are rejected; `ExecutedImmediately` is `Executed`; `ScheduledAction` is a keyed reference; past due times run immediately; dates are calendar days
+- [0.7 → 0.8](#07--08): `ValueComparer` and `ValueConverter` take `TemporalRules`; impossible `Local` times are rejected; `ExecutedImmediately` is `Executed`; `ScheduledAction` is a keyed reference; past due times run immediately; dates are calendar days; optionally, a time zone, the envelope, scheduled actions run by RuleLoom, observability
 - [0.6 → 0.7](#06--07): a parameter `{ "$path": ... }` is a path; `FieldDefinition` has `IsRequired`; optionally, typed actions, path parameters and `MapRuleLoom`
 - [0.5 → 0.6](#05--06): the engine, validator and DI run on a catalog; paths starting with `@` or `#` are no longer property names
 - [0.4 → 0.5](#04--05): rule ids are required; `LogAction` is `ConsoleLogAction`; ISO date strings and `changed` compare by meaning; rules on JSON state
@@ -71,6 +71,22 @@ your scheduler (which usually fired it at once). `ExecuteAsync` now runs it imme
 `ScheduledActions`. To skip actions that are too late instead, set `RuleEngineOptions.SkipOverdueActions` and an
 `OverdueGracePeriod`. `RuleValidator` now rejects a zero or negative schedule `amount`, and warns about `Advance`
 without a `referencePath`.
+
+### Optional: the envelope, scheduled actions run by RuleLoom, a time zone, observability
+
+Nothing else has to change, but 0.8 can replace code apps wrote themselves:
+
+- **A time zone.** If your data has date-times without an offset (a database's `DateTime`s), set the catalog's
+  `UseTimeZone("Europe/Sofia")`; dates then compare as calendar days there, and schedules count `Days` as calendar
+  days.
+- **The envelope.** Run rules on a `RuleEvent` (`ExecuteAsync(ruleEvent, rules)`) to carry an event id, subject, time and
+  metadata such as a tenant id; rules read them with `$event.` paths.
+- **Running scheduled actions.** A job that looked up the action and ran it itself becomes one call,
+  `ExecuteScheduledAsync(scheduled, storedEvent, rules)`; store both with `ToJson()`. Declare the event's subject with
+  a loader (`Subject(o => o.Number).LoadedBy("order")`) so a pending action is checked against current data when it's
+  due. See [dispatching scheduled actions](dispatching-scheduled-actions.md).
+- **Observability.** Add `RuleLoomDiagnostics.Name` to your OpenTelemetry tracing and metrics; `AddRuleLoom` passes your
+  logger factory to the engine (see [observability](observability.md)).
 
 ## 0.6 → 0.7
 

@@ -35,6 +35,25 @@ Reviewed with the maintainer before building (HITL).
 
 Recorded while building.
 
+1. **Spans under ASP.NET Core requests were dropped.** OpenTelemetry's default sampler follows the parent span, and a
+   request's activity isn't recorded unless the app adds ASP.NET Core instrumentation, so `ruleloom.execute` never
+   reached the exporter; scheduled runs (started by Quartz, without a parent) did. The sample sets an always-on sampler
+   with a comment; the observability guide now explains it. Apps usually add the instrumentation anyway.
+2. **A scheduled run's span named a different subject than its key.** `ruleloom.execute_scheduled` and its Debug log
+   use `RuleEvent.Subject` (`order-1001`), while the key and `ExecuteAsync`'s logs use the identity the schema
+   declares (`SO-1001`). A library fix, in its own PR (see the issue's comments).
+3. **The order store is a stand-in.** A service that receives events about another service's entities has no
+   database of them; the subject loader needs one (or an API to the producer). The sample keeps an in-memory store
+   current from the events themselves and says so; a real app calls the producer or reads its own projection.
+4. **Two subjects in one request.** The wire format's `entityId` becomes `RuleEvent.Subject`, but order events
+   declare their own subject (the order number), which wins; ads use `entityId`. Both work, but a reader sees two ids
+   for one order. Keeping one (declared subjects only) would be clearer in a later tidy-up.
+5. **The samples could be organised better** (maintainer's note while reviewing the shape): more separation by
+   concern (events, contexts, scheduling, endpoints) would make them easier to navigate and to test. Candidate for a
+   follow-up issue.
+6. **Testing the sample is manual** (`.http` and the console). A small test project driving `POST /events` with a fake
+   clock would catch regressions such as finding 1; part of the follow-up in 5.
+
 ## Deviations
 
-None yet.
+None.
