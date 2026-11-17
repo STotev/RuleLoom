@@ -3,7 +3,8 @@
 An action with a `schedule` isn't run when its event is processed. `ExecuteAsync` returns it in
 `result.ScheduledActions` with its due time; your scheduler (Quartz.NET, Hangfire, a polling job) holds it until then
 and hands it back to RuleLoom with **one call**. RuleLoom checks it again when it's due and runs it, or tells you why
-not. The [ASP.NET Core sample](../../samples/RuleLoom.Samples.AspNetCore/) does all of this with Quartz.
+not. The [ASP.NET Core sample](../../samples/RuleLoom.Samples.AspNetCore/) does all of this with Quartz (one shop, so its keys
+have no tenant prefix).
 
 ## The loop
 

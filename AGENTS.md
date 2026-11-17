@@ -86,7 +86,7 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 | `RuleLoom.Extensions.DependencyInjection.Tests` | `tests/RuleLoom.Extensions.DependencyInjection.Tests` | xUnit tests of DI registration (uses the real container) |
 | `RuleLoom.AspNetCore.Tests` | `tests/RuleLoom.AspNetCore.Tests` | xUnit tests of the endpoints over HTTP (`Microsoft.AspNetCore.TestHost`) |
 | `RuleLoom.Samples.Console` | `samples/RuleLoom.Samples.Console` | Usage sample: one web-shop scenario per file in `Scenarios/` (`dotnet run -- <n>`), printed with Spectre.Console |
-| `RuleLoom.Samples.AspNetCore` | `samples/RuleLoom.Samples.AspNetCore` | Web sample: per-tenant JSON rules, contexts, the catalog document (`GET /catalog`), Quartz for scheduled actions |
+| `RuleLoom.Samples.AspNetCore` | `samples/RuleLoom.Samples.AspNetCore` | Web sample: a shop API raising order events in-process, rules as JSON files, contexts, a subject loader, Quartz for scheduled actions, `MapRuleLoom("/rules")` and a demo page (`wwwroot/index.html`); folders by concern |
 
 Namespaces follow folders: `RuleLoom.Abstractions.{Action,Condition,Context,Rule,Scheduling,Values}` and
 `RuleLoom.{Engine,Evaluators,Operators,Actions,Contexts,Scheduling,Validation}` (there is no `RuleLoom.Core`);

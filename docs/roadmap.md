@@ -171,7 +171,7 @@ the 0.5 spike's [findings](specs/2026-10-14-aspnetcore-sample-design.md#findings
 
 Also [#157](https://github.com/STotev/RuleLoom/pull/157): telemetry fixes found while building the sample (findings 2
 and 7). Follow-ups: [#155](https://github.com/STotev/RuleLoom/issues/155) (shared test helpers),
-[#158](https://github.com/STotev/RuleLoom/issues/158) (samples by concern, with tests).
+[#158](https://github.com/STotev/RuleLoom/issues/158) (demo samples: console [#160](https://github.com/STotev/RuleLoom/pull/160), web shop [#161](https://github.com/STotev/RuleLoom/pull/161); [spec](specs/2026-11-17-demo-samples-design.md)).
 
 ---
 
