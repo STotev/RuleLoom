@@ -35,7 +35,8 @@ builder.Services
     .AddQuartz()
     .AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
-// RuleLoom's spans, nested under each request's, and its metrics on the console; a real app uses an exporter such as OTLP.
+// Uncomment for RuleLoom's spans, nested under each request's, and its metrics on the console (left out because they
+// bury the logs); a real app uses an exporter such as OTLP.
 // builder.Services.AddOpenTelemetry()
 //     .WithTracing(tracing => tracing
 //         .AddAspNetCoreInstrumentation()

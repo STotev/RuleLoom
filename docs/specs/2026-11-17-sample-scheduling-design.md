@@ -60,4 +60,5 @@ Recorded while building.
 
 ## Deviations
 
-None.
+- **OpenTelemetry is commented out in `Program.cs`** (maintainer's choice when merging): the console exporter's spans
+  and metrics buried the logs. The setup stays in the sample, to uncomment; the Debug logs show each outcome.
