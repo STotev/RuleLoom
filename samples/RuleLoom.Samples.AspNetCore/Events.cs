@@ -16,6 +16,7 @@ public sealed class OrderPlacedSchema : EventSchema<Order>
     public OrderPlacedSchema()
     {
         Event("OrderPlaced").Label("Order placed");
+        Subject(o => o.Number).LoadedBy("order");   // scheduled actions are checked against the order as it is when due
         Context("customer").ReferencedBy(o => o.Customer.Email).Label("Customer");
         Context("orderHistory").ReferencedBy(o => o.Customer.Email).Label("Earlier orders");
     }
@@ -26,6 +27,7 @@ public sealed class OrderUpdatedSchema : EventSchema<Order>
     public OrderUpdatedSchema()
     {
         Event("OrderUpdated").Label("Order updated");
+        Subject(o => o.Number).LoadedBy("order");
         Context("customer").ReferencedBy(o => o.Customer.Email).Label("Customer");
     }
 }

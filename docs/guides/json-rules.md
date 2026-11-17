@@ -559,7 +559,8 @@ again replaces the job instead of adding one (prefix it, e.g. with a tenant, whe
 identity the event's schema declares (`Subject(o => o.Number)`), or else the event's `RuleEvent.Subject`; without one
 the key is `null`. `ToJson()` and `ScheduledAction.Parse(json)` store it, e.g. in a persistent job store.
 
-When the job fires, run the action with one call, passing the event that scheduled it and your current rules:
+When the job fires, run the action with one call, passing the event that scheduled it and your current rules (the
+[dispatching guide](dispatching-scheduled-actions.md) shows Quartz and Hangfire jobs):
 
 ```csharp
 var result = await engine.ExecuteScheduledAsync(scheduled, storedEvent, rules, ct);   // Executed, Skipped or Failed

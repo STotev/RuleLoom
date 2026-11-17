@@ -17,6 +17,9 @@ builder.Services.AddOpenTelemetry()
 
 When nothing listens, they cost close to nothing.
 
+In ASP.NET Core, also add `AddAspNetCoreInstrumentation()` (`OpenTelemetry.Instrumentation.AspNetCore`) to tracing, so
+RuleLoom's spans are recorded under the request's span.
+
 | Span | When | Attributes |
 |---|---|---|
 | `ruleloom.execute` | each `ExecuteAsync` | `ruleloom.event_type`, `ruleloom.subject`, `ruleloom.event_id`; counts `ruleloom.rules.matched`/`not_matched`/`failed` and `ruleloom.actions.executed`/`scheduled`/`skipped`/`failed`; a `ruleloom.rule_failed` event per failed rule (its id and error) |
