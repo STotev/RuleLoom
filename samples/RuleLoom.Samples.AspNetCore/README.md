@@ -21,9 +21,10 @@ against them. It shows:
   their subject (`Subject(o => o.Number).LoadedBy("order")`), so a reminder for an order paid meanwhile is skipped.
   Reminders more than a minute late are skipped too (`SkipOverdueActions`). See the
   [dispatching guide](../../docs/guides/dispatching-scheduled-actions.md).
-- **Observability**: RuleLoom's spans (under each request's span) and metrics go to the OpenTelemetry console exporter, and every rule's and action's outcome
-  to the Debug log, written by Serilog with timestamps (levels are in the `Serilog` section of `appsettings.json`;
-  `"RuleLoom": "Debug"`).
+- **Observability**: every rule's and action's outcome goes to the Debug log, written by Serilog with timestamps (levels
+  are in the `Serilog` section of `appsettings.json`; `"RuleLoom": "Debug"`). OpenTelemetry is set up but commented out
+  in `Program.cs`, because the console exporter's output buries the logs: uncomment it to see RuleLoom's spans (under
+  each request's span) and metrics.
 
 It's also a spike: what was awkward while building it is recorded in the
 [spec's findings](../../docs/specs/2026-10-14-aspnetcore-sample-design.md#findings).
@@ -92,7 +93,7 @@ come from `MapRuleLoom`; a real app secures them with `RequireAuthorization()`.
 
 | File | Role |
 |---|---|
-| `Program.cs` | Registers RuleLoom (`AddRuleLoom` with a catalog of the event schemas, the context providers and the actions, and `Configure` for overdue actions), Quartz and OpenTelemetry; maps the authoring endpoints (`MapRuleLoom("/rules")`) and `POST /events` |
+| `Program.cs` | Registers RuleLoom (`AddRuleLoom` with a catalog of the event schemas, the context providers and the actions, and `Configure` for overdue actions), Quartz and OpenTelemetry (commented out); maps the authoring endpoints (`MapRuleLoom("/rules")`) and `POST /events` |
 | `Events.cs` | The events the app raises and their schemas: the subject orders declare (loaded by `order`) and their contexts; rules on other event types are rejected |
 | `Orders.cs` | The in-memory `OrderStore` (the shop's database, kept current by order events) and the `order` provider that loads an order as it is now |
 | `Customers.cs` | The `customer` and `orderHistory` context providers, the customer profile's schema, and an in-memory customer directory (`ada@example.com` is gold with three earlier orders, `bob@example.com` bronze with none) |
