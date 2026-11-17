@@ -10,7 +10,7 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Logs through Serilog: levels and the console format (with timestamps and each log's source) are in appsettings.json.
+// Logs through Serilog, with timestamps; the levels are in appsettings.json.
 builder.Services.AddSerilog((services, logging) => logging
     .ReadFrom.Configuration(builder.Configuration)
     .ReadFrom.Services(services));
@@ -36,14 +36,14 @@ builder.Services
     .AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
 // RuleLoom's spans, nested under each request's, and its metrics on the console; a real app uses an exporter such as OTLP.
-// builder.Services.AddOpenTelemetry()
-//     .WithTracing(tracing => tracing
-//         .AddAspNetCoreInstrumentation()
-//         .AddSource(RuleLoomDiagnostics.Name)
-//         .AddConsoleExporter())
-//     .WithMetrics(metrics => metrics
-//         .AddMeter(RuleLoomDiagnostics.Name)
-//         .AddConsoleExporter());
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddSource(RuleLoomDiagnostics.Name)
+        .AddConsoleExporter())
+    .WithMetrics(metrics => metrics
+        .AddMeter(RuleLoomDiagnostics.Name)
+        .AddConsoleExporter());
 
 var app = builder.Build();
 

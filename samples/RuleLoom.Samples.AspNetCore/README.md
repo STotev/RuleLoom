@@ -22,8 +22,8 @@ against them. It shows:
   Reminders more than a minute late are skipped too (`SkipOverdueActions`). See the
   [dispatching guide](../../docs/guides/dispatching-scheduled-actions.md).
 - **Observability**: RuleLoom's spans (under each request's span) and metrics go to the OpenTelemetry console exporter, and every rule's and action's outcome
-  to the Debug log, written by Serilog with timestamps and each log's source (levels and the console format are in the
-  `Serilog` section of `appsettings.json`; `"RuleLoom": "Debug"`).
+  to the Debug log, written by Serilog with timestamps (levels are in the `Serilog` section of `appsettings.json`;
+  `"RuleLoom": "Debug"`).
 
 It's also a spike: what was awkward while building it is recorded in the
 [spec's findings](../../docs/specs/2026-10-14-aspnetcore-sample-design.md#findings).
