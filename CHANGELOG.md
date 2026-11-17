@@ -4,6 +4,33 @@ All notable changes to this project are documented in this file. It is generated
 [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/) — do not edit it by hand.
 
+## [0.8.0](https://github.com/STotev/RuleLoom/compare/v0.7.0...v0.8.0) (2026-11-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* dates are calendar days ([#153](https://github.com/STotev/RuleLoom/issues/153))
+* past due times run immediately; skip overdue actions with RuleEngineOptions ([#151](https://github.com/STotev/RuleLoom/issues/151))
+* event subjects and keyed scheduled actions ([#149](https://github.com/STotev/RuleLoom/issues/149))
+* TemporalRules and the catalog's time zone ([#145](https://github.com/STotev/RuleLoom/issues/145))
+
+### Features
+
+* dates are calendar days ([#153](https://github.com/STotev/RuleLoom/issues/153)) ([35f7b33](https://github.com/STotev/RuleLoom/commit/35f7b3314882f7bae7aff7c70b48598f87791858))
+* event subjects and keyed scheduled actions ([#149](https://github.com/STotev/RuleLoom/issues/149)) ([7eb61d2](https://github.com/STotev/RuleLoom/commit/7eb61d2f312e4e579d5717715bf431157ccd3047))
+* OpenTelemetry traces and metrics, and ILogger logging ([#152](https://github.com/STotev/RuleLoom/issues/152)) ([3a27154](https://github.com/STotev/RuleLoom/commit/3a27154bc0fe73327373e4159658e93a0b6e0217))
+* past due times run immediately; skip overdue actions with RuleEngineOptions ([#151](https://github.com/STotev/RuleLoom/issues/151)) ([2ee5e24](https://github.com/STotev/RuleLoom/commit/2ee5e245862e90b464120a3eaaea7642663c4fb2))
+* RuleEngine.ExecuteScheduledAsync re-checks and runs scheduled actions when due ([#150](https://github.com/STotev/RuleLoom/issues/150)) ([584125f](https://github.com/STotev/RuleLoom/commit/584125f1d0b35fb5d5b0a1f37150eff5fb00735a))
+* **sample:** scheduled reminders checked against current data, and the dispatching guide ([#156](https://github.com/STotev/RuleLoom/issues/156)) ([32db7fa](https://github.com/STotev/RuleLoom/commit/32db7facd808552efa59e623a25a6cde37ef254f))
+* schedules count days as calendar days in the catalog's time zone ([#154](https://github.com/STotev/RuleLoom/issues/154)) ([f5358ee](https://github.com/STotev/RuleLoom/commit/f5358eec3c522d6d68baba175d12c482a63ccd8f))
+* TemporalRules and the catalog's time zone ([#145](https://github.com/STotev/RuleLoom/issues/145)) ([46b9b97](https://github.com/STotev/RuleLoom/commit/46b9b973c73aa48a05a8dfa4b62872761d717fef))
+* the RuleEvent envelope and $event paths ([#146](https://github.com/STotev/RuleLoom/issues/146)) ([3296f4a](https://github.com/STotev/RuleLoom/commit/3296f4af353791efaea5a5dd1331c52910dbf68d))
+
+
+### Bug Fixes
+
+* scheduled-run telemetry names the key's subject; RuleEventId in logs; rules logged before their actions ([#157](https://github.com/STotev/RuleLoom/issues/157)) ([9432672](https://github.com/STotev/RuleLoom/commit/9432672264a83703c7c8542bf20b8d5b86ff7c52))
+
 ## [0.7.0](https://github.com/STotev/RuleLoom/compare/v0.6.0...v0.7.0) (2026-10-26)
 
 
