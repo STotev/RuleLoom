@@ -25,7 +25,7 @@ Reviewed with the maintainer before building (HITL).
 |---|---|
 | Domain | One web shop everywhere: orders, customers, payments. Car ads, invoices and tenants go |
 | Console layout | One numbered, self-contained file per scenario in `Scenarios/`. Each reads top to bottom: a comment saying what it shows, the data, the rule (JSON in a raw string, as an author writes it), the catalog, the run, and the printed outcome. The shop's types are shared (`Shop.cs`) |
-| Console scenarios | 1 First rule (also built in C#) · 2 Changes (`changed`, `$previous`) · 3 Validation · 4 Contexts · 5 Typed actions and `$path` · 6 Scheduling (Delay, Advance, calendar days, time zone) · 7 Re-checked when due (`ExecuteScheduledAsync`, a demo clock) · 8 Overdue actions (a timeline) · 9 Dependency injection · 10 The catalog document |
+| Console scenarios | 1 First rule (also built in C#) · 2 Changes (`changed`, `$previous`) · 3 Contexts · 4 Typed actions and `$path` · 5 Validation · 6 Scheduling (Delay, Advance, calendar days, time zone) · 7 Re-checked when due (`ExecuteScheduledAsync`, a demo clock) · 8 Overdue actions (a timeline) · 9 Dependency injection · 10 The catalog document |
 | Running the console | `dotnet run -- 4` runs one scenario; no argument lists them; `all` runs every scenario |
 | Console output | Spectre.Console (MIT, sample only): each result as a tree (rule, then its actions with their status and timing), colours by status. The console sample doesn't log, so the output is only the scenario's story |
 | Web sample shape | A small shop API: `POST /orders` (place), `POST /orders/{number}/pay`, `POST /orders/{number}/ship`, `GET /orders`. The app keeps its orders and raises `OrderPlaced`/`OrderUpdated` to RuleLoom **in-process**, with the previous state from its own store. `POST /events` goes |
@@ -44,14 +44,14 @@ Reviewed with the maintainer before building (HITL).
 |---|---|---|
 | 1 | `01-FirstRule.cs` | An `OrderPlaced` rule ("big order": `Total gte 500`) with a `console-log` action, written as JSON and then the same rule in C# |
 | 2 | `02-Changes.cs` | `OrderUpdated` with previous state: `changed Status`, and `$current.Total lt $previous.Total` (a discount) |
-| 3 | `03-Validation.cs` | Rules with mistakes (an unknown field, an unknown operator, a missing parameter) rejected against the catalog, each error with its JSONPath |
-| 4 | `04-Contexts.cs` | `@customer.Tier eq gold`: the event declares the `customer` context, a provider loads it by the customer's email |
-| 5 | `05-TypedActions.cs` | `send-email` with typed parameters; `to` given as `{ "$path": "@customer.Email" }` |
+| 3 | `03-Contexts.cs` | `@customer.Tier eq gold`: the event declares the `customer` context, a provider loads it by the customer's email |
+| 4 | `04-TypedActions.cs` | `send-email` with typed parameters; `to` given as `{ "$path": "@customer.Email" }` |
+| 5 | `05-Validation.cs` | Rules with mistakes (an unknown field, an unknown operator, a misspelt and a missing parameter, an unknown event and action) rejected against the catalog, each error with its JSONPath |
 | 6 | `06-Scheduling.cs` | A "thank you" email 1 hour after the order (Delay), a reminder 2 days before `PaymentDueAt` (Advance, calendar days in `Europe/Sofia`); RuleLoom returns `ScheduledAction`s instead of running them |
 | 7 | `07-RecheckedWhenDue.cs` | The reminder is scheduled; the order is paid; at the due time `ExecuteScheduledAsync` loads the order as it is then and skips the reminder. An unpaid order's reminder is sent |
 | 8 | `08-Overdue.cs` | `SkipOverdueActions` with a 30-second grace period: a reminder run on time, 15 seconds late (runs), and 45 seconds late (skipped), printed as a timeline |
 | 9 | `09-DependencyInjection.cs` | `AddRuleLoom` with an action that injects the app's mailer |
-| 10 | `10-Catalog.cs` | The catalog document an authoring UI reads: the event's fields and contexts, the actions and their parameters |
+| 10 | `10-TheCatalog.cs` | The catalog document an authoring UI reads: the event's fields and contexts, the actions and their parameters |
 
 ## Web shop layout
 
