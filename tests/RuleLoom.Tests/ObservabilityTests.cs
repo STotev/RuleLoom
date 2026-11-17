@@ -97,6 +97,23 @@ public sealed class ObservabilityTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteScheduledAsync_NamesTheSubjectTheSchemaDeclares_LikeTheKey()
+    {
+        var schema = Schemas.EventSchemaDefinition.Parse($$"""
+            { "x-ruleloom-event": "{{_eventType}}", "type": "object", "properties": { "number": { "type": "string" } },
+              "x-ruleloom-subject": { "x-ruleloom-identity": "number" } }
+            """);
+        var engine = new TestCatalog().Action("notify", new NotifyAction()).Event(schema).Engine(loggerFactory: _logs);
+        var placed = new RuleEvent(_eventType, new { Number = "SO-1" }) { Subject = "order-1" };
+
+        await engine.ExecuteScheduledAsync(new ScheduledAction("gone", 0, "notify", DateTimeOffset.UnixEpoch, "gone:0:SO-1"), placed, [],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("SO-1", Mine("ruleloom.execute_scheduled").Single().GetTagItem("ruleloom.subject"));
+        Assert.Contains(_logs.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("(subject SO-1, "));
+    }
+
+    [Fact]
     public async Task Logs_FailuresAsWarnings_OutcomesAtDebug_NeverStateValues()
     {
         var engine = Catalog().Engine(loggerFactory: _logs);
@@ -110,6 +127,33 @@ public sealed class ObservabilityTests : IDisposable
         Assert.DoesNotContain(_logs.Entries, e => e.Message.Contains(Secret));
         Assert.DoesNotContain(Mine("ruleloom.execute").SelectMany(a => a.TagObjects.Concat(a.Events.SelectMany(e => e.Tags))),
             tag => tag.Value?.ToString()?.Contains(Secret) == true);
+    }
+
+    [Fact]
+    public async Task Logs_NameTheEventsIdAsRuleEventId_AndOmitAMissingMessage()
+    {
+        var engine = Catalog().Engine(loggerFactory: _logs);
+        var placed = new RuleEvent(_eventType, new { Total = 10 }) { Subject = "order-1", EventId = "msg-1" };
+
+        await engine.ExecuteAsync(placed, [Rule("big", Op("eq", Value(1), Value(1)))], TestContext.Current.CancellationToken);
+
+        Assert.Contains(_logs.Values, v => Equals(v.GetValueOrDefault("RuleEventId"), "msg-1") && Equals(v.GetValueOrDefault("RuleId"), "big"));
+        Assert.Contains(_logs.Entries, e => e.Message == $"Action 'notify' (0) of rule 'big' for {_eventType}: Executed (subject order-1, event msg-1)");
+        Assert.DoesNotContain(_logs.Entries, e => e.Message.Contains("null"));
+    }
+
+    [Fact]
+    public async Task Logs_ARulesOutcome_BeforeItsActions()
+    {
+        var engine = Catalog().Engine(loggerFactory: _logs);
+
+        await engine.ExecuteAsync(new RuleEvent(_eventType, new { Total = 10 }), [Rule("big", Op("eq", Value(1), Value(1)))],
+            TestContext.Current.CancellationToken);
+
+        var messages = _logs.Entries.Select(e => e.Message).ToList();
+        var rule = messages.FindIndex(m => m.StartsWith($"Rule 'big' for {_eventType}: Matched", StringComparison.Ordinal));
+        var action = messages.FindIndex(m => m.StartsWith("Action 'notify' (0) of rule 'big'", StringComparison.Ordinal));
+        Assert.InRange(rule, 0, action - 1);
     }
 
     [Fact]
@@ -148,6 +192,7 @@ public sealed class ObservabilityTests : IDisposable
     private sealed class TestLoggerFactory : ILoggerFactory, ILogger
     {
         public ConcurrentQueue<(LogLevel Level, string Message)> Entries { get; } = new();
+        public ConcurrentQueue<IReadOnlyDictionary<string, object?>> Values { get; } = new();
         public LogLevel MinimumLevel { get; set; } = LogLevel.Debug;
 
         public ILogger CreateLogger(string categoryName) => this;
@@ -159,8 +204,12 @@ public sealed class ObservabilityTests : IDisposable
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            if (IsEnabled(logLevel))
-                Entries.Enqueue((logLevel, formatter(state, exception)));
+            if (!IsEnabled(logLevel))
+                return;
+
+            Entries.Enqueue((logLevel, formatter(state, exception)));
+            if (state is IEnumerable<KeyValuePair<string, object?>> values)
+                Values.Enqueue(values.ToDictionary(v => v.Key, v => v.Value));
         }
     }
 }

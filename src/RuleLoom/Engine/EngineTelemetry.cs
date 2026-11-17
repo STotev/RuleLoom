@@ -35,9 +35,9 @@ internal sealed partial class EngineTelemetry(ILogger logger)
         Start("ruleloom.execute", @event, subject);
 
     /// <summary>A <c>ruleloom.execute_scheduled</c> span for a scheduled action.</summary>
-    public static Activity? StartScheduled(RuleEvent @event, ScheduledAction scheduled)
+    public static Activity? StartScheduled(RuleEvent @event, ScheduledAction scheduled, Func<string?> subject)
     {
-        var activity = Start("ruleloom.execute_scheduled", @event, () => @event.Subject);
+        var activity = Start("ruleloom.execute_scheduled", @event, subject);
         activity?.SetTag("ruleloom.rule_id", scheduled.RuleId);
         activity?.SetTag("ruleloom.action", scheduled.ActionName);
         activity?.SetTag("ruleloom.action_index", scheduled.ActionIndex);
@@ -97,23 +97,23 @@ internal sealed partial class EngineTelemetry(ILogger logger)
     public void OverdueSkipped(string eventType, string ruleId, string action, string reason) =>
         LogOverdueSkipped(logger, eventType, ruleId, action, reason);
 
-    /// <summary>Counts and logs a rule's outcome; a failure is a span event too.</summary>
-    public void RuleOutcome(Activity? activity, RuleEvent @event, RuleExecutionResult rule, string? subject)
+    /// <summary>Counts and logs a rule's outcome once its condition is decided; a failure is a span event too.</summary>
+    public void RuleOutcome(Activity? activity, RuleEvent @event, string ruleId, RuleExecutionStatus status, Exception? error, string? subject)
     {
         Rules.Add(1, new KeyValuePair<string, object?>("ruleloom.event_type", @event.EventType),
-            new KeyValuePair<string, object?>("ruleloom.outcome", Outcome(rule.Status)));
+            new KeyValuePair<string, object?>("ruleloom.outcome", Outcome(status)));
 
-        if (rule.Status == RuleExecutionStatus.Failed)
+        if (status == RuleExecutionStatus.Failed)
         {
             activity?.AddEvent(new ActivityEvent("ruleloom.rule_failed", tags: new ActivityTagsCollection
             {
-                ["ruleloom.rule_id"] = rule.RuleId,
-                ["exception.message"] = rule.Error?.Message
+                ["ruleloom.rule_id"] = ruleId,
+                ["exception.message"] = error?.Message
             }));
-            LogRuleFailed(logger, @event.EventType, rule.RuleId, rule.Error?.Message);
+            LogRuleFailed(logger, @event.EventType, ruleId, error?.Message);
         }
 
-        LogRuleOutcome(logger, @event.EventType, rule.RuleId, rule.Status, subject, @event.EventId);
+        LogRuleOutcome(logger, @event.EventType, ruleId, status, subject, @event.EventId);
     }
 
     /// <summary>Counts and logs an action's outcome.</summary>
@@ -126,7 +126,10 @@ internal sealed partial class EngineTelemetry(ILogger logger)
         if (result.Status == ActionExecutionStatus.Failed)
             LogActionFailed(logger, @event.EventType, ruleId, result.ActionName, result.ActionIndex, result.Error?.Message ?? result.Message);
 
-        LogActionOutcome(logger, @event.EventType, ruleId, result.ActionName, result.ActionIndex, result.Status, result.Message, subject, @event.EventId);
+        if (result.Message is { } message)
+            LogActionOutcomeWithMessage(logger, @event.EventType, ruleId, result.ActionName, result.ActionIndex, result.Status, message, subject, @event.EventId);
+        else
+            LogActionOutcome(logger, @event.EventType, ruleId, result.ActionName, result.ActionIndex, result.Status, subject, @event.EventId);
     }
 
     /// <summary>Ends an event's span with its counts, and records its duration.</summary>
@@ -148,7 +151,8 @@ internal sealed partial class EngineTelemetry(ILogger logger)
     }
 
     /// <summary>Ends a scheduled action's span with its status, and records its duration.</summary>
-    public void EndScheduled(Activity? activity, RuleEvent @event, ScheduledAction scheduled, ActionResult result, long started)
+    public void EndScheduled(Activity? activity, RuleEvent @event, ScheduledAction scheduled, ActionResult result, long started,
+        Func<string?> subject)
     {
         ScheduledDuration.Record(Stopwatch.GetElapsedTime(started).TotalSeconds, new KeyValuePair<string, object?>("ruleloom.event_type", @event.EventType));
 
@@ -158,7 +162,7 @@ internal sealed partial class EngineTelemetry(ILogger logger)
         if (result is { Status: ActionExecutionStatus.Failed, Error: { } error })
             Fail(activity, error);
 
-        ActionOutcome(@event, scheduled.RuleId, result, Detailed ? @event.Subject : null);
+        ActionOutcome(@event, scheduled.RuleId, result, Detailed ? subject() : null);
     }
 
     private static Activity? Start(string name, RuleEvent @event, Func<string?> subject)
@@ -199,11 +203,18 @@ internal sealed partial class EngineTelemetry(ILogger logger)
     [LoggerMessage(Level = LogLevel.Warning, Message = "Action '{Action}' of rule '{RuleId}' for {EventType} was skipped: {Reason}")]
     private static partial void LogOverdueSkipped(ILogger logger, string eventType, string ruleId, string action, string reason);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Rule '{RuleId}' for {EventType}: {Status} (subject {Subject}, event {EventId})")]
-    private static partial void LogRuleOutcome(ILogger logger, string eventType, string ruleId, RuleExecutionStatus status, string? subject, string? eventId);
+    // RuleEventId, not EventId: logging reserves EventId for the log message's own id.
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Rule '{RuleId}' for {EventType}: {Status} (subject {Subject}, event {RuleEventId})")]
+    private static partial void LogRuleOutcome(ILogger logger, string eventType, string ruleId, RuleExecutionStatus status, string? subject,
+        string? ruleEventId);
 
     [LoggerMessage(Level = LogLevel.Debug,
-        Message = "Action '{Action}' ({ActionIndex}) of rule '{RuleId}' for {EventType}: {Status} {Message} (subject {Subject}, event {EventId})")]
+        Message = "Action '{Action}' ({ActionIndex}) of rule '{RuleId}' for {EventType}: {Status} (subject {Subject}, event {RuleEventId})")]
     private static partial void LogActionOutcome(ILogger logger, string eventType, string ruleId, string action, int actionIndex,
-        ActionExecutionStatus status, string? message, string? subject, string? eventId);
+        ActionExecutionStatus status, string? subject, string? ruleEventId);
+
+    [LoggerMessage(Level = LogLevel.Debug,
+        Message = "Action '{Action}' ({ActionIndex}) of rule '{RuleId}' for {EventType}: {Status}, {Message} (subject {Subject}, event {RuleEventId})")]
+    private static partial void LogActionOutcomeWithMessage(ILogger logger, string eventType, string ruleId, string action, int actionIndex,
+        ActionExecutionStatus status, string message, string? subject, string? ruleEventId);
 }

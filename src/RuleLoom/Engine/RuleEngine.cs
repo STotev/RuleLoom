@@ -94,20 +94,23 @@ public sealed class RuleEngine(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            bool matched;
+            RuleExecutionStatus status;
+            Exception? error = null;
             try
             {
-                matched = _conditionEvaluator.Evaluate(context, rule.Condition);
+                status = _conditionEvaluator.Evaluate(context, rule.Condition) ? RuleExecutionStatus.Matched : RuleExecutionStatus.NotMatched;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                Add(CreateRuleResult(rule, RuleExecutionStatus.Failed, error: ex));
-                continue;
+                (status, error) = (RuleExecutionStatus.Failed, ex);
             }
 
-            if (!matched)
+            // Reported when decided, so a rule's log line comes before its actions'.
+            _telemetry.RuleOutcome(activity, @event, rule.Id, status, error, subjectText);
+
+            if (status != RuleExecutionStatus.Matched)
             {
-                Add(CreateRuleResult(rule, RuleExecutionStatus.NotMatched));
+                ruleResults.Add(CreateRuleResult(rule, status, error: error));
                 continue;
             }
 
@@ -131,18 +134,12 @@ public sealed class RuleEngine(
                 }
             }
 
-            Add(CreateRuleResult(rule, RuleExecutionStatus.Matched, actionResults));
+            ruleResults.Add(CreateRuleResult(rule, RuleExecutionStatus.Matched, actionResults));
         }
 
         var engineResult = new RuleEngineResult { Rules = ruleResults, ScheduledActions = scheduledActions };
         EngineTelemetry.EndExecute(activity, @event, engineResult, started);
         return engineResult;
-
-        void Add(RuleExecutionResult ruleResult)
-        {
-            ruleResults.Add(ruleResult);
-            _telemetry.RuleOutcome(activity, @event, ruleResult, subjectText);
-        }
     }
 
     /// <summary>
@@ -186,13 +183,16 @@ public sealed class RuleEngine(
         ArgumentNullException.ThrowIfNull(storedEvent);
         ArgumentNullException.ThrowIfNull(rules);
 
+        // The same subject as the key and ExecuteAsync's telemetry: the declared identity, else RuleEvent.Subject.
+        var subject = new Lazy<string?>(() => SubjectOf(storedEvent, new EvaluationContext(storedEvent, _catalog, _contextProviders))?.Text);
+
         var started = Stopwatch.GetTimestamp();
-        using var activity = EngineTelemetry.StartScheduled(storedEvent, scheduled);
+        using var activity = EngineTelemetry.StartScheduled(storedEvent, scheduled, () => subject.Value);
 
         var result = await RunScheduledAsync(scheduled, storedEvent, rules, cancellationToken)
             with { ActionName = scheduled.ActionName, ActionIndex = scheduled.ActionIndex };
 
-        _telemetry.EndScheduled(activity, storedEvent, scheduled, result, started);
+        _telemetry.EndScheduled(activity, storedEvent, scheduled, result, started, () => subject.Value);
         return result;
     }
 
