@@ -1,4 +1,5 @@
 using Quartz;
+using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Rule;
 
 namespace RuleLoom.Samples.AspNetCore;
@@ -15,7 +16,8 @@ namespace RuleLoom.Samples.AspNetCore;
 public sealed class ActionScheduler(ISchedulerFactory schedulerFactory)
 {
     public async Task<IReadOnlyList<ScheduledJob>> ScheduleAsync(
-        EventRequest request,
+        string tenantId,
+        RuleEvent @event,
         IReadOnlyList<ScheduledAction> scheduledActions,
         CancellationToken cancellationToken)
     {
@@ -28,18 +30,16 @@ public sealed class ActionScheduler(ISchedulerFactory schedulerFactory)
         foreach (var scheduled in scheduledActions)
         {
             // The engine's key is {rule}:{action index}:{subject}; rule ids repeat across tenants, so prefix the tenant.
-            var key = new JobKey($"{request.TenantId}/{scheduled.Key}");
+            var key = new JobKey($"{tenantId}/{scheduled.Key}");
             var scheduledFor = scheduled.ScheduledFor;
 
             var job = JobBuilder.Create<RunScheduledActionJob>()
                 .WithIdentity(key)
                 .Build();
 
-            job.JobDataMap[RunScheduledActionJob.TenantIdKey] = request.TenantId;
-            job.JobDataMap[RunScheduledActionJob.EventTypeKey] = request.EventType;
+            job.JobDataMap[RunScheduledActionJob.TenantIdKey] = tenantId;
             job.JobDataMap[RunScheduledActionJob.ScheduledActionKey] = scheduled;
-            job.JobDataMap[RunScheduledActionJob.CurrentKey] = request.Current;
-            job.JobDataMap[RunScheduledActionJob.PreviousKey] = request.Previous;
+            job.JobDataMap[RunScheduledActionJob.EventKey] = @event;
 
             // The trigger needs the same key too: replacing a job keeps its old triggers under other keys.
             var trigger = TriggerBuilder.Create()

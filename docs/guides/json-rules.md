@@ -477,8 +477,10 @@ so a value matches when it means the same thing:
 | Any number (`decimal`, `int`, `double`, …) | Number | Equal by value: `100` matches `100m`, `5.0` matches `5` |
 | Enum | String | Same name, ignoring case: `"active"` matches `Status.Active`; `[Flags]` combinations like `"Read, Write"` work |
 | Enum | Number | Same underlying value: `1` matches `Status.Active` (= 1) |
-| `DateTime` / `DateTimeOffset` | String | Same moment, given as **ISO 8601**: `"2026-05-01T12:00:00Z"`, `"2026-05-01T14:00:00+02:00"`; no offset means wall-clock time in the catalog's [time zone](#time-zones); `"2026-05-01"` means the start of that day there |
-| `string` (ISO 8601 date) | ISO 8601 string | Same moment: `"2026-05-01T14:00:00+02:00"` matches `"2026-05-01T12:00:00Z"`; with a UTC catalog, `"2026-05-01"` matches `"2026-05-01T00:00:00Z"`. Typical for JSON state |
+| `DateTime` / `DateTimeOffset` | String | Same moment, given as **ISO 8601**: `"2026-05-01T12:00:00Z"`, `"2026-05-01T14:00:00+02:00"`; no offset means wall-clock time in the catalog's [time zone](#time-zones) |
+| `DateTime` / `DateTimeOffset` | Date (`"2026-05-01"`) | Same **calendar day** in the catalog's time zone: placed at 18:00 on 1 May matches `"2026-05-01"`; `gt "2026-05-01"` means from 2 May |
+| `DateOnly`, `string` (`"2026-05-01"`) | Date | Same day; ordered by day |
+| `string` (ISO 8601 date-time) | ISO 8601 string | Same moment: `"2026-05-01T14:00:00+02:00"` matches `"2026-05-01T12:00:00Z"`; with a date, by calendar day as above. Typical for JSON state |
 | `string` (ISO 8601 date) | Other string | Never matches, and can't be ordered |
 | `string` | String | Exactly equal (case-sensitive) |
 | JSON object or array | JSON object or array | Same content, ignoring property order (`changed` on an object path compares content) |
@@ -556,6 +558,47 @@ An action with a `schedule` isn't run by the engine: it comes back with status `
 again replaces the job instead of adding one (prefix it, e.g. with a tenant, when rule ids repeat). The subject is the
 identity the event's schema declares (`Subject(o => o.Number)`), or else the event's `RuleEvent.Subject`; without one
 the key is `null`. `ToJson()` and `ScheduledAction.Parse(json)` store it, e.g. in a persistent job store.
+
+When the job fires, run the action with one call, passing the event that scheduled it and your current rules:
+
+```csharp
+var result = await engine.ExecuteScheduledAsync(scheduled, storedEvent, rules, ct);   // Executed, Skipped or Failed
+```
+
+Anything that runs later must pass its checks then. The action is skipped when its rule is gone or no longer
+schedules it, and the rule's condition and the action's condition are evaluated again; then the rule's current version
+of the action runs. When the event's schema declares how to load its subject (`Subject(o => o.Number).LoadedBy("order")`),
+the checks and the action read the subject **as it is now**, compared with the event's previous state:
+
+| Condition | When the action is due |
+|---|---|
+| `Status eq AwaitingPayment` | the order is still unpaid |
+| `changed Status` | the status still differs from before the event (a change that was undone skips the action) |
+| `Price lt $previous.Price` | the price is still below what it was before the event |
+
+Without a loader, the checks see the stored event as it was. `RuleValidator` checks that the paths a scheduled action
+reads are fields of the loaded subject too.
+
+### Due times in the past
+
+A due time that has already passed (an event that arrives late, a reminder one hour before a payment due in thirty
+minutes) runs the action immediately: its status is `Executed`, not `Scheduled`. `Advance` without a `referencePath` is
+always in the past, so the validator warns about it.
+
+Schedulers don't fire exactly on time, and some can be down for a while. To skip actions that are too late to be
+useful, turn on `SkipOverdueActions` with a grace period that fits your scheduler (e.g. how often a polling job runs):
+
+```csharp
+var engine = new RuleEngine(catalog, actions, contexts, options: new RuleEngineOptions
+{
+    SkipOverdueActions = true,
+    OverdueGracePeriod = TimeSpan.FromMinutes(30)
+});
+// with DI: services.AddRuleLoom(r => r.Configure(o => { o.SkipOverdueActions = true; o.OverdueGracePeriod = TimeSpan.FromMinutes(30); }));
+```
+
+An action later than the grace period is then `Skipped` ("overdue by 3 hours (grace period 30 minutes)"), both when the
+event is processed and when `ExecuteScheduledAsync` runs it late.
 
 ```json
 { "action": "send-email", "schedule": { "mode": "Advance", "amount": 2, "unit": "Hours", "referencePath": "DueAt" } }

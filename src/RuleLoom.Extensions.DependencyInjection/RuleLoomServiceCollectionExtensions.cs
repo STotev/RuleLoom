@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Context;
@@ -42,10 +43,12 @@ public static class RuleLoomServiceCollectionExtensions
             sp.GetRequiredService<Catalog>(),
             sp.GetRequiredService<IActionFactory>(),
             sp.GetRequiredService<IContextProviderFactory>(),
-            sp.GetRequiredService<TimeProvider>()));
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<CatalogHolder>().EngineOptions,
+            sp.GetService<ILoggerFactory>()));
         services.TryAddScoped(sp => new RuleValidator(sp.GetRequiredService<Catalog>()));
 
-        configure?.Invoke(new RuleLoomBuilder(services, holder.Builder));
+        configure?.Invoke(new RuleLoomBuilder(services, holder.Builder, holder.EngineOptions));
 
         return services;
     }

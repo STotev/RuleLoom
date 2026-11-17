@@ -76,7 +76,7 @@ Evolve the existing code rather than rewriting it; don't refactor unrelated code
 | Project | Path | Role |
 |---|---|---|
 | `RuleLoom.Abstractions` | `src/RuleLoom.Abstractions` | Contracts and models: what the engine runs (operators, actions, context providers), the `Catalog` and its registrations, action descriptors, the factory contracts. **No dependencies outside `RuleLoom.Schemas` and .NET** |
-| `RuleLoom` | `src/RuleLoom` | Default implementation: `CatalogBuilder`, engine, evaluator, operators, actions, direct factories, scheduling, validation |
+| `RuleLoom` | `src/RuleLoom` | Default implementation: `CatalogBuilder`, engine, evaluator, operators, actions, direct factories, scheduling, validation, telemetry and logging (depends on `Microsoft.Extensions.Logging.Abstractions`) |
 | `RuleLoom.Schemas` | `src/RuleLoom.Schemas` | Descriptions: event schemas (`EventSchema<T>` classes), context schemas (`ContextSchema<T>`) and action parameters (`ParametersSchema<T>`), generated with System.Text.Json's `JsonSchemaExporter`, written/read as JSON Schema 2020-12 (`x-ruleloom-*`); the catalog document and store (`CatalogDocument`, `ICatalogStore` + `InMemoryCatalogStore`). **No dependencies at all** (not even Abstractions); producers and store packages use it without the engine; `RuleLoom.Abstractions` and `RuleLoom` reference it |
 | `RuleLoom.Extensions.DependencyInjection` | `src/RuleLoom.Extensions.DependencyInjection` | `services.AddRuleLoom(r => r.AddCatalog(...).UseStore<T>())`: the catalog (built at startup), engine, validator and factories |
 | `RuleLoom.AspNetCore` | `src/RuleLoom.AspNetCore` | `app.MapRuleLoom(prefix)`: `GET {prefix}/catalog` and `POST {prefix}/validate` for authoring UIs; returns the route group; no storage |
@@ -109,12 +109,22 @@ environment `nuget`) and attaches the packages to the GitHub release.
     → per action (ActionResult stamped with ActionName and ActionIndex by the engine):
         action condition throws           → Failed (only this action; later actions still run)
         action condition false            → Skipped
-        Schedule with Mode != Immediate   → ScheduleCalculator → Scheduled (executor NOT called; listed in
-                                            ScheduledActions as a keyed reference) / calculation error → Failed
+        Schedule with Mode != Immediate   → ScheduleCalculator → due ≥ now: Scheduled (executor NOT called; listed in
+                                            ScheduledActions as a keyed reference) / due < now: runs now, or
+                                            Skipped when overdue (RuleEngineOptions) / calculation error → Failed
         action name not in the catalog    → Failed
         otherwise                         → IActionFactory.Create(registration).ExecuteAsync → its ActionResult
                                             (factory or action exception / null result → Failed)
   → event types not in the catalog still run (the catalog describes; it doesn't gate execution)
+
+ExecuteScheduledAsync(ScheduledAction, storedEvent, rules) → ActionResult (stamped with ActionName/ActionIndex)
+  → rule by RuleId (and event type) missing → Skipped     action at ActionIndex renamed or unscheduled → Skipped
+  → overdue (now − ScheduledFor > OverdueGracePeriod, with SkipOverdueActions) → Skipped
+  → the due context: with Subject(...).LoadedBy(p) the provider loads the subject (reference = identity resolved on the
+    stored event; null → Skipped; load error or unregistered loader → Failed): $current = subject now, $previous =
+    the stored event's previous, $event = the stored envelope; without a loader, the stored event
+  → contexts prefetched fresh; rule condition false → Skipped / throws → Failed; action condition likewise
+  → the rule's current action runs (same failure rules as above) → Executed
   → failures are reported in the result, never written to the console;
     OperationCanceledException always propagates (partial results are discarded)
 ```
@@ -176,6 +186,15 @@ environment `nuget`) and attaches the packages to the GitHub release.
   `IContextProviderFactory` (`ActivatorUtilities.GetServiceOrCreateInstance`: registered services as registered, others
   created with scope dependencies and not disposed by the scope), `RuleEngine` and `RuleValidator` are Scoped;
   resolving them before startup throws.
+- **Observability** (spec `2026-10-29-observability-design.md`, guide `docs/guides/observability.md`): `ActivitySource` and
+  `Meter` named `RuleLoomDiagnostics.Name` ("RuleLoom") in both `RuleLoom` (`EngineTelemetry`: `ruleloom.execute`,
+  `ruleloom.execute_scheduled`, `ruleloom.action` spans, subject-load `ruleloom.context` spans; `ruleloom.rules`/
+  `ruleloom.actions` counters; duration histograms) and `RuleLoom.Abstractions` (`ContextTelemetry`: context-load spans
+  and `ruleloom.context.duration`); rules are counts, not spans. `ILogger` (`Microsoft.Extensions.Logging.Abstractions`,
+  only in `RuleLoom`): the engine's optional `ILoggerFactory` (passed by `AddRuleLoom`), `[LoggerMessage]`; Warning for
+  failures, context load failures and overdue skips, Debug for outcomes (with subject and event id); `StartRuleLoomAsync`
+  logs the built catalog (Information) and its problems (Warning). Never write event state, context data or parameter
+  values; the subject and event id only on spans and at Debug.
 - **Authoring endpoints** (`RuleLoom.AspNetCore`, `MapRuleLoom(prefix)` in `Microsoft.AspNetCore.Builder`): `GET
   {prefix}/catalog` (`catalog.ToJson()`); `POST {prefix}/validate` takes one rule or an array (`ParseEach`, then
   `RuleValidator`) and returns a `RuleValidationResponse` per rule (`index` for arrays, `id`, `parsed`, `isValid`,
@@ -189,7 +208,9 @@ environment `nuget`) and attaches the packages to the GitHub release.
   a schema → `Warnings` (`IsValid` ignores warnings). Typed actions' parameters are checked against their parameters
   schema (`ParameterCheck`, values as the JSON they're bound from): unknown or missing required parameters, values of
   the wrong type → `Errors`; a `$path` whose field can't be read as the parameter → `Warnings`; untyped actions aren't
-  checked. Every problem comes with a JSONPath location.
+  checked. When the event's subject has a loader with a schema, current-state paths read when a scheduled action is due
+  (the rule's condition if it schedules anything, the scheduled action's condition and parameters; not reference
+  paths) must be fields of the loaded subject too (`SubjectPathCheck`; reported only when the event has the field). Every problem comes with a JSONPath location.
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
   in Seconds/Minutes/Hours (elapsed time) or Days (calendar days in the catalog's time zone, keeping the wall-clock
   time; `TemporalRules.AddDays`, lenient: skipped → forward, repeated → earlier), from `ReferencePath` (a date: the start
@@ -202,9 +223,15 @@ environment `nuget`) and attaches the packages to the GitHub release.
   escaped), `null` without a subject. The subject (`SubjectIdentity`) is the identity the event's schema declares
   (resolved on the current state; composite `a=1;b=2` in declared order, invariant values, `null` if a part is), else
   `RuleEvent.Subject`; computed only when an action is scheduled. Statuses: `Executed`, `Scheduled`, `Skipped`, `Failed`.
+  A due time already in the past runs the action immediately. `RuleEngineOptions` (engine constructor, or
+  `AddRuleLoom(r => r.Configure(o => ...))`, one shared instance kept with the catalog builder; the engine keeps the
+  instance, `options ?? new RuleEngineOptions()`, so defaults live only in the options): `SkipOverdueActions` (off) skips actions later than `OverdueGracePeriod` (0, not negative), both at
+  processing and in `ExecuteScheduledAsync` ("overdue by 3 hours (grace period 30 minutes)"). The validator warns about
+  `Advance` without a `ReferencePath` and rejects `amount` ≤ 0.
 - **Value comparison**: `ValueComparer` (`AreEqual`, `TryCompare`) and `ValueConverter` (`TryConvert`) in
   `RuleLoom.Abstractions.Values` are the single implementation of the comparison rules (numbers by value across
-  types, enums by name or number, date-times as moments incl. strict ISO 8601 strings (two ISO strings compare as moments; ISO vs other text is
+  types, enums by name or number, dates (`DateOnly`, `yyyy-MM-dd` text) by day, date-times as moments incl. strict ISO
+  8601 strings, a date with a date-time by the date-time's calendar date in the time zone (ISO vs other text is
   incomparable), other strings ordinal, JSON objects/arrays by content via `DeepEquals`; `changed` uses `AreEqual` too). Operators
   and other features must use them rather than `object.Equals` or ad-hoc parsing. Both take a `TemporalRules`.
 - **Time** (ADR 0004, spec `2026-10-28-time-semantics-design.md`): `TemporalRules` (public, sealed, immutable) is the only
@@ -215,8 +242,11 @@ environment `nuget`) and attaches the packages to the GitHub release.
   with temporal converters) and schedules use it; `GetParameter<T>` without a context reads UTC. An offset wins; no offset
   (`Unspecified`, ISO text) is wall-clock time in the zone: skipped → `InvalidTemporalValueException` (named path or
   parameter; fails only that rule/action), repeated → the earlier occurrence; `Local` is the machine zone (skipped
-  rejected, repeated as .NET converts). Date-only text is the start of its day in the zone until dates become calendar
-  days (#136).
+  rejected, repeated as .NET converts). Dates are calendar days (`TryGetDate`: `DateOnly` and date-only text only;
+  `GetDate(instant)`: its day in the zone; `GetStartOfDay(date)`: lenient past a skipped midnight, and what
+  `TryGetInstant`/`TryConvert<DateTimeOffset>` give for a date when a moment is asked for). The validator reports
+  date-time literals compared with date/date-time fields and `DateTime` parameter values that the clocks skip in the
+  catalog's zone (`OperandValidationContext.TemporalRules`).
 - **Schemas** (`RuleLoom.Schemas`): `class XSchema : EventSchema<TDto>` configures `Event(name)` (required),
   `Field(o => o.A.B)` (`Label`/`Description`/`Ignore`) and `Context(name)` (a relation: `ReferencedBy(o => o.Id)` or
   `o => new { o.A, o.B }`; `LoadedBy(provider)`), and `Subject(o => o.Id)` (or composite) with optional

@@ -3,6 +3,7 @@ using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
 using RuleLoom.Abstractions.Rule;
 using RuleLoom.Abstractions.Scheduling;
+using RuleLoom.Abstractions.Values;
 
 namespace RuleLoom.Validation;
 
@@ -47,7 +48,7 @@ internal sealed class RootConditionCheck : RuleCheck
 /// operands (<see cref="IConditionOperator.ValidateOperands"/>), with the schema fields of path operands when there are
 /// schemas.
 /// </summary>
-internal sealed class OperatorCheck(SchemaPaths? schemaPaths) : RuleCheck
+internal sealed class OperatorCheck(SchemaPaths? schemaPaths, TemporalRules temporalRules) : RuleCheck
 {
     public override void Operator(OperatorCondition condition, IConditionOperator? @operator, string location, ValidationProblems problems)
     {
@@ -75,7 +76,10 @@ internal sealed class OperatorCheck(SchemaPaths? schemaPaths) : RuleCheck
             return;
 
         var context = new OperandValidationContext(condition,
-            schemaPaths is null ? null : index => paths[index] is { } path ? schemaPaths.Resolve(path, problems) : null);
+            schemaPaths is null ? null : index => paths[index] is { } path ? schemaPaths.Resolve(path, problems) : null)
+        {
+            TemporalRules = temporalRules
+        };
 
         // The validator never throws for a rule: an operator whose validation fails is reported at the operator.
         try
@@ -102,7 +106,10 @@ internal sealed class OperatorCheck(SchemaPaths? schemaPaths) : RuleCheck
     }
 }
 
-/// <summary>Actions must be registered, and delayed or advanced schedules need an amount and a unit.</summary>
+/// <summary>
+/// Actions must be registered, and delayed or advanced schedules need a positive amount and a unit; advancing from now
+/// (no reference path) is a warning.
+/// </summary>
 internal sealed class ActionCheck(Catalog catalog) : RuleCheck
 {
     public override void Action(ActionDefinition action, string location, ValidationProblems problems)
@@ -120,9 +127,17 @@ internal sealed class ActionCheck(Catalog catalog) : RuleCheck
 
         if (schedule.Amount is null)
             problems.Error($"{location}.schedule.amount", $"'amount' is required for '{schedule.Mode}' schedules.");
+        else if (schedule.Amount <= 0)
+            problems.Error($"{location}.schedule.amount", $"'amount' must be greater than zero, not {schedule.Amount}.");
 
         if (schedule.Unit is null)
             problems.Error($"{location}.schedule.unit", $"'unit' is required for '{schedule.Mode}' schedules.");
+
+        if (schedule is { Mode: ScheduleMode.Advance, ReferencePath: null })
+        {
+            problems.Warning($"{location}.schedule",
+                "'Advance' from now is always in the past, so the action runs immediately; did you mean to set a 'referencePath'?");
+        }
     }
 }
 

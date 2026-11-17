@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
 using RuleLoom.Abstractions.Condition;
@@ -20,17 +23,25 @@ namespace RuleLoom.Engine;
 /// <param name="contextProviders">Creates context providers; by default a <see cref="DirectContextProviderFactory"/>
 /// without instances.</param>
 /// <param name="timeProvider">The clock schedules are computed with; the system clock by default.</param>
+/// <param name="options">How rules are run (e.g. skipping overdue actions); a default <see cref="RuleEngineOptions"/>
+/// when not given.</param>
+/// <param name="loggerFactory">Where the engine logs (failures as warnings, every outcome at Debug); nowhere when not
+/// given. Traces and metrics go to OpenTelemetry under <see cref="RuleLoomDiagnostics.Name"/> either way.</param>
 public sealed class RuleEngine(
     Catalog catalog,
     IActionFactory? actions = null,
     IContextProviderFactory? contextProviders = null,
-    TimeProvider? timeProvider = null)
+    TimeProvider? timeProvider = null,
+    RuleEngineOptions? options = null,
+    ILoggerFactory? loggerFactory = null)
 {
     private readonly Catalog _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
     private readonly ConditionEvaluator _conditionEvaluator = new(catalog);
     private readonly IActionFactory _actionFactory = actions ?? new DirectActionFactory();
     private readonly IContextProviderFactory _contextProviders = contextProviders ?? new DirectContextProviderFactory();
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly RuleEngineOptions _options = options ?? new RuleEngineOptions();
+    private readonly EngineTelemetry _telemetry = new((loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RuleEngine>());
 
     /// <summary>
     /// Evaluates every rule for <paramref name="eventType"/> against the current and previous state and processes
@@ -73,6 +84,10 @@ public sealed class RuleEngine(
         var context = new EvaluationContext(@event, _catalog, _contextProviders);
         var subject = new Lazy<SubjectIdentity?>(() => SubjectOf(@event, context));
 
+        var started = Stopwatch.GetTimestamp();
+        using var activity = EngineTelemetry.StartExecute(@event, () => subject.Value?.Text);
+        var subjectText = _telemetry.Detailed ? subject.Value?.Text : null;
+
         await PrefetchContextsAsync(eventType, context, matchingRules, cancellationToken);
 
         foreach (var rule in matchingRules)
@@ -86,13 +101,13 @@ public sealed class RuleEngine(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                ruleResults.Add(CreateRuleResult(rule, RuleExecutionStatus.Failed, error: ex));
+                Add(CreateRuleResult(rule, RuleExecutionStatus.Failed, error: ex));
                 continue;
             }
 
             if (!matched)
             {
-                ruleResults.Add(CreateRuleResult(rule, RuleExecutionStatus.NotMatched));
+                Add(CreateRuleResult(rule, RuleExecutionStatus.NotMatched));
                 continue;
             }
 
@@ -103,10 +118,11 @@ public sealed class RuleEngine(
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var action = rule.Actions[index];
-                var result = await ProcessActionAsync(action, context, cancellationToken)
+                var result = await ProcessActionAsync(action, context, rule.Id, eventType, cancellationToken)
                     with { ActionName = action.Action, ActionIndex = index };
 
                 actionResults.Add(result);
+                _telemetry.ActionOutcome(@event, rule.Id, result, subjectText);
 
                 if (result.Status == ActionExecutionStatus.Scheduled)
                 {
@@ -115,10 +131,18 @@ public sealed class RuleEngine(
                 }
             }
 
-            ruleResults.Add(CreateRuleResult(rule, RuleExecutionStatus.Matched, actionResults));
+            Add(CreateRuleResult(rule, RuleExecutionStatus.Matched, actionResults));
         }
 
-        return new RuleEngineResult { Rules = ruleResults, ScheduledActions = scheduledActions };
+        var engineResult = new RuleEngineResult { Rules = ruleResults, ScheduledActions = scheduledActions };
+        EngineTelemetry.EndExecute(activity, @event, engineResult, started);
+        return engineResult;
+
+        void Add(RuleExecutionResult ruleResult)
+        {
+            ruleResults.Add(ruleResult);
+            _telemetry.RuleOutcome(activity, @event, ruleResult, subjectText);
+        }
     }
 
     /// <summary>
@@ -134,6 +158,156 @@ public sealed class RuleEngine(
     }
 
     /// <summary>
+    /// Runs an action the engine scheduled, now that it's due. Anything that runs later must pass its checks then: the
+    /// rule must still be active and still have the action, and the rule's and the action's conditions are evaluated
+    /// again. When the event's schema declares how to load its subject (<c>Subject(...).LoadedBy(...)</c>),
+    /// <c>$current</c> is the subject loaded now and <c>$previous</c> the stored event's previous state, so
+    /// <c>Status eq AwaitingPayment</c> means "still unpaid" and <c>changed Status</c> "still different from before the
+    /// event"; without a loader, the checks see the stored event. Contexts load fresh. The rule's current version of the
+    /// action runs, with <see cref="ExecuteAsync(RuleEvent, IEnumerable{RuleDefinition}, CancellationToken)"/>'s failure
+    /// rules.
+    /// </summary>
+    /// <param name="scheduled">The scheduled action, as <see cref="RuleEngineResult.ScheduledActions"/> listed it.</param>
+    /// <param name="storedEvent">The event that scheduled it, as it was then (e.g. stored with <see cref="RuleEvent.ToJson"/>).</param>
+    /// <param name="rules">The app's current rules, as for <see cref="ExecuteAsync(RuleEvent, IEnumerable{RuleDefinition}, CancellationToken)"/>.</param>
+    /// <param name="cancellationToken">Cancels loading and running.</param>
+    /// <returns><see cref="ActionExecutionStatus.Executed"/>; <see cref="ActionExecutionStatus.Skipped"/> with the reason
+    /// (the rule is gone or changed, it's overdue and <see cref="RuleEngineOptions.SkipOverdueActions"/> is on, a
+    /// condition no longer holds, the subject no longer exists); or
+    /// <see cref="ActionExecutionStatus.Failed"/>. Failures are reported in the result, not thrown.</returns>
+    /// <exception cref="OperationCanceledException">Cancellation was requested.</exception>
+    public async Task<ActionResult> ExecuteScheduledAsync(
+        ScheduledAction scheduled,
+        RuleEvent storedEvent,
+        IEnumerable<RuleDefinition> rules,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scheduled);
+        ArgumentNullException.ThrowIfNull(storedEvent);
+        ArgumentNullException.ThrowIfNull(rules);
+
+        var started = Stopwatch.GetTimestamp();
+        using var activity = EngineTelemetry.StartScheduled(storedEvent, scheduled);
+
+        var result = await RunScheduledAsync(scheduled, storedEvent, rules, cancellationToken)
+            with { ActionName = scheduled.ActionName, ActionIndex = scheduled.ActionIndex };
+
+        _telemetry.EndScheduled(activity, storedEvent, scheduled, result, started);
+        return result;
+    }
+
+    private async Task<ActionResult> RunScheduledAsync(
+        ScheduledAction scheduled,
+        RuleEvent storedEvent,
+        IEnumerable<RuleDefinition> rules,
+        CancellationToken cancellationToken)
+    {
+        var rule = rules.FirstOrDefault(r => r.Id == scheduled.RuleId &&
+                                             string.Equals(r.EventType, storedEvent.EventType, StringComparison.OrdinalIgnoreCase));
+        if (rule is null)
+            return ActionResult.Skipped($"Rule '{scheduled.RuleId}' is no longer active.");
+
+        var action = rule.Actions.ElementAtOrDefault(scheduled.ActionIndex);
+        if (action is null || !string.Equals(action.Action, scheduled.ActionName, StringComparison.OrdinalIgnoreCase) ||
+            action.Schedule is not { Mode: not ScheduleMode.Immediate })
+        {
+            return ActionResult.Skipped(
+                $"Rule '{rule.Id}' no longer schedules action {scheduled.ActionIndex} ('{scheduled.ActionName}'): its actions changed.");
+        }
+
+        if (Overdue(action.Action, scheduled.ScheduledFor, _timeProvider.GetUtcNow(), rule.Id, storedEvent.EventType) is { } overdue)
+            return overdue;
+
+        EvaluationContext? context;
+        try
+        {
+            context = await DueContextAsync(storedEvent, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return ActionResult.Failed(ex, $"The subject of action '{action.Action}' couldn't be loaded. Reason: {ex.Message}");
+        }
+
+        if (context is null)
+            return ActionResult.Skipped($"Action '{action.Action}' skipped: its subject no longer exists (its loader found none).");
+
+        await PrefetchContextsAsync(storedEvent.EventType, context, [rule], cancellationToken);
+
+        try
+        {
+            if (!_conditionEvaluator.Evaluate(context, rule.Condition))
+                return ActionResult.Skipped($"Action '{action.Action}' skipped: rule '{rule.Id}' no longer matches.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return ActionResult.Failed(ex, $"Rule '{rule.Id}' condition could not be evaluated. Reason: {ex.Message}");
+        }
+
+        return CheckCondition(action, context) ?? await RunAsync(action, context, rule.Id, cancellationToken);
+    }
+
+    // Skipped when the app skips overdue actions and this one is later than the grace period allows; otherwise null.
+    private ActionResult? Overdue(string action, DateTimeOffset due, DateTimeOffset now, string ruleId, string eventType)
+    {
+        var lateness = now - due;
+        if (!_options.SkipOverdueActions || lateness <= _options.OverdueGracePeriod)
+            return null;
+
+        var reason = $"Action '{action}' skipped: overdue by {Describe(lateness)} (grace period {Describe(_options.OverdueGracePeriod)}).";
+        _telemetry.OverdueSkipped(eventType, ruleId, action, reason);
+        return ActionResult.Skipped(reason);
+    }
+
+    // A duration in its two largest units, e.g. "3 hours 5 minutes" or "0 seconds".
+    private static string Describe(TimeSpan span)
+    {
+        List<string> parts = [];
+        foreach (var (amount, unit) in new[] { (span.Days, "day"), (span.Hours, "hour"), (span.Minutes, "minute"), (span.Seconds, "second") })
+        {
+            if (amount > 0)
+                parts.Add($"{amount} {unit}{(amount == 1 ? "" : "s")}");
+        }
+
+        return parts.Count == 0 ? "0 seconds" : string.Join(' ', parts.Take(2));
+    }
+
+    /// <summary>
+    /// The state a scheduled action is checked and run against: the subject loaded now, with the stored event's
+    /// previous state and envelope, when the event's schema declares a loader; otherwise the stored event.
+    /// </summary>
+    /// <returns><c>null</c> when the loader finds no subject.</returns>
+    private async Task<EvaluationContext?> DueContextAsync(RuleEvent storedEvent, CancellationToken cancellationToken)
+    {
+        var stored = new EvaluationContext(storedEvent, _catalog, _contextProviders);
+
+        if (!_catalog.TryGetEvent(storedEvent.EventType, out var schema) || schema.Subject is not { Provider: { } provider } subject)
+            return stored;
+
+        if (!_catalog.TryGetContextProvider(provider, out var registration))
+            throw new InvalidOperationException($"No context provider is registered under '{provider}' (the subject's loader).");
+
+        var identity = subject.Identity;
+        object? reference = identity.IsComposite
+            ? identity.Parts.ToDictionary(part => part.Key, part => stored.Resolve(part.Value), StringComparer.OrdinalIgnoreCase)
+            : stored.Resolve(identity.Path!);
+
+        if (reference is null || reference is IReadOnlyDictionary<string, object?> parts && parts.Values.Any(value => value is null))
+            throw new InvalidOperationException($"The stored event has no subject identity ({(identity.IsComposite ? string.Join(", ", identity.Parts.Values) : identity.Path)}).");
+
+        var request = new ContextRequest(provider, storedEvent.EventType, storedEvent.Current, storedEvent.Previous)
+        {
+            Reference = reference,
+            Event = storedEvent,
+            TemporalRules = _catalog.TemporalRules
+        };
+
+        var current = await EngineTelemetry.LoadSubjectAsync(provider,
+            () => _contextProviders.Create(registration).GetAsync(request, cancellationToken).AsTask());
+
+        return current is null ? null : new EvaluationContext(storedEvent with { Current = current }, _catalog, _contextProviders);
+    }
+
+    /// <summary>
     /// The event's subject: read from its data when its schema declares the subject's identity, otherwise
     /// <see cref="RuleEvent.Subject"/>.
     /// </summary>
@@ -142,9 +316,16 @@ public sealed class RuleEngine(
         if (!_catalog.TryGetEvent(@event.EventType, out var schema) || schema.Subject is not { Identity: var identity })
             return SubjectIdentity.From(@event.Subject);
 
-        return identity.IsComposite
-            ? SubjectIdentity.From(identity.Parts.Select(part => KeyValuePair.Create(part.Key, context.Resolve(part.Value))))
-            : SubjectIdentity.From(context.Resolve(identity.Path!));
+        try
+        {
+            return identity.IsComposite
+                ? SubjectIdentity.From(identity.Parts.Select(part => KeyValuePair.Create(part.Key, context.Resolve(part.Value))))
+                : SubjectIdentity.From(context.Resolve(identity.Path!));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return null;   // a stored schema's broken identity (a catalog problem): no subject, so no key
+        }
     }
 
     /// <summary>
@@ -167,7 +348,8 @@ public sealed class RuleEngine(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // Reported by the rules that use the context.
+                // Logged here; failed in the results by the rules that use the context.
+                _telemetry.ContextFailed(eventType, name, ex);
             }
         }));
     }
@@ -175,32 +357,64 @@ public sealed class RuleEngine(
     private async Task<ActionResult> ProcessActionAsync(
         ActionDefinition action,
         EvaluationContext context,
+        string ruleId,
+        string eventType,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            if (action.Condition is not null && !_conditionEvaluator.Evaluate(context, action.Condition))
-                return ActionResult.Skipped($"Action '{action.Action}' skipped because condition was not met.");
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            return ActionResult.Failed(ex, $"Action '{action.Action}' condition could not be evaluated. Reason: {ex.Message}");
-        }
+        if (CheckCondition(action, context) is { } notRun)
+            return notRun;
 
         if (action.Schedule is { Mode: not ScheduleMode.Immediate } schedule)
         {
+            var now = _timeProvider.GetUtcNow();
+            DateTimeOffset scheduledFor;
             try
             {
-                var scheduledFor = ScheduleCalculator.Calculate(schedule, context, _timeProvider.GetUtcNow());
-
-                return ActionResult.Scheduled(scheduledFor, $"Action '{action.Action}' scheduled for {scheduledFor:O}.");
+                scheduledFor = ScheduleCalculator.Calculate(schedule, context, now);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return ActionResult.Failed(ex, $"Action '{action.Action}' scheduling failed. Reason: {ex.Message}");
             }
+
+            if (scheduledFor >= now)
+                return ActionResult.Scheduled(scheduledFor, $"Action '{action.Action}' scheduled for {scheduledFor:O}.");
+
+            // Its due time already passed: it runs now, unless it's overdue and the app skips those.
+            if (Overdue(action.Action, scheduledFor, now, ruleId, eventType) is { } skipped)
+                return skipped;
         }
 
+        return await RunAsync(action, context, ruleId, cancellationToken);
+    }
+
+    // An action's condition: Skipped when it doesn't hold, Failed when it can't be evaluated, null to go on.
+    private ActionResult? CheckCondition(ActionDefinition action, EvaluationContext context)
+    {
+        try
+        {
+            return action.Condition is not null && !_conditionEvaluator.Evaluate(context, action.Condition)
+                ? ActionResult.Skipped($"Action '{action.Action}' skipped because condition was not met.")
+                : null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return ActionResult.Failed(ex, $"Action '{action.Action}' condition could not be evaluated. Reason: {ex.Message}");
+        }
+    }
+
+    // Runs the action in a ruleloom.action span.
+    private async Task<ActionResult> RunAsync(ActionDefinition action, EvaluationContext context, string ruleId, CancellationToken cancellationToken)
+    {
+        using var activity = EngineTelemetry.StartAction(action.Action, ruleId);
+        var result = await CreateAndRunAsync(action, context, cancellationToken);
+        EngineTelemetry.EndAction(activity, result);
+        return result;
+    }
+
+    // Creates the action through the factory and runs it; every failure becomes a Failed result.
+    private async Task<ActionResult> CreateAndRunAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken)
+    {
         if (!_catalog.TryGetAction(action.Action, out var registration))
         {
             var ex = new InvalidOperationException($"No action is registered under the name '{action.Action}'.");
