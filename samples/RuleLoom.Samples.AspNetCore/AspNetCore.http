@@ -114,6 +114,28 @@ Content-Type: application/json
   }
 }
 
+### acme-shop: an order that arrives late. Payment is due in 15 seconds, so its "Payment reminder" (1 minute before) was
+### due 45 seconds ago: more than the 30-second grace period, so it's skipped right away ("overdue by ..." warning).
+< {%
+    request.variables.set("paymentDueAt", new Date(Date.now() + 15 * 1000).toISOString());
+%}
+POST {{baseUrl}}/events
+Content-Type: application/json
+
+{
+  "eventType": "OrderPlaced",
+  "tenantId": "acme-shop",
+  "entityId": "order-1004",
+  "current": {
+    "Number": "SO-1004",
+    "Status": "AwaitingPayment",
+    "Total": 75.00,
+    "ItemCount": 1,
+    "PaymentDueAt": "{{paymentDueAt}}",
+    "Customer": { "Name": "Bob", "Email": "bob@example.com" }
+  }
+}
+
 ### acme-shop: SO-1001 is paid. Matches "Order status changed" (changed + previous). Its pending "Payment reminder" is
 ### skipped when due: RuleLoom checks the rule again against the order as it is then (the "order" subject loader).
 POST {{baseUrl}}/events

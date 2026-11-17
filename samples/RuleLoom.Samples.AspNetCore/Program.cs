@@ -26,7 +26,7 @@ builder.Services
         {
             // A reminder that runs more than a minute late (the scheduler was down) is skipped rather than sent late.
             engine.SkipOverdueActions = true;
-            engine.OverdueGracePeriod = TimeSpan.FromMinutes(1);
+            engine.OverdueGracePeriod = TimeSpan.FromSeconds(30);
         }))
     .AddSingleton<CustomerDirectory>()
     .AddSingleton<OrderStore>()
@@ -36,14 +36,14 @@ builder.Services
     .AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
 // RuleLoom's spans, nested under each request's, and its metrics on the console; a real app uses an exporter such as OTLP.
-builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing => tracing
-        .AddAspNetCoreInstrumentation()
-        .AddSource(RuleLoomDiagnostics.Name)
-        .AddConsoleExporter())
-    .WithMetrics(metrics => metrics
-        .AddMeter(RuleLoomDiagnostics.Name)
-        .AddConsoleExporter());
+// builder.Services.AddOpenTelemetry()
+//     .WithTracing(tracing => tracing
+//         .AddAspNetCoreInstrumentation()
+//         .AddSource(RuleLoomDiagnostics.Name)
+//         .AddConsoleExporter())
+//     .WithMetrics(metrics => metrics
+//         .AddMeter(RuleLoomDiagnostics.Name)
+//         .AddConsoleExporter());
 
 var app = builder.Build();
 
