@@ -16,6 +16,12 @@ public sealed class EventRequest
     /// </summary>
     public required string EntityId { get; init; }
 
+    /// <summary>The producer's id for the event, if it has one (passed through as <c>RuleEvent.EventId</c>).</summary>
+    public string? EventId { get; init; }
+
+    /// <summary>When the event happened, with its offset.</summary>
+    public DateTimeOffset? OccurredAt { get; init; }
+
     public required JsonElement Current { get; init; }
 
     public JsonElement? Previous { get; init; }

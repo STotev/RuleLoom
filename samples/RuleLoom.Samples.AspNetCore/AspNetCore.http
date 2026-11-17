@@ -1,6 +1,10 @@
 ### Requests for the ASP.NET Core sample. Start it with:
 ###   dotnet run --project samples/RuleLoom.Samples.AspNetCore
 ### Written for the JetBrains (Rider) HTTP client: the pre-request scripts set due times relative to now.
+###
+### The scheduling demo: send the first order (SO-1001, Ada) and the unpaid order (SO-1003, Bob), then the update that
+### marks SO-1001 as paid. About a minute later both reminders are due: Bob's is sent, Ada's is skipped because its rule
+### no longer matches the order as it is then ("Scheduled action ... Skipped" in the console).
 
 @baseUrl = http://localhost:5080
 
@@ -51,6 +55,7 @@ Content-Type: application/json
 ### from now). Every acme-shop response lists "Silver upgrade", "Shipped SMS", "Gift wrap" and "Review request" as invalid.
 < {%
     request.variables.set("paymentDueAt", new Date(Date.now() + 2 * 60 * 1000).toISOString());
+    request.variables.set("now", new Date().toISOString());
 %}
 POST {{baseUrl}}/events
 Content-Type: application/json
@@ -59,6 +64,8 @@ Content-Type: application/json
   "eventType": "OrderPlaced",
   "tenantId": "acme-shop",
   "entityId": "order-1001",
+  "eventId": "msg-1001-placed",
+  "occurredAt": "{{now}}",
   "current": {
     "Number": "SO-1001",
     "Status": "AwaitingPayment",
@@ -86,7 +93,29 @@ Content-Type: application/json
   }
 }
 
-### acme-shop: status changes from AwaitingPayment to Paid. Matches "Order status changed" (changed + previous).
+### acme-shop: an order that stays unpaid. Its "Payment reminder" is scheduled like SO-1001's and is sent when due.
+< {%
+    request.variables.set("paymentDueAt", new Date(Date.now() + 2 * 60 * 1000).toISOString());
+%}
+POST {{baseUrl}}/events
+Content-Type: application/json
+
+{
+  "eventType": "OrderPlaced",
+  "tenantId": "acme-shop",
+  "entityId": "order-1003",
+  "current": {
+    "Number": "SO-1003",
+    "Status": "AwaitingPayment",
+    "Total": 75.00,
+    "ItemCount": 1,
+    "PaymentDueAt": "{{paymentDueAt}}",
+    "Customer": { "Name": "Bob", "Email": "bob@example.com" }
+  }
+}
+
+### acme-shop: SO-1001 is paid. Matches "Order status changed" (changed + previous). Its pending "Payment reminder" is
+### skipped when due: RuleLoom checks the rule again against the order as it is then (the "order" subject loader).
 POST {{baseUrl}}/events
 Content-Type: application/json
 

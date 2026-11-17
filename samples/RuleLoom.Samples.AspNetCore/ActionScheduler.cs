@@ -10,8 +10,8 @@ namespace RuleLoom.Samples.AspNetCore;
 /// <remarks>
 /// Job and trigger keys are <c>{tenant}/{ScheduledAction.Key}</c> (the key is <c>{rule}:{action index}:{subject}</c>, the
 /// subject being the event's entity id), and an existing job with the same key is
-/// replaced, so the same event sent twice doesn't schedule the action twice. The job data holds the objects themselves,
-/// which only works with Quartz's in-memory store.
+/// replaced, so the same event sent twice doesn't schedule the action twice. The job data is text
+/// (<see cref="ScheduledAction.ToJson"/>, <see cref="RuleEvent.ToJson"/>), so it works with a persistent Quartz store too.
 /// </remarks>
 public sealed class ActionScheduler(ISchedulerFactory schedulerFactory)
 {
@@ -38,8 +38,8 @@ public sealed class ActionScheduler(ISchedulerFactory schedulerFactory)
                 .Build();
 
             job.JobDataMap[RunScheduledActionJob.TenantIdKey] = tenantId;
-            job.JobDataMap[RunScheduledActionJob.ScheduledActionKey] = scheduled;
-            job.JobDataMap[RunScheduledActionJob.EventKey] = @event;
+            job.JobDataMap[RunScheduledActionJob.ScheduledActionKey] = scheduled.ToJson();
+            job.JobDataMap[RunScheduledActionJob.EventKey] = @event.ToJson();
 
             // The trigger needs the same key too: replacing a job keeps its old triggers under other keys.
             var trigger = TriggerBuilder.Create()

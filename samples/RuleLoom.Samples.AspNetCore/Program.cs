@@ -1,8 +1,10 @@
+using OpenTelemetry.Trace;
 using Quartz;
 using RuleLoom.Abstractions;
 using RuleLoom.Actions;
 using RuleLoom.Engine;
 using RuleLoom.Samples.AspNetCore;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,12 +13,29 @@ builder.Services
         .AddFromAssemblyOf<OrderPlacedSchema>() // the event schemas, SendEmailAction and LoyaltyCheckAction
         .AddContextProvider<CustomerProvider>("customer")
         .AddContextProvider<OrderHistoryProvider>("orderHistory")
-        .AddAction<ConsoleLogAction>()))        // built in, for development; not registered by default
+        .AddContextProvider<OrderProvider>("order")    // the subject of order events, loaded when a scheduled action is due
+        .AddAction<ConsoleLogAction>())         // built in, for development; not registered by default
+        .Configure(engine =>
+        {
+            // A reminder that runs more than a minute late (the scheduler was down) is skipped rather than sent late.
+            engine.SkipOverdueActions = true;
+            engine.OverdueGracePeriod = TimeSpan.FromMinutes(1);
+        }))
     .AddSingleton<CustomerDirectory>()
+    .AddSingleton<OrderStore>()
     .AddScoped<TenantRuleStore>()
     .AddSingleton<ActionScheduler>()
     .AddQuartz()
     .AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
+
+// RuleLoom's spans (ruleloom.execute, ruleloom.execute_scheduled, ruleloom.action, ruleloom.context) on the console;
+// a real app adds an exporter such as OTLP, and the meter with WithMetrics(m => m.AddMeter(RuleLoomDiagnostics.Name)).
+// The sampler follows the parent span by default, and requests have an unrecorded one unless the app adds ASP.NET Core
+// instrumentation (OpenTelemetry.Instrumentation.AspNetCore): without either, spans started in a request are dropped.
+builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing
+    .SetSampler(new AlwaysOnSampler())
+    .AddSource(RuleLoomDiagnostics.Name)
+    .AddConsoleExporter());
 
 var app = builder.Build();
 
@@ -27,6 +46,7 @@ app.MapRuleLoom("/rules");
 app.MapPost("/events", async (
     EventRequest request,
     TenantRuleStore ruleStore,
+    OrderStore orders,
     RuleEngine engine,
     ActionScheduler scheduler,
     CancellationToken cancellationToken) =>
@@ -35,7 +55,17 @@ app.MapPost("/events", async (
     if (rules is null)
         return Results.NotFound(new { error = $"Unknown tenant '{request.TenantId}'." });
 
-    var @event = new RuleEvent(request.EventType, request.Current, request.Previous) { Subject = request.EntityId };
+    // Stands in for the shop's database, which the producer updated before sending the event.
+    if (request.EventType is "OrderPlaced" or "OrderUpdated")
+        orders.Save(request.TenantId, request.Current.Deserialize<Order>(JsonSerializerOptions.Web)!);
+
+    var @event = new RuleEvent(request.EventType, request.Current, request.Previous)
+    {
+        EventId = request.EventId,
+        Subject = request.EntityId,
+        OccurredAt = request.OccurredAt,
+        Metadata = new Dictionary<string, object?> { ["tenantId"] = request.TenantId }
+    };
     var result = await engine.ExecuteAsync(@event, rules.Valid, cancellationToken);
     var jobs = await scheduler.ScheduleAsync(request.TenantId, @event, result.ScheduledActions, cancellationToken);
 
