@@ -1,12 +1,49 @@
 ### Requests for the ASP.NET Core sample. Start it with:
 ###   dotnet run --project samples/RuleLoom.Samples.AspNetCore
-### Written for the JetBrains (Rider) HTTP client: the pre-request scripts set due times relative to now.
+### The demo page at http://localhost:5080 does the same with buttons, and shows what the rules did.
 ###
-### The scheduling demo: send the first order (SO-1001, Ada) and the unpaid order (SO-1003, Bob), then the update that
-### marks SO-1001 as paid. About a minute later both reminders are due: Bob's is sent, Ada's is skipped because its rule
-### no longer matches the order as it is then ("Scheduled action ... Skipped" in the console).
+### The scheduling demo: place Ada's and Bob's orders, then pay Ada's. Thirty seconds after placing them the payment
+### reminders are due: Bob's is sent, Ada's is skipped because the rule no longer matches her order as it is then.
 
 @baseUrl = http://localhost:5080
+
+### Ada (gold) places an order of 640.50 with 5 items: "VIP order" emails her, "Payment reminder" is scheduled 30 seconds
+### before payment is due (in 60 seconds), "Big basket" and "Loyalty check" (her earlier orders) run too.
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{ "customerEmail": "ada@example.com", "total": 640.50, "itemCount": 5 }
+
+### Bob (bronze) places an order of 75.00: only "Payment reminder" matches.
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{ "customerEmail": "bob@example.com", "total": 75.00 }
+
+### Ada pays (SO-1001): "Order paid" emails her; her pending reminder will be skipped when it's due.
+POST {{baseUrl}}/orders/SO-1001/pay
+
+### Ada's order ships: "Order shipped" emails her now and asks for a review 20 seconds later.
+POST {{baseUrl}}/orders/SO-1001/ship
+
+### An order that comes in late: payment is due in 15 seconds, so its reminder was due 15 seconds ago, more than the
+### 10-second grace period: skipped at once. With 25 seconds it's 5 seconds late, and sent at once.
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{ "customerEmail": "bob@example.com", "total": 75.00, "paymentDueInSeconds": 15 }
+
+### The orders, the emails sent, what the rules did, and the rules as loaded (with the ones left out for mistakes).
+GET {{baseUrl}}/orders
+
+###
+GET {{baseUrl}}/demo/emails
+
+###
+GET {{baseUrl}}/demo/activity
+
+###
+GET {{baseUrl}}/demo/rules
 
 ### The catalog document: events and their contexts, context schemas, operators and actions (with their parameters),
 ### as a rule-authoring UI reads them. Mapped by MapRuleLoom("/rules").
@@ -48,154 +85,3 @@ Content-Type: application/json
   { "id": "typo", "name": "Typo", "eventType": "OrderPlaced",
     "condition": { "operator": "gte", "operands": [{ "path": "Totl" }, { "value": 5 }] } }
 ]
-
-### acme-shop: VIP order awaiting payment from a gold customer.
-### Matches "VIP order" (email now; @customer.Tier is gold), "Big basket" (log), "Loyalty check" (3 earlier orders,
-### from the orderHistory context) and "Payment reminder" (scheduled 1 minute before PaymentDueAt, so about a minute
-### from now). Every acme-shop response lists "Silver upgrade", "Shipped SMS", "Gift wrap" and "Review request" as invalid.
-< {%
-    request.variables.set("paymentDueAt", new Date(Date.now() + 2 * 60 * 1000).toISOString());
-    request.variables.set("now", new Date().toISOString());
-%}
-POST {{baseUrl}}/events
-Content-Type: application/json
-
-{
-  "eventType": "OrderPlaced",
-  "tenantId": "acme-shop",
-  "entityId": "order-1001",
-  "eventId": "msg-1001-placed",
-  "occurredAt": "{{now}}",
-  "current": {
-    "Number": "SO-1001",
-    "Status": "AwaitingPayment",
-    "Total": 640.50,
-    "ItemCount": 6,
-    "PaymentDueAt": "{{paymentDueAt}}",
-    "Customer": { "Name": "Ada", "Email": "ada@example.com" }
-  }
-}
-
-### acme-shop: the same order from a bronze customer. "VIP order" doesn't match; "Loyalty check" finds no earlier orders.
-POST {{baseUrl}}/events
-Content-Type: application/json
-
-{
-  "eventType": "OrderPlaced",
-  "tenantId": "acme-shop",
-  "entityId": "order-1002",
-  "current": {
-    "Number": "SO-1002",
-    "Status": "Paid",
-    "Total": 640.50,
-    "ItemCount": 2,
-    "Customer": { "Name": "Bob", "Email": "bob@example.com" }
-  }
-}
-
-### acme-shop: an order that stays unpaid. Its "Payment reminder" is scheduled like SO-1001's and is sent when due.
-< {%
-    request.variables.set("paymentDueAt", new Date(Date.now() + 2 * 60 * 1000).toISOString());
-%}
-POST {{baseUrl}}/events
-Content-Type: application/json
-
-{
-  "eventType": "OrderPlaced",
-  "tenantId": "acme-shop",
-  "entityId": "order-1003",
-  "current": {
-    "Number": "SO-1003",
-    "Status": "AwaitingPayment",
-    "Total": 75.00,
-    "ItemCount": 1,
-    "PaymentDueAt": "{{paymentDueAt}}",
-    "Customer": { "Name": "Bob", "Email": "bob@example.com" }
-  }
-}
-
-### acme-shop: an order that arrives late. Payment is due in 15 seconds, so its "Payment reminder" (1 minute before) was
-### due 45 seconds ago: more than the 30-second grace period, so it's skipped right away ("overdue by ..." warning).
-< {%
-    request.variables.set("paymentDueAt", new Date(Date.now() + 15 * 1000).toISOString());
-%}
-POST {{baseUrl}}/events
-Content-Type: application/json
-
-{
-  "eventType": "OrderPlaced",
-  "tenantId": "acme-shop",
-  "entityId": "order-1004",
-  "current": {
-    "Number": "SO-1004",
-    "Status": "AwaitingPayment",
-    "Total": 75.00,
-    "ItemCount": 1,
-    "PaymentDueAt": "{{paymentDueAt}}",
-    "Customer": { "Name": "Bob", "Email": "bob@example.com" }
-  }
-}
-
-### acme-shop: SO-1001 is paid. Matches "Order status changed" (changed + previous). Its pending "Payment reminder" is
-### skipped when due: RuleLoom checks the rule again against the order as it is then (the "order" subject loader).
-POST {{baseUrl}}/events
-Content-Type: application/json
-
-{
-  "eventType": "OrderUpdated",
-  "tenantId": "acme-shop",
-  "entityId": "order-1001",
-  "current": { "Number": "SO-1001", "Status": "Paid", "Total": 640.50, "Customer": { "Email": "ada@example.com" } },
-  "previous": { "Number": "SO-1001", "Status": "AwaitingPayment", "Total": 640.50, "Customer": { "Email": "ada@example.com" } }
-}
-
-### acme-shop: an update without a status change (the total is written differently). Nothing matches.
-POST {{baseUrl}}/events
-Content-Type: application/json
-
-{
-  "eventType": "OrderUpdated",
-  "tenantId": "acme-shop",
-  "entityId": "order-1001",
-  "current": { "Number": "SO-1001", "Status": "Paid", "Total": 640.5, "Customer": { "Email": "ada@example.com" } },
-  "previous": { "Number": "SO-1001", "Status": "Paid", "Total": 640.50, "Customer": { "Email": "ada@example.com" } }
-}
-
-### wheels-market: a new ad. Matches "Ad published": logs now, emails the seller in 30 seconds.
-POST {{baseUrl}}/events
-Content-Type: application/json
-
-{
-  "eventType": "AdPublished",
-  "tenantId": "wheels-market",
-  "entityId": "ad-77",
-  "current": {
-    "Title": "2019 hatchback, one owner",
-    "Status": "Published",
-    "Price": 10500,
-    "Seller": { "Name": "Grace", "Email": "grace@example.com" }
-  }
-}
-
-### wheels-market: the price drops below 10k. Matches "Price drop" ($previous.Price); the action condition adds the bargain log.
-POST {{baseUrl}}/events
-Content-Type: application/json
-
-{
-  "eventType": "AdUpdated",
-  "tenantId": "wheels-market",
-  "entityId": "ad-77",
-  "current": { "Title": "2019 hatchback, one owner", "Status": "Published", "Price": 9800, "Seller": { "Email": "grace@example.com" } },
-  "previous": { "Title": "2019 hatchback, one owner", "Status": "Published", "Price": 10500, "Seller": { "Email": "grace@example.com" } }
-}
-
-### Unknown tenant: 404.
-POST {{baseUrl}}/events
-Content-Type: application/json
-
-{
-  "eventType": "OrderPlaced",
-  "tenantId": "globex",
-  "entityId": "order-1",
-  "current": { "Total": 10 }
-}
