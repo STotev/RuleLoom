@@ -212,7 +212,9 @@ ExecuteScheduledAsync(ScheduledAction, storedEvent, rules) → ActionResult (sta
   (the rule's condition if it schedules anything, the scheduled action's condition and parameters; not reference
   paths) must be fields of the loaded subject too (`SubjectPathCheck`; reported only when the event has the field). Every problem comes with a JSONPath location.
 - **Scheduling** (`ScheduleMetadata`): `Immediate` (default) / `Delay` (+offset) / `Advance` (−offset),
-  in Seconds/Minutes/Hours/Days, from `ReferencePath` or the injected `TimeProvider`'s UTC now; `ScheduledFor` is UTC.
+  in Seconds/Minutes/Hours (elapsed time) or Days (calendar days in the catalog's time zone, keeping the wall-clock
+  time; `TemporalRules.AddDays`, lenient: skipped → forward, repeated → earlier), from `ReferencePath` (a date: the start
+  of its day in the zone) or the injected `TimeProvider`'s UTC now; `ScheduledFor` is UTC.
   `ReferencePath` values are read by the catalog's `TemporalRules` (`DateTime`/`DateTimeOffset`, or strict ISO 8601
   strings); an impossible wall-clock time fails the action, naming the reference path.
   RuleLoom computes `ScheduledFor`; dispatching scheduled work is the consumer's responsibility.

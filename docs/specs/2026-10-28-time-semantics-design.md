@@ -151,3 +151,11 @@ Recorded for slice 2 ([#136](https://github.com/STotev/RuleLoom/issues/136)):
 - **The validator's temporal checks** apply to date-time literals compared with a date or date-time field (in the
   comparison operators, through `OperandValidationContext.TemporalRules`) and to parameter values bound as date-times;
   date-only literals can't be invalid. A comparison of a `DateOnly` value with a date-time field is no longer a warning.
+
+Recorded for slice 3 ([#137](https://github.com/STotev/RuleLoom/issues/137)):
+
+- **`TemporalRules.AddDays(instant, days)`** is public, like the other policy methods: the wall-clock time in the time
+  zone moved by calendar days, resolved leniently.
+- **`DateOnly` references** start their day through `TryGetInstant`, which handles `DateOnly` from slice 2 (#136);
+  date-only text already did.
+- **A UTC catalog is unchanged**: UTC has no daylight saving, so `Days` stay 24 hours there.
