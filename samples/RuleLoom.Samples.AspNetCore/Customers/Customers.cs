@@ -1,17 +1,15 @@
 using RuleLoom.Abstractions.Context;
 using RuleLoom.Schemas;
 
-namespace RuleLoom.Samples.AspNetCore;
+namespace RuleLoom.Samples.AspNetCore.Customers;
 
-// The contexts orders declare (see Events.cs): what the app knows about a customer, loaded when a rule or an action asks.
+// The contexts order events declare: what the shop knows about a customer, loaded only when a rule or an action asks.
 
-public sealed record CustomerProfile(string Email, string Tier, DateOnly MemberSince);
+public sealed record CustomerProfile(string Name, string Email, string Tier, DateOnly MemberSince);
 
 public sealed record PastOrder(string Number, decimal Total, DateOnly PlacedOn);
 
-/// <summary>
-/// Describes <see cref="CustomerProfile"/> to rule authors; found next to the type by the catalog.
-/// </summary>
+/// <summary>Describes <see cref="CustomerProfile"/> to rule authors; found next to the type by the catalog.</summary>
 public sealed class CustomerProfileSchema : ContextSchema<CustomerProfile>
 {
     public CustomerProfileSchema()
@@ -23,15 +21,13 @@ public sealed class CustomerProfileSchema : ContextSchema<CustomerProfile>
     }
 }
 
-/// <summary>
-/// Stands in for the app's customer database.
-/// </summary>
+/// <summary>The shop's customers; a real app has a database. Ada is gold with three earlier orders, Bob bronze with none.</summary>
 public sealed class CustomerDirectory
 {
     private readonly Dictionary<string, CustomerProfile> _profiles = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["ada@example.com"] = new("ada@example.com", "gold", new DateOnly(2021, 3, 14)),
-        ["bob@example.com"] = new("bob@example.com", "bronze", new DateOnly(2026, 9, 1))
+        ["ada@example.com"] = new("Ada", "ada@example.com", "gold", new DateOnly(2021, 3, 14)),
+        ["bob@example.com"] = new("Bob", "bob@example.com", "bronze", new DateOnly(2026, 9, 1))
     };
 
     private readonly Dictionary<string, PastOrder[]> _orders = new(StringComparer.OrdinalIgnoreCase)
@@ -44,23 +40,21 @@ public sealed class CustomerDirectory
         ]
     };
 
+    public IReadOnlyCollection<CustomerProfile> All => _profiles.Values;
+
     public CustomerProfile? FindProfile(string email) => _profiles.GetValueOrDefault(email);
 
     public IReadOnlyList<PastOrder> FindOrders(string email) => _orders.GetValueOrDefault(email) ?? [];
 }
 
-/// <summary>
-/// Registered as "customer": the profile of the customer an order refers to (by email), or <c>null</c> for a guest.
-/// </summary>
+/// <summary>Registered as "customer": the profile of the customer an order refers to (by email), or <c>null</c> for a guest.</summary>
 public sealed class CustomerProvider(CustomerDirectory customers) : ContextProvider<CustomerProfile>
 {
     protected override ValueTask<CustomerProfile?> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>
         ValueTask.FromResult(customers.FindProfile(request.GetReference<string>()!));
 }
 
-/// <summary>
-/// Registered as "orderHistory": the customer's earlier orders.
-/// </summary>
+/// <summary>Registered as "orderHistory": the customer's earlier orders.</summary>
 public sealed class OrderHistoryProvider(CustomerDirectory customers) : CollectionContextProvider<PastOrder>
 {
     protected override ValueTask<IReadOnlyList<PastOrder>> LoadAsync(ContextRequest request, CancellationToken cancellationToken) =>

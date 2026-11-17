@@ -1,22 +1,20 @@
 using RuleLoom.Abstractions;
 using RuleLoom.Abstractions.Action;
+using RuleLoom.Samples.AspNetCore.Customers;
 
-namespace RuleLoom.Samples.AspNetCore;
+namespace RuleLoom.Samples.AspNetCore.Actions;
 
 /// <summary>
-/// Registered as "loyalty-check". Reads the customer's earlier orders (the <c>orderHistory</c> context) and logs how
+/// Registered as "loyalty-check". Reads the customer's earlier orders (the <c>orderHistory</c> context) and reports how
 /// many there are and what they add up to. No parameters.
 /// </summary>
-public sealed class LoyaltyCheckAction(ILogger<LoyaltyCheckAction> logger) : IAction
+public sealed class LoyaltyCheckAction : IAction
 {
     public async Task<ActionResult> ExecuteAsync(ActionDefinition action, EvaluationContext context, CancellationToken cancellationToken = default)
     {
         var orders = await context.GetContextAsync<IReadOnlyList<PastOrder>>("orderHistory", cancellationToken) ?? [];
-        var message = $"{orders.Count} earlier orders worth {orders.Sum(o => o.Total):0.00}.";
 
-        logger.LogInformation("Loyalty check: {Message}", message);
-
-        return ActionResult.Success(message);
+        return ActionResult.Success($"{orders.Count} earlier orders worth {orders.Sum(o => o.Total):0.00}.");
     }
 }
 

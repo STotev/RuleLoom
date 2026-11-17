@@ -2,38 +2,53 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Quartz;
 using RuleLoom.Abstractions;
-using RuleLoom.Actions;
-using RuleLoom.Engine;
-using RuleLoom.Samples.AspNetCore;
+using RuleLoom.Samples.AspNetCore.Customers;
+using RuleLoom.Samples.AspNetCore.Demo;
+using RuleLoom.Samples.AspNetCore.Orders;
+using RuleLoom.Samples.AspNetCore.Rules;
+using RuleLoom.Samples.AspNetCore.Scheduling;
 using Serilog;
-using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Logs through Serilog, with timestamps; the levels are in appsettings.json.
+// Logs through Serilog; the levels are in appsettings.json.
 builder.Services.AddSerilog((services, logging) => logging
     .ReadFrom.Configuration(builder.Configuration)
     .ReadFrom.Services(services));
 
-builder.Services
-    .AddRuleLoom(rules => rules.AddCatalog(catalog => catalog
-        .AddFromAssemblyOf<OrderPlacedSchema>() // the event schemas, SendEmailAction and LoyaltyCheckAction
+// RuleLoom: the catalog (what rules can use) and how rules run.
+builder.Services.AddRuleLoom(ruleLoom => ruleLoom
+    .AddCatalog(catalog => catalog
+        .AddFromAssemblyOf<OrderPlacedSchema>()             // the order events, the actions and their descriptors
+        .AddContextProvider<OrderProvider>("order")        // the subject of order events, loaded when a scheduled action is due
         .AddContextProvider<CustomerProvider>("customer")
-        .AddContextProvider<OrderHistoryProvider>("orderHistory")
-        .AddContextProvider<OrderProvider>("order")    // the subject of order events, loaded when a scheduled action is due
-        .AddAction<ConsoleLogAction>())         // built in, for development; not registered by default
-        .Configure(engine =>
-        {
-            // A reminder that runs more than a minute late (the scheduler was down) is skipped rather than sent late.
-            engine.SkipOverdueActions = true;
-            engine.OverdueGracePeriod = TimeSpan.FromSeconds(30);
-        }))
-    .AddSingleton<CustomerDirectory>()
+        .AddContextProvider<OrderHistoryProvider>("orderHistory"))
+    .Configure(engine =>
+    {
+        // A reminder that runs more than 10 seconds late (the scheduler was down, or the order came in after the reminder's
+        // time) is skipped rather than sent late.
+        engine.SkipOverdueActions = true;
+        engine.OverdueGracePeriod = TimeSpan.FromSeconds(10);
+    }));
+
+// The shop, and where it hands events to RuleLoom.
+builder.Services
+    .AddSingleton(TimeProvider.System)
     .AddSingleton<OrderStore>()
-    .AddScoped<TenantRuleStore>()
+    .AddSingleton<CustomerDirectory>()
+    .AddScoped<RuleStore>()
+    .AddScoped<RuleRunner>();
+
+// Scheduled actions run on Quartz.
+builder.Services
     .AddSingleton<ActionScheduler>()
     .AddQuartz()
     .AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
+
+// What the demo page shows.
+builder.Services
+    .AddSingleton<ActivityFeed>()
+    .AddSingleton<Outbox>();
 
 // Uncomment for RuleLoom's spans, nested under each request's, and its metrics on the console (left out because they
 // bury the logs); a real app uses an exporter such as OTLP.
@@ -48,37 +63,13 @@ builder.Services
 
 var app = builder.Build();
 
-// What a rule-authoring UI uses: GET /rules/catalog (the events and their contexts, their fields, the operators and the
-// actions with their parameters) and POST /rules/validate. A real app secures them: .RequireAuthorization().
+app.UseDefaultFiles();
+app.UseStaticFiles();     // the demo page, wwwroot/index.html
+
+app.MapOrders();          // the shop's API: place, pay and ship orders
+app.MapDemo();            // what the demo page reads
+
+// What a rule-authoring UI uses: GET /rules/catalog and POST /rules/validate. A real app secures them: .RequireAuthorization().
 app.MapRuleLoom("/rules");
-
-app.MapPost("/events", async (
-    EventRequest request,
-    TenantRuleStore ruleStore,
-    OrderStore orders,
-    RuleEngine engine,
-    ActionScheduler scheduler,
-    CancellationToken cancellationToken) =>
-{
-    var rules = await ruleStore.LoadAsync(request.TenantId, cancellationToken);
-    if (rules is null)
-        return Results.NotFound(new { error = $"Unknown tenant '{request.TenantId}'." });
-
-    // Stands in for the shop's database, which the producer updated before sending the event.
-    if (request.EventType is "OrderPlaced" or "OrderUpdated")
-        orders.Save(request.TenantId, request.Current.Deserialize<Order>(JsonSerializerOptions.Web)!);
-
-    var @event = new RuleEvent(request.EventType, request.Current, request.Previous)
-    {
-        EventId = request.EventId,
-        Subject = request.EntityId,
-        OccurredAt = request.OccurredAt,
-        Metadata = new Dictionary<string, object?> { ["tenantId"] = request.TenantId }
-    };
-    var result = await engine.ExecuteAsync(@event, rules.Valid, cancellationToken);
-    var jobs = await scheduler.ScheduleAsync(request.TenantId, @event, result.ScheduledActions, cancellationToken);
-
-    return Results.Ok(EventResponse.From(result, rules.Invalid, jobs));
-});
 
 app.Run();
