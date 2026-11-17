@@ -54,6 +54,9 @@ Recorded while building.
    follow-up issue.
 6. **Testing the sample is manual** (`.http` and the console). A small test project driving `POST /events` with a fake
    clock would catch regressions such as finding 1; part of the follow-up in 5.
+7. **RuleLoom's Debug logs used `{EventId}`**, which logging reserves for the log message's own id: with Serilog the
+   line showed `event {"Id": …, "Name": "LogActionOutcome"}` instead of the event's id (the default console logger
+   hides it). Also, an action without a message logged `null`. Both fixed in #157 (`{RuleEventId}`).
 
 ## Deviations
 
