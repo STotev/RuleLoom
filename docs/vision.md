@@ -98,6 +98,12 @@ Also: past times, retries and duplicates; serializable scheduled actions for per
 semantics review** (time zones, `Unspecified` dates); and a "dispatching scheduled actions" guide showing the
 Hangfire/Quartz pattern.
 
+**Overdue actions per rule** (raised 2026-11-18, after 0.8): skipping overdue actions (`SkipOverdueActions`,
+`OverdueGracePeriod`) is one setting for the whole engine. Some actions are worth running late (a receipt) and some
+aren't (a "due in an hour" reminder), so a rule, or an action, could say whether it's skipped when overdue and with
+what grace period, overriding the engine's default. Open: rule or action level, how it reads in the JSON, and how a
+UI explains it.
+
 ### Named instances (e.g. per tenant)
 Raised 2026-10-08, after Quartz.NET's
 [scheduler per tenant](https://github.com/quartznet/quartznet/blob/main/docs/documentation/quartz-4.x/multi-tenancy.md#scheduler-per-tenant):
