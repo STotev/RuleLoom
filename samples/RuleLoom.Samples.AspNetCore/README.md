@@ -28,6 +28,32 @@ Also: **ship** an order ("Order shipped" emails now and asks for a review 20 sec
 payment due in 25 or 15 seconds: its reminder is already late, and is sent at once (5 seconds late) or skipped (15
 seconds late, past the 10-second grace period).
 
+## See it in the Aspire Dashboard
+
+RuleLoom's traces, metrics and logs are OpenTelemetry; the [Aspire Dashboard](https://learn.microsoft.com/dotnet/aspire/fundamentals/dashboard/standalone)
+shows them without installing anything else. Start it in Docker, then run the shop with the `dashboard` profile:
+
+```bash
+docker run --rm -d --name aspire-dashboard -p 18888:18888 -p 4317:18889 \
+  -e ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true mcr.microsoft.com/dotnet/aspire-dashboard:13.6.2
+dotnet run --project samples/RuleLoom.Samples.AspNetCore --launch-profile dashboard
+```
+
+Open the dashboard at **http://localhost:18888** next to the shop, and after a demo step look at:
+
+- **Traces**: each request (`POST /orders/`) with `ruleloom.execute` under it: the event type, the subject (the order
+  number), counts of rules matched / not matched / failed and of actions executed / scheduled, a `ruleloom.context` span
+  per context loaded and a `ruleloom.action` span per action run. A reminder that comes due is a trace of its own,
+  `ruleloom.execute_scheduled`, with its status and, when skipped, the reason.
+- **Structured logs**: every rule's and action's outcome at Debug ("why didn't my rule fire?"), filterable by subject
+  or event id; the console only shows Information and up.
+- **Metrics** (exported every minute): `ruleloom.rules` by outcome, `ruleloom.actions` by action and status, and the
+  durations.
+
+Stop it with `docker stop aspire-dashboard`. Without the profile, nothing is exported. A real app points
+`OTEL_EXPORTER_OTLP_ENDPOINT` at its collector; RuleLoom only needs `AddSource`/`AddMeter(RuleLoomDiagnostics.Name)` (see
+the [observability guide](../../docs/guides/observability.md)).
+
 ## What it shows
 
 - **Events raised in-process**: the shop saves the order and hands RuleLoom the order before and after
@@ -42,8 +68,8 @@ seconds late, past the 10-second grace period).
   (`SkipOverdueActions`). See the [dispatching guide](../../docs/guides/dispatching-scheduled-actions.md).
 - **Authoring endpoints**: `MapRuleLoom("/rules")` serves the catalog (`GET /rules/catalog`) and validates rules
   (`POST /rules/validate`), as a rule-authoring UI would use them.
-- **Logs**: Serilog on the console: emails sent, scheduled actions run, and RuleLoom's warnings. OpenTelemetry is set
-  up in `Program.cs` but commented out (the console exporter buries the logs); uncomment it to see the spans and metrics.
+- **Observability**: Serilog on the console (emails sent, scheduled actions run, and warnings); with the `dashboard`
+  profile, traces, metrics and logs (RuleLoom's Debug outcomes included) go over OTLP to the Aspire Dashboard.
 
 Storing rules, tenants and the like are the app's choice: this shop keeps one set of rules in files.
 
@@ -51,7 +77,8 @@ Storing rules, tenants and the like are the app's choice: this shop keeps one se
 
 | Folder | Holds |
 |---|---|
-| `Program.cs` | Registration (`AddRuleLoom` with the catalog and overdue actions, Quartz, the shop's services) and endpoint mapping |
+| `Program.cs` | Registration (`AddRuleLoom` with the catalog and overdue actions, Quartz, the shop's services, OpenTelemetry when an OTLP endpoint is set) and endpoint mapping |
+| `Properties/launchSettings.json` | The `shop` profile (the default) and `dashboard` (sets `OTEL_EXPORTER_OTLP_ENDPOINT`) |
 | `Orders/` | `Order`, the `OrderPlaced`/`OrderUpdated` schemas (subject, contexts), `OrderStore`, the `order` subject loader and the shop's endpoints |
 | `Customers/` | The customer directory, the `customer` and `orderHistory` context providers and the profile's schema |
 | `Actions/` | `send-email` (typed, with its descriptor) and `loyalty-check` |

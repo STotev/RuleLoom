@@ -1,4 +1,7 @@
+using OpenTelemetry;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Quartz;
 using RuleLoom.Abstractions;
@@ -11,10 +14,12 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Logs through Serilog; the levels are in appsettings.json.
+// Logs through Serilog; the levels are in appsettings.json. writeToProviders passes them on to OpenTelemetry too, so
+// ASP.NET Core's own console logger goes first, or every line would print twice.
+builder.Logging.ClearProviders();
 builder.Services.AddSerilog((services, logging) => logging
     .ReadFrom.Configuration(builder.Configuration)
-    .ReadFrom.Services(services));
+    .ReadFrom.Services(services), writeToProviders: true);
 
 // RuleLoom: the catalog (what rules can use) and how rules run.
 builder.Services.AddRuleLoom(ruleLoom => ruleLoom
@@ -50,16 +55,21 @@ builder.Services
     .AddSingleton<ActivityFeed>()
     .AddSingleton<Outbox>();
 
-// Uncomment for RuleLoom's spans, nested under each request's, and its metrics on the console (left out because they
-// bury the logs); a real app uses an exporter such as OTLP.
-// builder.Services.AddOpenTelemetry()
-//     .WithTracing(tracing => tracing
-//         .AddAspNetCoreInstrumentation()
-//         .AddSource(RuleLoomDiagnostics.Name)
-//         .AddConsoleExporter())
-//     .WithMetrics(metrics => metrics
-//         .AddMeter(RuleLoomDiagnostics.Name)
-//         .AddConsoleExporter());
+// Traces, metrics and logs over OTLP, when an endpoint is set: the "dashboard" launch profile sends them to the Aspire
+// Dashboard (see the README). RuleLoom's spans nest under each request's; a scheduled run is a trace of its own.
+if (builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] is not null)
+{
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService("demo-shop"))
+        .WithTracing(tracing => tracing
+            .AddAspNetCoreInstrumentation()
+            .AddSource(RuleLoomDiagnostics.Name))
+        .WithMetrics(metrics => metrics
+            .AddAspNetCoreInstrumentation()
+            .AddMeter(RuleLoomDiagnostics.Name))
+        .WithLogging()
+        .UseOtlpExporter();
+}
 
 var app = builder.Build();
 
