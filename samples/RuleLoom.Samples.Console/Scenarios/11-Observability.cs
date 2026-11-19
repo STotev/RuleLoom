@@ -107,7 +107,7 @@ public static class Observability
 
         public void Print()
         {
-            var tree = new Tree("[grey]Trace[/]");
+            var tree = new Tree("[aqua]Trace[/]");
             foreach (var root in _spans.Where(s => !_spans.Any(p => p.SpanId == s.ParentSpanId)).OrderBy(s => s.StartTimeUtc))
                 Add(tree.AddNode(Describe(root)), root);
 
@@ -117,7 +117,7 @@ public static class Observability
         private void Add(TreeNode node, Activity parent)
         {
             foreach (var (key, value) in parent.TagObjects)
-                node.AddNode($"[grey]{Markup.Escape(key)}[/] = {Markup.Escape(value?.ToString() ?? "")}");
+                node.AddNode($"[purple]{Markup.Escape(key)}[/] = {Markup.Escape(value?.ToString() ?? "")}");
             foreach (var spanEvent in parent.Events)
                 node.AddNode($"[yellow]event[/] {Markup.Escape(spanEvent.Name)}: {Markup.Escape(string.Join(", ", spanEvent.Tags.Select(t => $"{t.Key} = {t.Value}")))}");
             foreach (var child in _spans.Where(s => s.ParentSpanId == parent.SpanId).OrderBy(s => s.StartTimeUtc))
@@ -127,7 +127,7 @@ public static class Observability
         private static string Describe(Activity span)
         {
             var status = span.Status == ActivityStatusCode.Error ? $" [red]error: {Markup.Escape(span.StatusDescription ?? "")}[/]" : "";
-            return $"[bold]{span.OperationName}[/] [grey]{span.Duration.TotalMilliseconds:0.0} ms[/]{status}";
+            return $"[bold]{span.OperationName}[/] [purple]{span.Duration.TotalMilliseconds:0.0} ms[/]{status}";
         }
 
         public void Dispose() => _listener.Dispose();
@@ -195,12 +195,12 @@ public static class Observability
             {
                 var level = logLevel switch
                 {
-                    LogLevel.Debug => "[grey]DBG[/]",
+                    LogLevel.Debug => "[purple]DBG[/]",
                     LogLevel.Information => "[blue]INF[/]",
                     LogLevel.Warning => "[yellow]WRN[/]",
                     _ => "[red]ERR[/]"
                 };
-                AnsiConsole.MarkupLine($"  {level} [grey]{Markup.Escape(category)}:[/] {Markup.Escape(formatter(state, exception))}");
+                AnsiConsole.MarkupLine($"  {level} [purple]{Markup.Escape(category)}:[/] {Markup.Escape(formatter(state, exception))}");
             }
         }
     }

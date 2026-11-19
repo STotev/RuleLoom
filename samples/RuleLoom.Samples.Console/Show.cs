@@ -12,25 +12,25 @@ public static class Show
     public static void Scenario(int number, string title, string what)
     {
         AnsiConsole.Write(new Rule($"[bold]{number}. {Markup.Escape(title)}[/]").LeftJustified());
-        AnsiConsole.MarkupLine($"[grey]{Markup.Escape(what)}[/]");
+        AnsiConsole.MarkupLine($"[aqua]{Markup.Escape(what)}[/]");
         AnsiConsole.WriteLine();
     }
 
     /// <summary>A step of the story, e.g. "Ada places an order".</summary>
     public static void Step(string text) => AnsiConsole.MarkupLine($"[bold aqua]▸[/] {Markup.Escape(text)}");
 
-    public static void Note(string text) => AnsiConsole.MarkupLine($"  [grey]{Markup.Escape(text)}[/]");
+    public static void Note(string text) => AnsiConsole.MarkupLine($"  [aqua]{Markup.Escape(text)}[/]");
 
     /// <summary>What an action did (an email "sent", a message logged).</summary>
     public static void Effect(string text) => AnsiConsole.MarkupLine($"  [green]✉[/] {Markup.Escape(text)}");
 
     public static void Json(string header, string json) =>
-        AnsiConsole.Write(new Panel(new Text(json.Trim())).Header(Markup.Escape(header)).BorderColor(Color.Grey));
+        AnsiConsole.Write(new Panel(new Text(json.Trim())).Header(Markup.Escape(header)).BorderColor(Color.Aqua));
 
     /// <summary>Each rule's outcome, with its actions under it.</summary>
     public static void Result(RuleEngineResult result)
     {
-        var tree = new Tree("[grey]Result[/]");
+        var tree = new Tree("[aqua]Result[/]");
 
         foreach (var rule in result.Rules)
         {
@@ -57,14 +57,14 @@ public static class Show
         var when = action.ScheduledFor is { } at ? $" for {Time(at)}" : "";
         // A scheduled action's message only repeats its time.
         var message = action.Status == ActionExecutionStatus.Scheduled ? null : action.Message ?? action.Error?.Message;
-        var detail = message is null ? "" : $" [grey]({Markup.Escape(message)})[/]";
+        var detail = message is null ? "" : $" [purple]({Markup.Escape(message)})[/]";
         return $"Action [bold]{Markup.Escape(action.ActionName)}[/] {Status(action.Status)}{when}{detail}";
     }
 
     private static string Status(RuleExecutionStatus status) => status switch
     {
         RuleExecutionStatus.Matched => "[green]matched[/]",
-        RuleExecutionStatus.NotMatched => "[grey]not matched[/]",
+        RuleExecutionStatus.NotMatched => "[purple]not matched[/]",
         _ => "[red]failed[/]"
     };
 
