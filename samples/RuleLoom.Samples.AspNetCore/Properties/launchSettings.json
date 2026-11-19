@@ -1,0 +1,15 @@
+{
+  "profiles": {
+    "shop": {
+      "commandName": "Project",
+      "applicationUrl": "http://localhost:5080"
+    },
+    "dashboard": {
+      "commandName": "Project",
+      "applicationUrl": "http://localhost:5080",
+      "environmentVariables": {
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317"
+      }
+    }
+  }
+}

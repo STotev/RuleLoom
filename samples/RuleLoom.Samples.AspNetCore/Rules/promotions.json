@@ -1,0 +1,20 @@
+[
+  {
+    "id": "big-basket",
+    "name": "Big basket",
+    "eventType": "OrderPlaced",
+    "condition": { "operator": "gte", "operands": [{ "path": "ItemCount" }, { "value": 5 }] },
+    "actions": [
+      { "action": "send-email", "parameters": { "to": { "$path": "Customer.Email" }, "subject": "Free shipping on your next order" } }
+    ]
+  },
+  {
+    "id": "loyalty-check",
+    "name": "Loyalty check",
+    "eventType": "OrderPlaced",
+    "condition": { "operator": "gte", "operands": [{ "path": "Total" }, { "value": 100 }] },
+    "actions": [
+      { "action": "loyalty-check" }
+    ]
+  }
+]

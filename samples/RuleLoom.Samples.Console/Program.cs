@@ -13,7 +13,8 @@ using Spectre.Console;
     (7, "Re-checked when due", RecheckedWhenDue.RunAsync),
     (8, "Overdue actions", Overdue.RunAsync),
     (9, "Dependency injection", DependencyInjection.RunAsync),
-    (10, "The catalog", TheCatalog.RunAsync)
+    (10, "The catalog", TheCatalog.RunAsync),
+    (11, "Observability", Observability.RunAsync)
 ];
 
 var choice = args.FirstOrDefault();

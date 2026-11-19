@@ -1,0 +1,37 @@
+[
+  {
+    "id": "silver-upgrade",
+    "name": "Silver upgrade",
+    "eventType": "OrderPlaced",
+    "condition": { "operator": "eq", "operands": [{ "path": "@customer.Teir" }, { "value": "bronze" }] },
+    "actions": [
+      { "action": "send-email", "parameters": { "to": { "$path": "Customer.Email" }, "subject": "Upgrade to silver" } }
+    ]
+  },
+  {
+    "id": "shipped-sms",
+    "name": "Shipped SMS",
+    "eventType": "OrderUpdated",
+    "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Shipped" }] },
+    "actions": [
+      { "action": "send-sms", "parameters": { "to": "Customer.Phone" } }
+    ]
+  },
+  {
+    "id": "review-request",
+    "name": "Review request",
+    "eventType": "OrderUpdated",
+    "condition": { "operator": "eq", "operands": [{ "path": "Status" }, { "value": "Delivered" }] },
+    "actions": [
+      { "action": "send-email", "parameters": { "to": { "$path": "Customer.Email" }, "subjet": "How was your order?" } }
+    ]
+  },
+  {
+    "id": "gift-wrap",
+    "name": "Gift wrap",
+    "eventType": "OrderPlaced",
+    "actions": [
+      { "action": "send-email", "parameters": { "to": { "$path": "Customer.Email" }, "subject": "Gift wrapping?" } }
+    ]
+  }
+]

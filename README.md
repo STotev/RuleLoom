@@ -123,7 +123,7 @@ Add your own by implementing `IConditionOperator`; see the [quick start](docs/gu
   validating rules against it, and the catalog document for authoring UIs
 - [Upgrading](docs/guides/upgrading.md): breaking changes by version, with before/after examples
 - Samples: a [console sample](samples/RuleLoom.Samples.Console/) and a
-  [ASP.NET Core sample](samples/RuleLoom.Samples.AspNetCore/) (JSON events over HTTP, rules per tenant, Quartz.NET)
+  [ASP.NET Core sample](samples/RuleLoom.Samples.AspNetCore/) (a web shop with a demo page: rules as JSON files, scheduled emails on Quartz.NET)
 - [Vision](docs/vision.md) and [roadmap](docs/roadmap.md): where RuleLoom is going and why
 - [Changelog](CHANGELOG.md)
 

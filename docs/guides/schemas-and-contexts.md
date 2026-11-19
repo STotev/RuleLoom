@@ -15,7 +15,7 @@ System.Text.Json writes it), so you only add what the class can't say: the event
 fields to leave out.
 
 ```csharp
-public sealed record Order(string Number, string Status, decimal Total, int ItemCount, DateTimeOffset? PaymentDueAt, Person Customer);
+public sealed record Order(string Number, OrderStatus Status, decimal Total, int ItemCount, DateTimeOffset PaymentDueAt, Customer Customer);
 
 public sealed class OrderPlacedSchema : EventSchema<Order>
 {
@@ -207,8 +207,7 @@ Rules read a context with `@name.Path`. The engine loads only the contexts the e
 
 Action parameters can be paths too: `{ "$path": "@customer.Email" }` is read from the customer's profile when the
 action runs. The engine loads the contexts parameter paths use along with the others, and a scheduled action loads
-them when it runs (the sample's `RunScheduledActionJob` creates its `EvaluationContext` with the event type, the catalog
-and the context provider factory, as the engine does).
+them when it runs (the sample's `RunScheduledActionJob` runs it with `ExecuteScheduledAsync`, which does this).
 
 Rules can't use paths into a list, so collections are for actions. An action loads any context its event declares:
 

@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RuleLoom Demo Shop</title>
+  <style>
+    :root {
+      --bg: #f5f6f8; --card: #ffffff; --text: #1d2330; --muted: #6b7385; --line: #e3e6ec;
+      --accent: #3b5bdb; --green: #2f9e44; --green-bg: #e6f6ea; --grey-bg: #eef0f3;
+      --red: #e03131; --red-bg: #fdecec; --blue: #1c7ed6; --blue-bg: #e7f1fc; --amber: #b7791f; --amber-bg: #fdf3e1;
+      --flash: #fff6d6;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14171d; --card: #1c2028; --text: #e6e8ee; --muted: #9098aa; --line: #2c313c;
+        --accent: #7c95ff; --green: #69db7c; --green-bg: #1f3326; --grey-bg: #262b35;
+        --red: #ff8787; --red-bg: #3a2023; --blue: #74c0fc; --blue-bg: #1d2d40; --amber: #ffc078; --amber-bg: #3a2e1c;
+        --flash: #3a3420;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    header { padding: 18px 24px 6px; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+    header h1 { margin: 0; font-size: 22px; }
+    header a { color: var(--accent); font-size: 14px; }
+    header span { color: var(--muted); font-size: 14px; }
+    main { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(360px, 1.4fr) minmax(280px, 1fr); gap: 16px; padding: 12px 24px 24px; }
+    @media (max-width: 1100px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+    h2 { margin: 0 0 10px; font-size: 15px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    form { display: grid; grid-template-columns: auto 1fr; gap: 8px 10px; align-items: center; }
+    label { color: var(--muted); font-size: 14px; }
+    input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); min-width: 0; }
+    button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+    button.small { padding: 2px 10px; font-size: 13px; background: transparent; color: var(--accent); }
+    form button { grid-column: 1 / -1; justify-self: start; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+    td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .Matched, .Executed, .Paid { background: var(--green-bg); color: var(--green); }
+    .NotMatched { background: var(--grey-bg); color: var(--muted); }
+    .Failed { background: var(--red-bg); color: var(--red); }
+    .Scheduled, .AwaitingPayment { background: var(--blue-bg); color: var(--blue); }
+    .Skipped, .Due { background: var(--amber-bg); color: var(--amber); }
+    .Shipped { background: var(--grey-bg); color: var(--text); }
+    .entry { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+    .entry.new { animation: flash 2.5s ease-out; }
+    @keyframes flash { from { background: var(--flash); } to { background: transparent; } }
+    .entry-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
+    .entry-head strong { font-size: 15px; }
+    .time { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+    .rule { margin: 4px 0; }
+    .rule.dim { color: var(--muted); font-size: 13px; }
+    .action { margin: 3px 0 3px 18px; font-size: 14px; }
+    .note { color: var(--muted); font-size: 13px; }
+    .error { color: var(--red); font-size: 13px; }
+    .email { padding: 6px 0; border-bottom: 1px solid var(--line); }
+    .email:last-child { border-bottom: 0; }
+    .empty { color: var(--muted); font-size: 14px; }
+    details summary { cursor: pointer; }
+    ul { margin: 4px 0; padding-left: 18px; }
+    code { font-size: 12px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Demo shop</h1>
+  <span>Its business rules run on RuleLoom, from the JSON files in <code>Rules/</code>.</span>
+  <a href="/rules/catalog" target="_blank">Catalog</a>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>Place an order</h2>
+      <form id="place">
+        <label for="customer">Customer</label>
+        <select id="customer"></select>
+        <label for="total">Total</label>
+        <input id="total" type="number" step="0.01" value="640.50">
+        <label for="items">Items</label>
+        <input id="items" type="number" min="1" value="1">
+        <label for="due">Payment due in</label>
+        <select id="due">
+          <option value="60" selected>60 seconds: reminder in 30 seconds</option>
+          <option value="25">25 seconds: reminder 5 seconds late, sent now</option>
+          <option value="15">15 seconds: reminder 15 seconds late, skipped</option>
+          <option value="3600">an hour</option>
+        </select>
+        <button type="submit">Place order</button>
+      </form>
+    </section>
+    <section>
+      <h2>Orders</h2>
+      <div id="orders"></div>
+    </section>
+  </div>
+
+  <section>
+    <h2>What the rules did</h2>
+    <div id="activity"></div>
+  </section>
+
+  <div>
+    <section>
+      <h2>Emails sent</h2>
+      <div id="emails"></div>
+    </section>
+    <section>
+      <h2>Rules</h2>
+      <div id="rules"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const time = t => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const pill = (status, text) => `<span class="pill ${esc(status)}">${esc(text ?? words(status))}</span>`;
+  const words = s => String(s).replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+  const money = n => Number(n).toFixed(2);
+
+  function inSeconds(t) {
+    const s = Math.round((new Date(t) - Date.now()) / 1000);
+    return s > 0 ? `in ${s}s` : `${-s}s ago`;
+  }
+
+  async function get(url) {
+    const response = await fetch(url);
+    return response.json();
+  }
+
+  async function post(url, body) {
+    await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: body && JSON.stringify(body) });
+    refresh();
+  }
+
+  $("place").addEventListener("submit", e => {
+    e.preventDefault();
+    post("/orders", {
+      customerEmail: $("customer").value,
+      total: Number($("total").value),
+      itemCount: Number($("items").value),
+      paymentDueInSeconds: Number($("due").value)
+    });
+  });
+
+  window.pay = number => post(`/orders/${number}/pay`);
+  window.ship = number => post(`/orders/${number}/ship`);
+
+  function renderOrders(orders) {
+    if (!orders.length) return `<p class="empty">No orders yet: place one above.</p>`;
+    return `<table><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr>${orders.map(o => `
+      <tr>
+        <td><strong>${esc(o.number)}</strong></td>
+        <td>${esc(o.customer.name)}</td>
+        <td>${money(o.total)}</td>
+        <td>${pill(o.status)}${o.status === "AwaitingPayment" ? `<div class="note">due ${inSeconds(o.paymentDueAt)}</div>` : ""}</td>
+        <td>${o.status === "AwaitingPayment" ? `<button class="small" onclick="pay('${esc(o.number)}')">Pay</button>` : ""}
+            ${o.status === "Paid" ? `<button class="small" onclick="ship('${esc(o.number)}')">Ship</button>` : ""}</td>
+      </tr>`).join("")}</table>`;
+  }
+
+  function renderAction(a) {
+    const when = a.status === "Scheduled" ? ` for ${time(a.scheduledFor)} <span class="note">(${inSeconds(a.scheduledFor)})</span>` : "";
+    const message = a.message ? ` <span class="note">${esc(a.message)}</span>` : "";
+    return `<div class="action">→ ${esc(a.action)} ${pill(a.status)}${when}${message}</div>`;
+  }
+
+  function renderRule(r) {
+    if (r.status === "NotMatched") return `<div class="rule dim">${esc(r.ruleName)} ${pill(r.status)}</div>`;
+    const error = r.error ? `<div class="error">${esc(r.error)}</div>` : "";
+    return `<div class="rule"><strong>${esc(r.ruleName)}</strong> ${pill(r.status)}${error}${r.actions.map(renderAction).join("")}</div>`;
+  }
+
+  const seen = new Set();
+  let firstLoad = true;
+
+  function renderActivity(entries) {
+    if (!entries.length) return `<p class="empty">Place an order, then pay or ship it: each event's rules show up here.</p>`;
+    return entries.map(e => {
+      const key = e.at + e.title + e.order;
+      const isNew = !firstLoad && !seen.has(key);
+      seen.add(key);
+      const title = e.kind === "scheduled"
+        ? `⏰ ${esc(e.rules[0].ruleName)} came due`
+        : esc(e.title);
+      const rules = e.kind === "scheduled"
+        ? e.rules[0].actions.map(renderAction).join("")
+        : e.rules.length ? e.rules.map(renderRule).join("") : `<div class="note">No rules for this event.</div>`;
+      return `<div class="entry${isNew ? " new" : ""}">
+        <div class="entry-head"><span class="time">${time(e.at)}</span><strong>${title}</strong><span>${esc(e.order ?? "")}</span></div>
+        ${rules}
+      </div>`;
+    }).join("");
+  }
+
+  function renderEmails(emails) {
+    if (!emails.length) return `<p class="empty">None yet.</p>`;
+    return emails.map(m => `<div class="email"><span class="time">${time(m.at)}</span> to <strong>${esc(m.to)}</strong><div>${esc(m.subject)}</div></div>`).join("");
+  }
+
+  function renderRules(rules) {
+    const valid = rules.valid.map(r => `<li>${esc(r.name)} <span class="note">${esc(r.eventType)}</span></li>`).join("");
+    const invalid = rules.invalid.map(r => `<li><strong>${esc(r.rule ?? "(unnamed)")}</strong> <span class="note">${esc(r.file)}</span>
+      <ul>${r.errors.map(e => `<li class="error">${esc(e)}</li>`).join("")}</ul></li>`).join("");
+    return `<div>Running</div><ul>${valid}</ul>
+      <details ${rules.invalid.length ? "open" : ""}><summary>Left out: ${rules.invalid.length} with mistakes</summary><ul>${invalid}</ul></details>`;
+  }
+
+  async function refresh() {
+    const [orders, activity, emails, rules] = await Promise.all([
+      get("/orders"), get("/demo/activity"), get("/demo/emails"), get("/demo/rules")
+    ]);
+    $("orders").innerHTML = renderOrders(orders);
+    $("activity").innerHTML = renderActivity(activity);
+    $("emails").innerHTML = renderEmails(emails);
+    $("rules").innerHTML = renderRules(rules);
+    firstLoad = false;
+  }
+
+  (async () => {
+    const customers = await get("/demo/customers");
+    $("customer").innerHTML = customers.map(c => `<option value="${esc(c.email)}">${esc(c.name)} (${esc(c.tier)})</option>`).join("")
+      + `<option value="guest@example.com">A guest</option>`;
+    await refresh();
+    setInterval(refresh, 1500);
+  })();
+</script>
+</body>
+</html>

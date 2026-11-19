@@ -3,7 +3,7 @@
 **Issue:** [#158 Tidy up the samples](https://github.com/STotev/RuleLoom/issues/158)
 **Builds on:** [the 0.8 sample](2026-11-17-sample-scheduling-design.md) (findings 3–6)
 **Date:** 2026-11-17
-**Status:** Approved
+**Status:** Implemented
 
 ---
 
@@ -52,6 +52,7 @@ Reviewed with the maintainer before building (HITL).
 | 8 | `08-Overdue.cs` | `SkipOverdueActions` with a 30-second grace period: a reminder run on time, 15 seconds late (runs), and 45 seconds late (skipped), printed as a timeline |
 | 9 | `09-DependencyInjection.cs` | `AddRuleLoom` with an action that injects the app's mailer |
 | 10 | `10-TheCatalog.cs` | The catalog document an authoring UI reads: the event's fields and contexts, the actions and their parameters |
+| 11 | `11-Observability.cs` | One event with four rules (one broken): the logs as written, the span tree with its attributes, and the metrics, caught with `ActivityListener`/`MeterListener` |
 
 ## Web shop layout
 
@@ -66,6 +67,25 @@ Reviewed with the maintainer before building (HITL).
 | `Demo/` | The outbox, the activity feed and their endpoints |
 | `wwwroot/index.html` | The demo page |
 
+## Observability (added after review)
+
+The maintainer asked for a readable way to demo observability; the console exporter was unreadable.
+
+| Question | Decision |
+|---|---|
+| Console | Scenario 11 listens in-process (`ActivityListener`, `MeterListener`, a printing `ILoggerFactory`) and prints the logs, the span tree and the metrics; no packages |
+| Web shop | OTLP (`OpenTelemetry.Exporter.OpenTelemetryProtocol`, Apache-2.0, replacing the console exporter) to the standalone Aspire Dashboard (`mcr.microsoft.com/dotnet/aspire-dashboard:13.6.2`, Docker), enabled only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set: the `dashboard` launch profile sets it |
+| Logs | Serilog passes its events on to OpenTelemetry (`writeToProviders`, with ASP.NET Core's default providers cleared so lines don't print twice). `RuleLoom.Engine` logs at Debug, the console sink only from Information: the outcomes go to the dashboard, not the console |
+
 ## Deviations
 
-None yet.
+- **Console scenario order**: contexts and typed actions come before validation (3, 4, 5), so validation can show
+  mistakes in context paths and action parameters. The catalog scenario's file is `10-TheCatalog.cs` (a class named
+  `Catalog` would shadow RuleLoom's).
+- **Where events meet RuleLoom**: `Rules/RuleRunner.cs` (load the rules, run them, schedule, record), so `Orders/` knows
+  only the shop. The demo endpoints are under `/demo` (`/demo/activity`, `/demo/emails`, `/demo/rules`,
+  `/demo/customers`).
+- **Grace period of 10 seconds**, not a minute: with the reminder 30 seconds before payment is due, the page's "payment
+  due in 25 / 15 seconds" choices show a late reminder sent at once (5 seconds late) and one skipped (15 seconds late).
+- **Log levels**: only `RuleLoom.Engine` is set to Warning; a `RuleLoom` override would also silence the sample's own
+  namespace (`RuleLoom.Samples...`). The catalog's startup line (Information) stays.
