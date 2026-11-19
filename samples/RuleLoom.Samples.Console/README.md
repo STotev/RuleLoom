@@ -21,6 +21,11 @@ dotnet run --project samples/RuleLoom.Samples.Console -- all   # runs every scen
 | 8 | [Overdue actions](Scenarios/08-Overdue.cs) | `SkipOverdueActions` and its grace period: on time, a little late, too late |
 | 9 | [Dependency injection](Scenarios/09-DependencyInjection.cs) | `AddRuleLoom`, and an action that injects the app's services |
 | 10 | [The catalog](Scenarios/10-TheCatalog.cs) | What a rule-authoring UI reads: events, fields, contexts, actions and their parameters |
+| 11 | [Observability](Scenarios/11-Observability.cs) | The logs, the trace (spans and their attributes) and the metrics RuleLoom emits for one event, caught in-process |
+
+Scenario 11 catches RuleLoom's telemetry with .NET's own listeners to show what's emitted; an app exports it with
+OpenTelemetry instead (the [ASP.NET Core sample](../RuleLoom.Samples.AspNetCore/#see-it-in-the-aspire-dashboard) sends it
+to the Aspire Dashboard).
 
 The shop's types (orders, customers, the order events) are in [`Shop.cs`](Shop.cs). Scenarios 4 to 10 reuse the
 `send-email` action and the customer context from scenarios 3 and 4. `DemoClock` moves time by hand, so scheduled
