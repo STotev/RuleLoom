@@ -52,6 +52,7 @@ Reviewed with the maintainer before building (HITL).
 | 8 | `08-Overdue.cs` | `SkipOverdueActions` with a 30-second grace period: a reminder run on time, 15 seconds late (runs), and 45 seconds late (skipped), printed as a timeline |
 | 9 | `09-DependencyInjection.cs` | `AddRuleLoom` with an action that injects the app's mailer |
 | 10 | `10-TheCatalog.cs` | The catalog document an authoring UI reads: the event's fields and contexts, the actions and their parameters |
+| 11 | `11-Observability.cs` | One event with four rules (one broken): the logs as written, the span tree with its attributes, and the metrics, caught with `ActivityListener`/`MeterListener` |
 
 ## Web shop layout
 
@@ -65,6 +66,16 @@ Reviewed with the maintainer before building (HITL).
 | `Scheduling/` | `ActionScheduler` (Quartz job per scheduled action, JSON job data) and `RunScheduledActionJob` |
 | `Demo/` | The outbox, the activity feed and their endpoints |
 | `wwwroot/index.html` | The demo page |
+
+## Observability (added after review)
+
+The maintainer asked for a readable way to demo observability; the console exporter was unreadable.
+
+| Question | Decision |
+|---|---|
+| Console | Scenario 11 listens in-process (`ActivityListener`, `MeterListener`, a printing `ILoggerFactory`) and prints the logs, the span tree and the metrics; no packages |
+| Web shop | OTLP (`OpenTelemetry.Exporter.OpenTelemetryProtocol`, Apache-2.0, replacing the console exporter) to the standalone Aspire Dashboard (`mcr.microsoft.com/dotnet/aspire-dashboard:13.6.2`, Docker), enabled only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set: the `dashboard` launch profile sets it |
+| Logs | Serilog passes its events on to OpenTelemetry (`writeToProviders`, with ASP.NET Core's default providers cleared so lines don't print twice). `RuleLoom.Engine` logs at Debug, the console sink only from Information: the outcomes go to the dashboard, not the console |
 
 ## Deviations
 
